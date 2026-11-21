@@ -12,7 +12,7 @@ import { TUNING } from '../../engine/tuning';
 import { spent } from '../../engine/script';
 import { METERS, chosenTake, weeksUsed } from '../../engine/shooting';
 import {
-  MUSIC_TIERS, POLISH_TIERS, autoPolish, chooseTake, finishPost, isEmotional, postSummary, setCut, setMusic, setPolish,
+  MUSIC_TIERS, POLISH_TIERS, autoPolish, chooseTake, finishPost, isEmotional, postSummary, sceneScores, setCut, setMusic, setPolish,
   type PolishKind, type PostResult, type SceneScore,
 } from '../../engine/post';
 
@@ -31,6 +31,7 @@ export function PostScreen() {
   const level = p.directors[film.directorId]?.level ?? 1;
   const [msg, setMsg] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+  const [watchAll, setWatchAll] = useState(false);
   const [view, setView] = useState<'cut' | 'poster'>('cut');
   const summary = postSummary(film, level);
   const budgetLeft = film.contract.budget - spent(film);
@@ -50,11 +51,13 @@ export function PostScreen() {
     <div className="shoot">
       <Calendar film={film} />
       {msg && <p className="bad">{msg}</p>}
+      {watchAll && <FilmPlayer film={film} onClose={() => setWatchAll(false)} />}
       {playing && <Playback key={playing} film={film} scene={film.scenes.find((s) => s.id === playing)!} score={scoreOf(playing)} onClose={() => setPlaying(null)} />}
       <div className="script-grid">
         <div className="script-main">
           <div className="seg-tabs" role="tablist">
             <button role="tab" aria-selected={view === 'cut'} className={view === 'cut' ? 'primary' : ''} onClick={() => setView('cut')}>🎞 Final cut</button>
+            <button onClick={() => setWatchAll(true)}>▶ Watch the whole film</button>
             <button role="tab" aria-selected={view === 'poster'} className={view === 'poster' ? 'primary' : ''} onClick={() => setView('poster')}>🖼 Poster & marketing</button>
           </div>
           {view === 'poster' && <PosterStudio film={film} history={p.filmography} onApply={apply} />}
@@ -179,7 +182,7 @@ function SceneEdit({
 }
 
 /** Plays a scene back: the set, the cast, the beats as captions, then the score. */
-function Playback({ film, scene, score, onClose }: { film: Film; scene: Scene; score?: SceneScore; onClose: () => void }) {
+export function Playback({ film, scene, score, onClose, onEnded, heading }: { film: Film; scene: Scene; score?: SceneScore; onClose: () => void; onEnded?: () => void; heading?: string }) {
   const take = chosenTake(scene)!;
   const set = setById(take.setId);
   const [step, setStep] = useState(0);
@@ -192,11 +195,17 @@ function Playback({ film, scene, score, onClose }: { film: Film; scene: Scene; s
   const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
   const beat = scene.beats[Math.min(step, scene.beats.length - 1)];
   const done = step >= scene.beats.length;
+  // When used by the whole-film player, move on shortly after the score shows.
+  useEffect(() => {
+    if (!done || !onEnded) return;
+    const t = window.setTimeout(onEnded, BEAT_MS);
+    return () => window.clearTimeout(t);
+  }, [done, onEnded]);
   const active = new Set(done ? [] : [beat.roleId, beat.targetId].filter(Boolean));
   return (
     <div className="card stage-card">
       <div className="row between">
-        <h3>▶ Scene {film.scenes.indexOf(scene) + 1} · {toneById(scene.tone).name} · {set.name}{film.music !== 'none' ? ` · ♪ ${film.music}` : ''}</h3>
+        <h3>▶ {heading ?? `Scene ${film.scenes.indexOf(scene) + 1}`} · {toneById(scene.tone).name} · {set.name}{film.music !== 'none' ? ` · ♪ ${film.music}` : ''}</h3>
         <button onClick={onClose}>Close</button>
       </div>
       <div className={`stage tone-${scene.tone}`}>
@@ -220,5 +229,32 @@ function Playback({ film, scene, score, onClose }: { film: Film; scene: Scene; s
         ))}
       </div>
     </div>
+  );
+}
+
+/** Plays the whole final cut: a title card, every kept scene in order, then the end card. */
+export function FilmPlayer({ film, onClose }: { film: Film; onClose: () => void }) {
+  const scenes = film.scenes.filter((s) => !s.cut && chosenTake(s));
+  const [i, setI] = useState(-1); // -1 = title card, scenes.length = end card
+  const scores = sceneScores(film);
+  useEffect(() => {
+    if (i !== -1) return;
+    const t = window.setTimeout(() => setI(0), 1800);
+    return () => window.clearTimeout(t);
+  }, [i]);
+  if (i === -1 || i >= scenes.length) {
+    return (
+      <div className="card film-card-player">
+        <div className="row between"><span className="kicker light">{i === -1 ? 'Now showing' : 'The end'}</span><button className="ghost-dark" onClick={onClose}>Close</button></div>
+        <div className="film-card-title">{i === -1 ? film.title : 'The End'}</div>
+        <div className="kicker light">{i === -1 ? `A film by ${film.directorName ?? ''}` : `Final cut ${postSummary(film).cutQuality}`}</div>
+        {i >= scenes.length && <button className="primary" onClick={() => setI(-1)}>Watch again</button>}
+      </div>
+    );
+  }
+  const s = scenes[i];
+  return (
+    <Playback key={s.id + i} film={film} scene={s} score={scores.find((x) => x.sceneId === s.id)} onClose={onClose} onEnded={() => setI(i + 1)}
+      heading={`Scene ${i + 1} of ${scenes.length}`} />
   );
 }

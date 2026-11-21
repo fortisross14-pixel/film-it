@@ -91,6 +91,7 @@ export function gradeFilm(film: Film, results: FilmResults, _history: FilmRecord
       : b.kind === 'festivalNomination' ? results.nominations.some((n) => n.startsWith('Festival:'))
       : b.kind === 'underBudget' ? totalSpent <= c.budget * (1 - b.pct / 100)
       : b.kind === 'boxOffice' ? results.boxOffice >= b.min
+      : b.kind === 'returningLead' ? film.roles.some((r) => r.actor?.id === b.actorId)
       : results.criticsRating >= b.min;
     if (met) {
       bonusMet.push(describeBonus(b));

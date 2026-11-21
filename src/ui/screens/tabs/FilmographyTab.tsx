@@ -8,10 +8,12 @@ import { actionById } from '../../../engine/data/actions';
 import { audienceScore, criticsScore, money } from '../../../engine/format';
 import { Popcorn, Tomato } from '../../components/Icons';
 import { sceneScores } from '../../../engine/post';
+import { FilmPlayer } from '../PostScreen';
 
 export function FilmographyTab() {
   const p = useProfile();
   const [open, setOpen] = useState<string | null>(null);
+  const [watching, setWatching] = useState<string | null>(null);
   return (
     <div>
       <h2>Filmography</h2>
@@ -42,6 +44,7 @@ export function FilmographyTab() {
                   <tr>
                     <td colSpan={9}>
                       <div className="cut-detail">
+                        {watching === film.id ? <FilmPlayer film={film} onClose={() => setWatching(null)} /> : <button onClick={() => setWatching(film.id)}>▶ Watch the final cut</button>}
                         <p className="small muted">
                           {film.contract.studio.name} · {film.runtime} min · script {film.scriptQuality} · casting {film.castingScore} · music {film.music}
                           {film.report && <> · score {film.report.score}{film.report.missedReqs.length > 0 && ` · missed: ${film.report.missedReqs.join(', ')}`}</>}

@@ -14,6 +14,7 @@ import { affinityBonus, specialtyScale } from './director';
 import { withRng } from './profile';
 import { screenTime, spent } from './script';
 import { initShooting } from './shooting';
+import { loyaltyMult } from './franchise';
 
 export type CastResult = { ok: true; profile: Profile } | { ok: false; reason: string };
 const fail = (reason: string): CastResult => ({ ok: false, reason });
@@ -73,7 +74,7 @@ export function actorPay(actor: Actor, role: Role, minutes: number): { base: num
 }
 
 export function rolePay(film: Film, role: Role, actor: Actor): number {
-  return actorPay(actor, role, screenTime(film)[role.id] ?? 0).total;
+  return Math.round(actorPay(actor, role, screenTime(film)[role.id] ?? 0).total * loyaltyMult(actor, film.directorId));
 }
 
 /** Payroll of everyone cast so far (signed pay, or the current estimate before signing). */
@@ -148,7 +149,10 @@ export function drawCards(p: Profile, roleId: string): CastResult {
       pool = [...pool, ...fresh];
       available = [...available, ...fresh];
     }
-    return { pool, cards: drawFrom(rng, available, role.billing, gemBoost, C().cardsPerDraw) };
+    // A sequel's first draw for the lead brings back the original star (if still available).
+    const returning = role.type === 'main' && state.draws === 0 ? available.find((a) => a.id === film.contract.sequelOf?.leadActorId) : undefined;
+    const rest = drawFrom(rng, available.filter((a) => a.id !== returning?.id), role.billing, gemBoost, C().cardsPerDraw - (returning ? 1 : 0));
+    return { pool, cards: returning ? [returning, ...rest] : rest };
   });
 
   const nextFilm: Film = {

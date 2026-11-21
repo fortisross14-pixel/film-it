@@ -643,3 +643,8 @@ button.record { font-size: 1.1rem; letter-spacing: 0.08em; }
 .trophy-card { display: grid; justify-items: center; gap: 4px; text-align: center; }
 .trophy-card img { width: 56px; height: auto; }
 .trophy-card.nominated img { filter: grayscale(0.7) opacity(0.55); }
+.rivals { display: block; max-width: 14rem; }
+.sequel-badge { background: #fde6dc; border-radius: 10px; padding: 6px 10px; font-weight: 700; color: var(--primary); }
+.paper .card.film-card-player { background: radial-gradient(ellipse at 50% 30%, #3a2c22, #120d0a); color: var(--chrome-text); text-align: center; display: grid; gap: 12px; min-height: 320px; align-content: center; }
+.film-card-title { font-family: var(--display); font-size: clamp(2rem, 5vw, 3.6rem); letter-spacing: 0.1em; text-transform: uppercase; color: #f6dfa6; animation: reveal-pop 0.8s ease-out; }
+.career-line { margin: 0; }

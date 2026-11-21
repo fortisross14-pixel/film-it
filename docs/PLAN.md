@@ -217,13 +217,21 @@ casting invariants, accessibility and layout at 200% text, reduce motion, tiered
 See the end-of-turn message / issue list: actor portraits, posters per genre, set backdrops or
 sprites, prop sprites, UI ornaments (laurels, reels, film strip, tickets), award statuettes.
 
-## Milestone 8 — "Later" features from the requirements
+## Milestone 8 — "Later" features (done)
 
-- Chemistry between actor pairs (hidden, revealed after first shared scene).
-- Actor careers across films (star power growth, "remembers you" discount).
-- Rival directors' films in award season.
-- Sequels and franchises.
-- Storyboard playback of the final cut.
+- Chemistry: hidden per actor pair, revealed on the first shared shoot (built in Milestone 4).
+- Actor careers (`franchise.ts`): after each film the cast's star power moves with the grade
+  (A +8 … F −3, other billings ×0.6) and awards (+4 each); strong performances add acting;
+  films, wins and recent credits are tracked. Actors cast while unknown (<35 star) remember the
+  director who discovered them: 15% fee discount later. Actors carry a gender for portraits.
+- Rival films: each award season has named rival films by rival directors; each category lists
+  the nominees and the winner.
+- Sequels and franchises: a hit (B or better, box office at or above target) puts a sequel brief
+  first on the next board — same studio, genre and topic, budget ×1.4, rewards ×1.3, bonus goal
+  to bring back the original lead (who appears in the first lead draw). Sequels get fanbase buzz
+  and opening ×1.25, minus some critics fatigue.
+- Final-cut playback: "Watch the whole film" in Edit and in the filmography plays every kept
+  scene in order with title and end cards.
 
 ## After the milestones
 

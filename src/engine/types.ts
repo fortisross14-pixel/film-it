@@ -160,6 +160,12 @@ export interface Actor {
   age: AgeBracket;
   /** Parody of a famous name ("Leonardo DiBario"). */
   famous?: boolean;
+  /** For matching portrait art. */
+  gender?: 'f' | 'm';
+  /** Career across films: films made, awards won, recent credits. */
+  films?: number;
+  wins?: number;
+  credits?: { title: string; grade: string }[];
   /** Asset key for commissioned cartoon portrait art; undefined = procedural face. */
   portrait?: string;
   /** Directors who discovered this actor (fee discount later). */
@@ -181,7 +187,8 @@ export type BonusGoal =
   | { kind: 'festivalNomination'; points: number }
   | { kind: 'underBudget'; pct: number; points: number }
   | { kind: 'boxOffice'; min: number; points: number }
-  | { kind: 'criticsAtLeast'; min: number; points: number };
+  | { kind: 'criticsAtLeast'; min: number; points: number }
+  | { kind: 'returningLead'; actorId: string; name: string; points: number };
 
 export interface Contract {
   id: string;
@@ -204,6 +211,8 @@ export interface Contract {
   boxOfficeTarget: number;
   /** Marketing budget the studio puts behind the film, $K (studio money, not ours). */
   marketing?: number;
+  /** Set when this brief is a sequel to one of your hits. */
+  sequelOf?: { filmId: string; franchise: string; number: number; topicId?: string; leadActorId?: string };
   difficulty: number; // 1–5 stars
   rewards: { reputation: number; credits: number };
 }
@@ -369,6 +378,8 @@ export interface FilmResults {
   awardDrivers: Record<string, number>;
   posterScore?: number;
   marketing?: MarketingLevel;
+  /** Per award: who was nominated and who won (rival films included). */
+  awardDetails?: { category: string; nominees: string[]; winner: string }[];
 }
 
 export interface GradeReport {
@@ -411,6 +422,8 @@ export interface Film {
   fillerShot: boolean;
   poster?: PosterDesign;
   marketing?: MarketingState;
+  /** Franchise this film belongs to (number 2+ = sequel). */
+  franchise?: { name: string; number: number };
   shooting?: ShootingState;
   /** Script quality locked in when the script is finished. */
   scriptQuality?: number;

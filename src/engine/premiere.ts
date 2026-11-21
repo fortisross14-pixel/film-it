@@ -12,6 +12,10 @@ import { participants, spent } from './script';
 import { withRng } from './profile';
 import { gradeFilm } from './grade';
 import { recordFilm } from './career';
+import { afterDelivery, franchiseEffect } from './franchise';
+import { RIVAL_DIRECTORS } from './data/rivals';
+import { workingTitle } from './titles';
+import { GENRE_IDS } from './data/genres';
 import { marketingLevel, posterEffect, posterScore } from './marketing';
 import { directorById } from './data/directors';
 import { specialtyScale } from './director';
@@ -70,6 +74,7 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const cut = finalCut(film);
   const post = postSummary(film);
   const factors = ratingFactors(film, history);
+  const fx = franchiseEffect(film);
   const fillerShare = post.fillerMinutes / film.runtime;
   const boredom = Math.max(0, fillerShare - T.boredomFreeShare);
   const noise = () => (rng.next() * 2 - 1) * T.ratingNoise;
@@ -81,7 +86,7 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const publicRating = Math.round(clamp(rate(factors, publicWeights) - boredom * T.boredomPublic + charming * 2 + noise()));
   const darling = specialtyScale(directorById(film.directorId), 'festival', 1);
   const criticsRating = Math.round(clamp(rate(factors, T.criticsWeights) - boredom * T.boredomCritics - post.overproduction + noise()
-    + darling * TUNING.directors.festivalCritics));
+    + darling * TUNING.directors.festivalCritics + fx.critics));
   const festivalCut = darling * TUNING.directors.festivalThresholdCut;
 
   // Buzz: stars, topic hype, charm.
@@ -90,13 +95,13 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const poster = posterScore(film, history);
   const pe = posterEffect(poster.total);
   const level = marketingLevel(film);
-  const buzz = Math.round(clamp(T.buzzBase + topStar * T.buzzStar + hype * T.buzzTopic + charming * T.buzzCharming + pe.buzz));
+  const buzz = Math.round(clamp(T.buzzBase + topStar * T.buzzStar + hype * T.buzzTopic + charming * T.buzzCharming + pe.buzz + fx.buzz));
 
   // Box office: opening from market × buzz (× a little critics), legs from the public.
   const c = film.contract;
   const opening = c.budget * T.openingShare * T.genreMarket[c.genre] * T.ratingMarket[c.rating]
     * (T.openingBuzzBase + buzz / 100) * (T.criticsEffectBase + criticsRating * T.criticsEffectPer)
-    * pe.opening * TUNING.marketing.openingMult[level];
+    * pe.opening * TUNING.marketing.openingMult[level] * fx.opening;
   let retention = T.retentionBase + publicRating * T.retentionPerPublic;
   if (c.budget <= T.sleeperBudgetMax && publicRating >= T.sleeperPublicMin) retention += T.sleeperBonus;
   const weekly: number[] = [];
@@ -111,14 +116,26 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const nominations: string[] = [];
   const wins: string[] = [];
   const awardDrivers: Record<string, number> = {};
+  // The year's rival films (named, by rival directors) compete in every category.
+  const season = Array.from({ length: 8 }, () => {
+    const g = rng.pick(GENRE_IDS);
+    return { title: workingTitle(rng, g), director: rng.pick(RIVAL_DIRECTORS) };
+  });
+  const awardDetails: NonNullable<FilmResults['awardDetails']> = [];
+  const label = (r: { title: string; director: string }) => `${r.title} (${r.director})`;
   const contest = (name: string, driver: number, threshold: number) => {
+
     awardDrivers[name] = Math.round(driver);
     if (driver < threshold) return;
     const p = clamp(T.nominationBase + TUNING.marketing.nominationBonus[level] + (driver - threshold) * T.nominationPerPoint, 0.1, 0.95);
     if (!rng.chance(p)) return;
     nominations.push(name);
-    const rival = rng.int(T.rivalRange[0], T.rivalRange[1]);
-    if (driver + (rng.next() * 2 - 1) * T.winNoise > rival) wins.push(name);
+    const rivals = rng.shuffle(season).slice(0, TUNING.rivals.nomineesPerCategory - 1).map((r) => ({ ...r, score: rng.int(T.rivalRange[0], T.rivalRange[1]) }));
+    const best = rivals.reduce((a, b) => (b.score > a.score ? b : a));
+    const ours = driver + (rng.next() * 2 - 1) * T.winNoise;
+    const won = ours > best.score;
+    if (won) wins.push(name);
+    awardDetails.push({ category: name, nominees: [film.title, ...rivals.map(label)], winner: won ? film.title : label(best) });
   };
 
   // Festivals: reachable early for small films with strong critics.
@@ -149,7 +166,7 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
 
   return {
     buzz, publicRating, criticsRating, factors, boredom: Math.round(fillerShare * 100), overproduction: post.overproduction,
-    openingWeekend: Math.round(opening), weekly, boxOffice, nominations, wins, awardDrivers, posterScore: poster.total, marketing: level,
+    openingWeekend: Math.round(opening), weekly, boxOffice, nominations, wins, awardDrivers, posterScore: poster.total, marketing: level, awardDetails,
   };
 }
 
@@ -181,7 +198,8 @@ export function deliverFilm(p: Profile, now = Date.now()): PremiereResult {
     activeFilm: undefined,
   };
   const { profile, fired } = recordFilm(base, film, credits, reputation, now);
-  return { ok: true, profile, fired };
+  const done = withRng(profile, (rng) => afterDelivery(profile, film, rng));
+  return { ok: true, profile: { ...done.value, seed: done.profile.seed }, fired };
 }
 
 /** Facts for the red carpet moment. */

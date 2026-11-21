@@ -39,7 +39,7 @@ export function ContractBoardTab({ onGoTo }: { onGoTo?: (tab: string) => void })
           <button key={c.id} className={`contract-row ${c.id === contract?.id ? 'selected' : ''}`} onClick={() => setContractId(c.id)}>
             <Poster title={c.title ?? label(c)} genre={c.genre} seed={c.id} width={64} showTitle={false} />
             <span className="contract-row-text">
-              <span className="kicker">{label(c)}</span>
+              <span className="kicker">{c.sequelOf ? `Sequel #${c.sequelOf.number} · ` : ''}{label(c)}</span>
               <strong>{c.title ?? label(c)}</strong>
               <span className="row small"><Ticket size={18} /> {c.rewards.credits} · <span className="stars">{'★'.repeat(c.difficulty)}</span></span>
             </span>
@@ -55,6 +55,7 @@ export function ContractBoardTab({ onGoTo }: { onGoTo?: (tab: string) => void })
             <div className="detail-facts">
               <h2 className="film-title">{contract.title}</h2>
               <p className="muted">{contract.studio.name} · {ARCHETYPE_NAMES[contract.archetype]}</p>
+              {contract.sequelOf && <p className="sequel-badge">🎞 Sequel to your hit “{contract.sequelOf.franchise}”: a built-in fanbase, but critics expect something new.</p>}
               <div className="fact"><Clapper size={22} /><span><span className="kicker">Genre</span>{label(contract)}</span></div>
               <div className="fact"><Masks size={22} /><span><span className="kicker">Mood</span>{toneById(GENRE_TONE[contract.genre]).name}</span></div>
               <div className="fact"><Calendar size={22} /><span><span className="kicker">Runtime · deadline</span>{contract.runtime} min · {contract.deadlineWeeks} weeks</span></div>

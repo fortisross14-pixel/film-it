@@ -71,6 +71,7 @@ export function startFilm(p: Profile, contractId: string, directorIdArg?: string
     contract: structuredClone(contract) as Contract,
     directorId,
     directorName: p.name,
+    franchise: contract.sequelOf ? { name: contract.sequelOf.franchise, number: contract.sequelOf.number } : undefined,
     phase: 'script',
     runtime: contract.runtime,
     roles: [],

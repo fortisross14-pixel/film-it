@@ -389,6 +389,34 @@ export const TUNING = {
     /** Awards campaign: nomination chance bonus. */
     nominationBonus: { cut: -0.03, standard: 0, push: 0.06 },
   },
+  actorCareers: {
+    /** Star power change after a film, by grade (lead billing; others × otherShare). */
+    starByGrade: { A: 8, B: 5, C: 2, D: -1, F: -3 },
+    starPerWin: 4,
+    otherShare: 0.6,
+    /** Acting improves a little after a strong performance. */
+    actingGainAt: 70,
+    actingGain: 1,
+    /** Actors cast while below this star power "remember you": fee discount for that director. */
+    discoveredBelow: 35,
+    discoveryDiscount: 0.15,
+    creditsKept: 5,
+  },
+  sequel: {
+    /** A hit (this grade or better and box office ≥ target) earns a sequel brief. */
+    minGrade: 'B',
+    budgetMult: 1.4,
+    rewardMult: 1.3,
+    /** Franchise effects at the premiere. */
+    buzzBonus: 12,
+    openingMult: 1.25,
+    criticsFatiguePer: 3,
+    criticsFatigueMax: 9,
+    returningLeadPoints: 4,
+  },
+  rivals: {
+    nomineesPerCategory: 5,
+  },
 } as const;
 
 export type Tuning = typeof TUNING;

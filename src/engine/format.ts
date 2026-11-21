@@ -60,6 +60,8 @@ export function describeBonus(b: BonusGoal): string {
       return `Box office ≥ ${money(b.min)}`;
     case 'criticsAtLeast':
       return `Critics rating ≥ ${b.min}`;
+    case 'returningLead':
+      return `Bring back ${b.name}`;
   }
 }
 

@@ -121,6 +121,16 @@ export function PremiereScreen() {
                     <span>
                       <strong>{n.replace('Festival: ', '')}</strong>
                       <span className={`chip ${r.wins.includes(n) ? 'win' : ''}`}>{r.wins.includes(n) ? <><Trophy size={14} /> Winner</> : <><Star size={14} /> Nominated</>}</span>
+                      {(() => {
+                        const d = r.awardDetails?.find((x) => x.category === n);
+                        if (!d) return null;
+                        const rivals = d.nominees.slice(1);
+                        return (
+                          <span className="small muted rivals" title={rivals.join(' · ')}>
+                            {d.winner === film.title ? `beat ${rivals.length} rivals` : `won by ${d.winner}`}
+                          </span>
+                        );
+                      })()}
                     </span>
                   </span>
                 ))

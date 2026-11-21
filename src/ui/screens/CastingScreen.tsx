@@ -87,6 +87,7 @@ export function CastingScreen() {
                     fit={actorFit(film, role, a)}
                     pay={rolePay(film, role, a)}
                     budgetLeft={budgetLeft(film)}
+                    directorId={film.directorId}
                     onCast={() => {
                       if (apply(castActor(p, roleId, a.id))) {
                         const next = film.roles.find((r) => !r.actor && r.id !== roleId);
