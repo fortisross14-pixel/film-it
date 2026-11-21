@@ -5,7 +5,7 @@ import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from '
 
 export const TUNING = {
   saveSlots: 3,
-  saveVersion: 3,
+  saveVersion: 4,
 
   contracts: {
     boardSize: 4,
@@ -186,6 +186,68 @@ export const TUNING = {
     roleDefaultWeight: 0.3,
     targetSkill: 'drama',
     targetWeight: 0.3,
+  },
+  shooting: {
+    /** Crew cost per production week = budget × share (min). Runs every week. */
+    crewWeekShare: 0.012,
+    crewWeekMin: 20,
+    /** Set rental: dayCost × days per shoot week. */
+    shootDaysPerWeek: 5,
+    /** Extra per stunt beat on a shoot week, × budget. */
+    stuntShare: 0.004,
+    /** Fatigue. */
+    shootFatigue: 25,
+    methodExtraFatigue: 10,
+    practiceFatigue: 8,
+    clubFatigue: 5,
+    relaxRecovery: 60,
+    fatiguePenalty: 0.5, // at 100 fatigue a meter loses half
+    /** Practice per week on one scene (diminishing towards 100). */
+    practiceGain: 35,
+    /** Relax: fresh boost on next shoot's pace & chemistry; practiced dialogue fades. */
+    relaxFresh: 0.12,
+    relaxDialogueKeep: 0.6,
+    clubBond: 25,
+    /** Hidden pair chemistry range, added around 50. */
+    pairChemistry: [-25, 35] as [number, number],
+    /** Learning curve: + per previous shoot of the scene, capped. */
+    retakeBonus: 6,
+    retakeBonusCap: 2,
+    cinematographerBase: 8,
+    cinematographerRetake: 1.5,
+    /** Multipliers. */
+    starBubbleBase: 0.85,
+    starBubbleRange: 0.3,
+    sceneFitBase: 0.75,
+    sceneFitRange: 0.5,
+    setFitBase: 0.7,
+    setFitRange: 0.6,
+    focusBoost: 1.2,
+    focusOther: 0.92,
+    /** "Inspired that day": per-meter noise ± this share. */
+    noise: 0.08,
+    /** Meters ease towards 100 above the knee. */
+    softCapKnee: 70,
+    softCapScale: 40,
+    /** Bubbles are roughly this many points each. */
+    bubbleSize: 5,
+    /** Version shaping. */
+    versionShape: {
+      pace: { pace: 1.15, chemistry: 0.88, dialogue: 0.95 },
+      chemistry: { pace: 0.88, chemistry: 1.15, dialogue: 0.95 },
+      rough: { pace: 0.7, chemistry: 0.72, dialogue: 0.7 },
+    },
+    /** How each tone values the three meters for the take score. */
+    toneWeights: {
+      thrill: { pace: 0.5, chemistry: 0.2, dialogue: 0.3 },
+      scary: { pace: 0.45, chemistry: 0.15, dialogue: 0.4 },
+      romantic: { pace: 0.15, chemistry: 0.55, dialogue: 0.3 },
+      happy: { pace: 0.3, chemistry: 0.35, dialogue: 0.35 },
+      sad: { pace: 0.15, chemistry: 0.35, dialogue: 0.5 },
+      calm: { pace: 0.2, chemistry: 0.3, dialogue: 0.5 },
+    },
+    /** Filler is shot in one block at wrap: one week, mediocre. */
+    fillerScore: 45,
   },
 } as const;
 

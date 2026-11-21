@@ -70,7 +70,7 @@ export function startFilm(p: Profile, contractId: string, directorId: string): S
     scenes: [],
     music: 'none',
     ledger: [],
-    calendar: { shootDays: 0, postDays: 0 },
+    calendar: { shootWeeks: 0, postWeeks: 0 },
     casting: {},
     rejected: [],
     fillerShot: false,

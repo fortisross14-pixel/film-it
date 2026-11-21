@@ -90,14 +90,25 @@ new phase playable in the browser.
 - Casting UI: role list, actor cards with procedural cartoon faces (`Face`; commissioned art
   plugs into `actor.portrait`), budget, requirements, sign the cast → shooting.
 
-## Milestone 4 — Shooting phase
+## Milestone 4 — Shooting phase (done)
 
-- Per scene: pick the set (fit for the scene's tone and actions), cast walks onto the iso set,
-  bubbles pop for a few seconds filling Pace / Chemistry / Dialogue meters. Inputs: actor
-  skills for the beats, acting, set fit, director, traits (one-take, method), retake number.
-- 3 versions per shoot (best pace, best chemistry, a bad one). Choose one or reshoot.
-- Schedule: shooting days per take, weeks calendar, crew cost per day, set rental, lateness.
-- Shooting UI: scene list, set picker, animated tableau with bubbles, version picker, calendar.
+- Weekly loop (`shooting.ts`): each production week is one activity, costs crew money and
+  counts toward the deadline:
+  - **Practice scene X**: +pace and +dialogue prep for that scene (diminishing), light fatigue.
+  - **Club meetup**: +cast bond (chemistry).
+  - **Relax**: −fatigue, fresh boost to the next shoot's pace & chemistry, practiced lines fade.
+  - **Shoot scene X**: pick set + focus (pace / chemistry / dialogue). Adds set rental and stunts.
+- Bubble inputs: focus; actors (star power → more bubbles, skills for their actions, acting,
+  traits: one-take, method, charming, diva); fatigue; hidden pair chemistry (revealed the
+  first time a pair shoots together); cast bond; practice; director (affinity, Cinematographer);
+  scene↔genre alignment; set alignment; retake learning; ±8% "inspired that day" noise.
+  Meters ease towards 100 above 70 so stacked bonuses still separate.
+- Each shoot yields 3 versions (pace cut, chemistry cut, rough cut); take score weights the
+  meters by the scene's tone. Use one, or try again another week. All takes are stored.
+- Wrap shoots the filler in one block (1 week) and moves to post.
+- UI: calendar, scene list, set picker with iso preview and fit, focus, expected meters with
+  factor chips, cast fatigue/bond/discovered chemistry, animated stage with bubbles over the
+  actors, version picker, log.
 
 ## Milestone 5 — Post-production
 

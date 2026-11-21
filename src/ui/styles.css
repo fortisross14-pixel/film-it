@@ -211,3 +211,39 @@ button.icon { min-width: 36px; padding: 0 8px; }
   .scene-cards { grid-template-columns: 1fr; }
   .char { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---- Shooting ---- */
+.shoot { display: grid; gap: 12px; }
+.calendar .weeks { display: flex; gap: 3px; margin-top: 8px; flex-wrap: wrap; }
+.wk { width: 18px; height: 10px; border-radius: 3px; background: var(--panel-2); }
+.wk.used { background: var(--accent); }
+.wk.late { outline: 1px solid var(--bad); }
+.wk.used.late { background: var(--bad); }
+.tone-dot { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+.tone-dot.t-happy { background: #f4d35e; } .tone-dot.t-sad { background: #7aa6d6; } .tone-dot.t-thrill { background: #ee6c4d; }
+.tone-dot.t-calm { background: #9fd8b5; } .tone-dot.t-romantic { background: #f28dbb; } .tone-dot.t-scary { background: #a78bfa; }
+.shoot-setup { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 8px 0; }
+.factor-chips { margin-top: 8px; }
+.factor-chips .tag { text-transform: none; letter-spacing: 0; }
+.bar.m-pace > span { background: #ee6c4d; }
+.bar.m-chemistry > span { background: #f28dbb; }
+.bar.m-dialogue > span { background: #7aa6d6; }
+.bar.fatigue { width: 120px; margin-top: 4px; }
+.bar.fatigue > span { background: var(--bad); }
+.cast-row { margin: 6px 0; }
+.log p { margin: 2px 0; }
+.script-side button.wide { margin-bottom: 6px; text-align: left; }
+.stage-card { display: grid; gap: 10px; }
+.stage { position: relative; background: radial-gradient(ellipse at center, #2e2a40, #16141d); border-radius: 12px; padding: 10px; overflow: hidden; }
+.stage-actors { position: absolute; inset: 0; pointer-events: none; }
+.stage-actor { position: absolute; bottom: 18%; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; text-shadow: 0 1px 2px #000; }
+.bubble {
+  position: absolute; bottom: 45%; transform: translateX(-50%); padding: 2px 8px; border-radius: 999px;
+  font-weight: 700; font-size: 0.85rem; color: #111; animation: rise 0.7s ease-out forwards;
+}
+.bubble.m-pace { background: #ee6c4d; } .bubble.m-chemistry { background: #f28dbb; } .bubble.m-dialogue { background: #7aa6d6; }
+@keyframes rise { from { opacity: 0; translate: 0 10px; } 20% { opacity: 1; } to { opacity: 0; translate: 0 -70px; } }
+.stage-meters .weight { grid-template-columns: 90px 1fr 40px; font-size: 1rem; }
+.stage-meters .bar { height: 12px; }
+.version.v-rough { opacity: 0.85; }
+@media (max-width: 760px) { .shoot-setup { grid-template-columns: 1fr; } }

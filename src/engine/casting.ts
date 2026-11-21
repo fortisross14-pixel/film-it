@@ -13,6 +13,7 @@ import { directorById } from './data/directors';
 import { affinityBonus, specialtyScale } from './director';
 import { withRng } from './profile';
 import { screenTime, spent } from './script';
+import { initShooting } from './shooting';
 
 export type CastResult = { ok: true; profile: Profile } | { ok: false; reason: string };
 const fail = (reason: string): CastResult => ({ ok: false, reason });
@@ -245,6 +246,6 @@ export function finishCasting(p: Profile): CastResult {
   const score = castingScore(film, directorById(film.directorId)).total;
   return {
     ok: true,
-    profile: { ...p, activeFilm: { ...film, roles, ledger, phase: 'shooting', castingScore: score, casting: {} } },
+    profile: { ...p, activeFilm: { ...film, roles, ledger, phase: 'shooting', castingScore: score, casting: {}, shooting: initShooting({ ...film, roles }) } },
   };
 }

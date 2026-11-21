@@ -227,21 +227,59 @@ export interface Beat {
   targetId?: string;
 }
 
-export interface TakeParams {
-  coverage: 'simple' | 'standard' | 'elaborate';
-  rehearsal: 'none' | 'short' | 'full';
-  tone: 'restrained' | 'balanced' | 'intense';
-  special: 'none' | 'stunts' | 'extras';
-}
+export type Meter = 'pace' | 'chemistry' | 'dialogue';
+export type MeterMap = Record<Meter, number>;
+
+/** Which cut of a shoot: favouring pace, favouring chemistry, or the rough one. */
+export type TakeVersion = 'pace' | 'chemistry' | 'rough';
 
 export interface Take {
   id: string;
   sceneId: string;
   setId: string;
-  params: TakeParams;
+  focus: Meter;
+  version: TakeVersion;
+  meters: MeterMap;
   score: number;
-  daysUsed: number;
+  week: number;
   feedback: string;
+}
+
+/** One bubble popping during a shoot (for the animation). t is 0–1 through the shoot. */
+export interface Bubble {
+  t: number;
+  meter: Meter;
+  value: number;
+  roleId?: string;
+}
+
+/** A shoot waiting for the player to pick a version or try again. */
+export interface PendingShoot {
+  sceneId: string;
+  setId: string;
+  focus: Meter;
+  bubbles: Bubble[];
+  meters: MeterMap;
+  versions: Take[];
+  /** Pairs whose hidden chemistry this shoot revealed. */
+  revealed: string[];
+}
+
+export interface ShootingState {
+  /** Fatigue per role, 0–100. */
+  fatigue: Record<string, number>;
+  /** Cast bond from club meetups, 0–100. */
+  bond: number;
+  /** Fresh boost from relaxing, consumed by the next shoot (0–1). */
+  fresh: number;
+  /** Practice per scene, 0–100 each. */
+  practice: Record<string, { pace: number; dialogue: number }>;
+  /** Number of shoots per scene (learning curve). */
+  shoots: Record<string, number>;
+  /** Revealed hidden chemistry per actor pair key. */
+  revealedPairs: Record<string, number>;
+  pending?: PendingShoot;
+  log: { week: number; text: string }[];
 }
 
 export type PolishTier = 'none' | 'basic' | 'pro' | 'premium';
@@ -274,9 +312,10 @@ export interface LedgerEntry {
   phase: FilmPhase;
 }
 
+/** Production weeks used (shoot + post share the contract deadline). */
 export interface Calendar {
-  shootDays: number;
-  postDays: number;
+  shootWeeks: number;
+  postWeeks: number;
 }
 
 export interface FilmResults {
@@ -309,6 +348,7 @@ export interface Film {
   /** Actor ids rejected anywhere in this film: gone for this film. */
   rejected: string[];
   fillerShot: boolean;
+  shooting?: ShootingState;
   /** Script quality locked in when the script is finished. */
   scriptQuality?: number;
   castingScore?: number;
