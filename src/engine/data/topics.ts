@@ -30,7 +30,7 @@ export const TOPICS: Topic[] = [
     genreFit: gm({ action: 100, comedy: 65, drama: 60, fantasy: 60, thriller: 55, romance: 30, scifi: 35, horror: 20 }) },
   { id: 'boxing', name: 'Boxing', packId: 'fight', sceneTypes: ['bigFight'], setIds: ['boxingRing'],
     genreFit: gm({ drama: 95, action: 85, comedy: 45, romance: 45, thriller: 40, horror: 10, scifi: 10, fantasy: 10 }) },
-  { id: 'military', name: 'Military', packId: 'fight', sceneTypes: ['battlefield'], setIds: ['barracks'],
+  { id: 'military', name: 'Military', packId: 'fight', sceneTypes: ['battlefield'], setIds: ['warField'],
     genreFit: gm({ action: 95, drama: 85, thriller: 75, scifi: 55, horror: 40, comedy: 35, romance: 30, fantasy: 20 }) },
   // Prestige
   { id: 'periodDrama', name: 'Period Drama', packId: 'prestige', sceneTypes: ['ballroom'], setIds: ['manor'],

@@ -4,6 +4,7 @@ import { ContractCard } from '../components/ContractCard';
 import { directorById } from '../../engine/data/directors';
 import { abandonFilm } from '../../engine/profile';
 import type { FilmPhase } from '../../engine/types';
+import { ScriptEditor } from './ScriptEditor';
 
 const PHASES: { id: FilmPhase; label: string }[] = [
   { id: 'script', label: 'Script' },
@@ -43,11 +44,14 @@ export function ProductionScreen() {
             </li>
           ))}
         </ol>
+        {film.phase === 'script' ? (
+          <ScriptEditor />
+        ) : (
         <div className="production-body">
           <div className="card placeholder">
             <h3>{PHASES[phaseIdx]?.label} phase</h3>
             <p className="muted">
-              The film starts as {film.runtime} minutes of filler. The script editor arrives in Milestone 2.
+              Script locked (quality {film.scriptQuality}). The {PHASES[phaseIdx]?.label.toLowerCase()} phase arrives in the next milestone.
             </p>
           </div>
           <div className="brief-side">
@@ -55,6 +59,7 @@ export function ProductionScreen() {
             <ContractCard c={film.contract} />
           </div>
         </div>
+        )}
       </div>
     </div>
   );

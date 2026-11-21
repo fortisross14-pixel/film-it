@@ -9,6 +9,7 @@ import { SETS } from '../src/engine/data/sets';
 import { TOPICS, TOPIC_PACKS } from '../src/engine/data/topics';
 import { DIRECTORS } from '../src/engine/data/directors';
 import { describeHardReq, money } from '../src/engine/format';
+import { applyDelivery, letterFor, satisfaction } from '../src/engine/grade';
 
 function memoryStore(): KeyValueStore {
   const m = new Map<string, string>();
@@ -34,6 +35,19 @@ describe('content', () => {
     for (const s of SETS) Object.keys(s.sceneFit).forEach((id) => expect(sceneIds.has(id), `${s.id}:${id}`).toBe(true));
     for (const p of TOPIC_PACKS) p.topicIds.forEach((id) => expect(topicIds.has(id), id).toBe(true));
     for (const st of SCENE_TYPES) if (st.topicId) expect(topicIds.has(st.topicId)).toBe(true);
+  });
+
+  it('applies delivery effects after weighting', () => {
+    const normal = { late: 1, overBudget: 1 };
+    expect(applyDelivery(90, 0, 0, normal).final).toBe(90);
+    expect(applyDelivery(90, 1, 0, normal).final).toBe(88); // slightly late
+    expect(applyDelivery(90, 2, 0, normal).final).toBe(85); // a bit late
+    expect(applyDelivery(90, 10, 0, normal).final).toBe(8); // very late
+    expect(applyDelivery(90, 2, 0, { late: 1.6, overBudget: 1 }).final).toBeLessThan(85);
+    expect(applyDelivery(90, 0, 10, normal).final).toBe(85);
+    expect(applyDelivery(90, 0, -20, normal).final).toBe(90);
+    expect(letterFor(88)).toBe('B');
+    expect(satisfaction({ boxOffice: 100, public: 50, critics: 0, awards: 0 }, { boxOffice: 0.5, public: 0.5, critics: 0, awards: 0 })).toBe(75);
   });
 
   it('expectation weights sum to 1', () => {

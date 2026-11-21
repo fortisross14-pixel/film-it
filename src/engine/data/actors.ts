@@ -4,8 +4,27 @@ import { makeId } from '../rng';
 import { TUNING } from '../tuning';
 import { GENRE_IDS } from './genres';
 
-const FIRST = ['Mila', 'Jonah', 'Priya', 'Theo', 'Sana', 'Lucas', 'Ines', 'Omar', 'Hana', 'Felix', 'Nora', 'Dev', 'Clara', 'Kenji', 'Zoe', 'Rafael', 'Ayla', 'Bruno', 'Lena', 'Malik', 'Esme', 'Tomas', 'Yara', 'Hugo', 'Iris', 'Caleb', 'Freya', 'Nico', 'Leila', 'Owen'];
-const LAST = ['Hart', 'Okafor', 'Varga', 'Moreau', 'Sato', 'Quinn', 'Albescu', 'Brandt', 'Castell', 'Dunmore', 'Ekwueme', 'Ferro', 'Galloway', 'Halvorsen', 'Ivers', 'Jansen', 'Kowal', 'Lindgren', 'Marchetti', 'Novak', 'Ortega', 'Pryce', 'Rahimi', 'Stroud', 'Tanaka', 'Underwood', 'Vance', 'Whitlock', 'Yilmaz', 'Zeller'];
+// Common everyday names ("John Smith", "Hannah Myers").
+const COMMON_FIRST = ['John', 'Chris', 'Hannah', 'Sarah', 'Mike', 'Emily', 'David', 'Laura', 'James', 'Anna', 'Tom', 'Kate', 'Paul', 'Lisa', 'Mark', 'Rachel', 'Dan', 'Megan', 'Steve', 'Julia', 'Ben', 'Amy', 'Sam', 'Nina'];
+const COMMON_LAST = ['Smith', 'Mills', 'Myers', 'Johnson', 'Brown', 'Taylor', 'Walker', 'Hall', 'Young', 'King', 'Wright', 'Green', 'Baker', 'Carter', 'Turner', 'Parker', 'Cooper', 'Ward', 'Price', 'Bell', 'Reed', 'Hayes', 'Fox', 'Lane'];
+// Syllables for totally random names ("Zarvo Quillent").
+const SYL_A = ['Za', 'Ko', 'Mir', 'Vel', 'Tor', 'Lu', 'Bri', 'Ost', 'Fen', 'Ri', 'Dax', 'Yo', 'Quil', 'Sev', 'Ar', 'Ném'];
+const SYL_B = ['ro', 'lin', 'ka', 'vo', 'ett', 'is', 'ana', 'den', 'ux', 'ari', 'el', 'ova', 'ent', 'ick', 'yn', 'oss'];
+// Parody-famous names. Assigned to legendary and some epic cards, each used once per pool.
+export const FAMOUS_NAMES = [
+  'Leonardo DiBario', 'Jennifer Balliston', 'Brad Pitts', 'Meryl Streak', 'Tom Hanxs', 'Scarlett Johanssen',
+  'Denzel Washingtown', 'Natalie Portmans', 'Keanu Leaves', 'Julia Roberds', 'Morgan Freedman', 'Angelina Jolly',
+  'Will Smit', 'Emma Stoned', 'Samuel L. Jacksun', 'Nicole Kidmon', 'Robert Downey Jnr.', 'Cate Blanchet',
+];
+
+type NameKind = 'famous' | 'common' | 'random';
+
+function makeName(rng: Rng, kind: Exclude<NameKind, 'famous'>): string {
+  if (kind === 'common') return `${rng.pick(COMMON_FIRST)} ${rng.pick(COMMON_LAST)}`;
+  const part = () => rng.pick(SYL_A) + rng.pick(SYL_B) + (rng.chance(0.4) ? rng.pick(SYL_B) : '');
+  return `${part()} ${part()}`;
+}
+
 const TRAITS: ActorTrait[] = ['method', 'diva', 'charming', 'oneTake'];
 const AGES: AgeBracket[] = ['young', 'adult', 'veteran'];
 
@@ -14,10 +33,17 @@ const inRange = (rng: Rng, [a, b]: readonly [number, number]) => rng.int(a, b);
 export function generateActor(rng: Rng, usedNames: Set<string>, forcedRarity?: Rarity): Actor {
   const t = TUNING.actors;
   const rarity: Rarity = forcedRarity ?? rng.weighted(t.rarityOdds);
+  const unusedFamous = FAMOUS_NAMES.filter((n) => !usedNames.has(n));
+  const wantsFamous = rarity === 'legendary' || (rarity === 'epic' && rng.chance(0.5));
+  const famous = wantsFamous && unusedFamous.length > 0;
   let name = '';
-  for (let i = 0; i < 50; i++) {
-    name = `${rng.pick(FIRST)} ${rng.pick(LAST)}`;
-    if (!usedNames.has(name)) break;
+  if (famous) name = rng.pick(unusedFamous);
+  else {
+    const kind = rng.chance(0.6) ? 'common' : 'random';
+    for (let i = 0; i < 50; i++) {
+      name = makeName(rng, kind);
+      if (!usedNames.has(name)) break;
+    }
   }
   usedNames.add(name);
 
@@ -41,7 +67,9 @@ export function generateActor(rng: Rng, usedNames: Set<string>, forcedRarity?: R
     if (!traits.includes(second)) traits.push(second);
   }
 
-  return { id: makeId('act', rng), name, starPower, acting, genreRange, rarity, traits, age: rng.pick(AGES) };
+  const actor: Actor = { id: makeId('act', rng), name, starPower, acting, genreRange, rarity, traits, age: rng.pick(AGES) };
+  if (famous) actor.famous = true;
+  return actor;
 }
 
 export function generateActorPool(rng: Rng, size = TUNING.actors.poolSize): Actor[] {

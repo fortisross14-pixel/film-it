@@ -4,13 +4,13 @@ import { genreName } from '../../engine/data/genres';
 import { describeBonus, describeHardReq, money } from '../../engine/format';
 
 const WEIGHT_LABELS = {
-  schedule: 'On time',
-  budget: 'On budget',
   boxOffice: 'Box office',
   public: 'Public',
   critics: 'Critics',
   awards: 'Awards',
 } as const;
+
+const strictLabel = (s: number) => (s > 1.2 ? 'strict' : s < 0.9 ? 'lenient' : 'normal');
 
 export function Stars({ n }: { n: number }) {
   return (
@@ -63,6 +63,11 @@ export function ContractCard({ c, selected, onSelect }: { c: Contract; selected?
           </div>
         ))}
       </div>
+      <p className="small">
+        Late / over budget: <span className={c.delivery.late > 1.2 ? 'bad' : 'muted'}>{strictLabel(c.delivery.late)}</span>
+        {' / '}
+        <span className={c.delivery.overBudget > 1.2 ? 'bad' : 'muted'}>{strictLabel(c.delivery.overBudget)}</span>
+      </p>
       <p className="muted small">Box office target {money(c.boxOfficeTarget)}</p>
       <p className="reward">Reward: {c.rewards.reputation} rep · {c.rewards.credits} credits</p>
     </div>

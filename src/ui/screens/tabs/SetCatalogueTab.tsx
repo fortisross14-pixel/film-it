@@ -4,6 +4,7 @@ import { SETS } from '../../../engine/data/sets';
 import { sceneTypeById } from '../../../engine/data/sceneTypes';
 import { buySet, reputationTier, setUnlockText } from '../../../engine/progression';
 import { money } from '../../../engine/format';
+import { IsoSet } from '../../components/IsoSet';
 
 export function SetCatalogueTab() {
   const p = useProfile();
@@ -29,7 +30,10 @@ export function SetCatalogueTab() {
                 <h3>{s.name}</h3>
                 <span className="tag">{money(s.dayCost)}/day</span>
               </div>
-              <p className="small muted">{s.tags.join(' · ')}</p>
+              <IsoSet set={s} extras={Math.min(s.extrasCapacity, 60)} />
+              <p className="small muted">
+                {s.footprint.w}×{s.footprint.d} {s.style} · up to {s.extrasCapacity} extras · {s.tags.filter((t) => t !== 'interior' && t !== 'exterior').join(' · ')}
+              </p>
               <p className="small">Best for: {best.join(', ')}</p>
               {!unlocked && <p className="small">🔒 {setUnlockText(s)}</p>}
               {buyable && s.unlock.kind === 'credits' && (

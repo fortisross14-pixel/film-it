@@ -15,7 +15,7 @@ new phase playable in the browser.
 
 ---
 
-## Milestone 1 — Foundation, content and the base menu
+## Milestone 1 — Foundation, content and the base menu (done)
 
 - Project scaffold: Vite + React + TS, Vitest, GitHub Pages deploy workflow.
 - Core types for every entity in the data model (Contract, Director, Topic,
@@ -34,7 +34,20 @@ new phase playable in the browser.
   Directors, Topic packs, Set catalogue, Filmography, Trophy room). Choosing a
   brief + director starts a Film and moves it to the Script phase (placeholder).
 
-## Milestone 2 — Script phase
+## Design updates (after Milestone 1 review)
+
+- Sets are low-poly isometric cube dioramas with a grid footprint (2×2 house interior
+  with walls, 4×10 War Field full of extras, green-screen chroma stage, …), a style
+  (interior / exterior / chroma) and an extras capacity. Rendered in SVG (`IsoSet`).
+- Actors are cartoon faces. Commissioned art will plug into `Actor.portrait`; until then a
+  procedural cartoon face (Milestone 3). Names mix common ("John Smith"), random and
+  parody-famous ("Leonardo DiBario", "Jennifer Balliston").
+- On time and on budget are effects, not weighted grade components: studio satisfaction is
+  weighted from box office / public / critics / awards, then late and over-budget penalties
+  are subtracted on a curve (90 → 88 slightly late, → 85 a bit late, → 8 very late).
+  Each archetype has a strictness multiplier (Tight ship is strictest). See `grade.ts`.
+
+## Milestone 2 — Script phase (done)
 
 - `script.ts`: runtime, filler timeline, roles (types, billing, limits),
   scene placement (type, participants, length, intensity, act derived from

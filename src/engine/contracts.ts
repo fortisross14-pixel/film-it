@@ -128,6 +128,7 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
     hardReqs,
     bonusGoals,
     weights: { ...TUNING.weights[archetype] },
+    delivery: { ...TUNING.delivery[archetype] },
     boxOfficeTarget,
     difficulty,
     rewards,

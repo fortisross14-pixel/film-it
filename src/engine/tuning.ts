@@ -1,11 +1,11 @@
 // All balance numbers live here. Values are first guesses; tune at the end.
 // Money is in $K (thousands of dollars) everywhere in the engine.
 
-import type { Archetype, ExpectationWeights, Rarity } from './types';
+import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from './types';
 
 export const TUNING = {
   saveSlots: 3,
-  saveVersion: 1,
+  saveVersion: 2,
 
   contracts: {
     boardSize: 4,
@@ -37,14 +37,30 @@ export const TUNING = {
     rewardBase: { reputation: 40, credits: 60 },
   },
 
-  /** Expectation profiles. Each sums to 1. */
+  /** Expectation profiles: weights for studio satisfaction. Each sums to 1. */
   weights: {
-    blockbuster: { schedule: 0.05, budget: 0.1, boxOffice: 0.4, public: 0.3, critics: 0.1, awards: 0.05 },
-    award: { schedule: 0.075, budget: 0.075, boxOffice: 0.15, public: 0.0, critics: 0.3, awards: 0.4 },
-    crowd: { schedule: 0.1, budget: 0.1, boxOffice: 0.3, public: 0.4, critics: 0.05, awards: 0.05 },
-    indie: { schedule: 0.1, budget: 0.15, boxOffice: 0.05, public: 0.1, critics: 0.35, awards: 0.25 },
-    tightship: { schedule: 0.35, budget: 0.35, boxOffice: 0.1, public: 0.1, critics: 0.05, awards: 0.05 },
+    blockbuster: { boxOffice: 0.5, public: 0.35, critics: 0.1, awards: 0.05 },
+    award: { boxOffice: 0.15, public: 0.05, critics: 0.35, awards: 0.45 },
+    crowd: { boxOffice: 0.35, public: 0.5, critics: 0.1, awards: 0.05 },
+    indie: { boxOffice: 0.1, public: 0.1, critics: 0.45, awards: 0.35 },
+    tightship: { boxOffice: 0.3, public: 0.3, critics: 0.2, awards: 0.2 },
   } satisfies Record<Archetype, ExpectationWeights>,
+
+  /** How harshly each archetype applies the delivery penalties (× the curves below). */
+  delivery: {
+    blockbuster: { late: 1.0, overBudget: 0.8 },
+    award: { late: 0.8, overBudget: 0.8 },
+    crowd: { late: 1.0, overBudget: 1.0 },
+    indie: { late: 1.0, overBudget: 1.3 },
+    tightship: { late: 1.6, overBudget: 1.6 },
+  } satisfies Record<Archetype, DeliveryStrictness>,
+
+  /**
+   * Penalty curves: [x, points off satisfaction], linearly interpolated, capped at the last point.
+   * Late: x = weeks late. Over budget: x = % over budget.
+   */
+  latePenalty: [[0, 0], [1, 2], [2, 5], [3, 10], [4, 18], [6, 35], [8, 60], [10, 82]] as [number, number][],
+  overBudgetPenalty: [[0, 0], [5, 2], [10, 5], [20, 12], [35, 30], [50, 60], [75, 82]] as [number, number][],
 
   /** Archetypes offered by the generator (MVP: 3; set to all 5 later if wanted). */
   generatorArchetypes: ['blockbuster', 'award', 'indie', 'crowd', 'tightship'] as Archetype[],
@@ -78,6 +94,52 @@ export const TUNING = {
 
   directors: {
     maxLevel: 10,
+    /** Genre affinity effect on every phase's quality (points). */
+    affinityMatch: 5,
+    affinityClose: 0,
+    affinityFar: -4,
+    /** Genre masters: bonus in their genre, small bonus everywhere else. */
+    masterGenreBonus: 8,
+    masterOtherBonus: 2,
+    /** Specialty bonus grows per level: base × (1 + perLevel × (level - 1)). */
+    specialtyPerLevel: 0.08,
+    writerQualityBonus: 6,
+    writerCostDiscount: 0.12,
+  },
+
+  script: {
+    minRuntime: 60,
+    maxRuntime: 180,
+    sceneMinMinutes: 1,
+    sceneMaxMinutes: 10,
+    /** Act boundaries as share of runtime. */
+    actSplits: [0.25, 0.75],
+    roleLimits: { main: [1, 1], coMain: [0, 1], villain: [0, 1], romanticInterest: [0, 1], sidekick: [0, 2], supporting: [0, 4] },
+    /** Coverage: score at the knee and the knee share (diminishing returns above it). */
+    coverageKnee: 0.8,
+    coverageKneeScore: 85,
+    /** Structure points. */
+    strongSceneFit: 60,
+    actStrongPoints: 20,
+    climaxPoints: 25,
+    gapPoints: 15,
+    gapMaxMinutes: 12,
+    gapPenaltyEach: 4,
+    /** Variety. */
+    varietyTarget: 6,
+    repeatFreeCount: 2,
+    repeatPenaltyEach: 8,
+    /** Topic fit multiplier range (topic genreFit 0 → min, 100 → max). No topic → noTopic. */
+    topicMultMin: 0.7,
+    topicMultMax: 1.15,
+    noTopicMult: 0.8,
+    secondaryGenreWeight: 0.3,
+    /** Role balance: share of runtime each billing should be on screen. */
+    leadScreenShare: 0.25,
+    secondScreenShare: 0.1,
+    unusedRolePenalty: 15,
+    /** Weights of the five quality components. */
+    qualityWeights: { coverage: 0.25, structure: 0.2, variety: 0.15, fit: 0.25, roles: 0.15 },
   },
 } as const;
 

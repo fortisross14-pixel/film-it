@@ -17,16 +17,22 @@ export type GenreMap = Record<GenreId, number>;
 
 export type Archetype = 'blockbuster' | 'award' | 'crowd' | 'indie' | 'tightship';
 
-export type GradeComponent =
-  | 'schedule'
-  | 'budget'
-  | 'boxOffice'
-  | 'public'
-  | 'critics'
-  | 'awards';
+/** Weighted components of studio satisfaction. */
+export type GradeComponent = 'boxOffice' | 'public' | 'critics' | 'awards';
 
-/** Weights for the A–F grade. Sum to 1. */
+/** Weights for studio satisfaction. Sum to 1. */
 export type ExpectationWeights = Record<GradeComponent, number>;
+
+/**
+ * On time and on budget are not weighted components: they are effects applied
+ * after weighting. A 90-satisfaction film delivered slightly late drops to ~88,
+ * a bit more late ~85, very late can fall to single digits.
+ * Severity multiplies the penalty curves in tuning.ts.
+ */
+export interface DeliveryStrictness {
+  late: number;
+  overBudget: number;
+}
 
 export type RoleType =
   | 'main'
@@ -91,10 +97,20 @@ export interface TopicPack {
   cost: number; // credits
 }
 
+/** How a set looks as a low-poly isometric diorama. */
+export type SetStyle = 'interior' | 'exterior' | 'chroma';
+
 export interface FilmSet {
   id: string;
   name: string;
   tags: string[]; // topic ids, mood, interior/exterior
+  style: SetStyle;
+  /** Grid footprint in iso cubes: width × depth (e.g. 2×2 house room, 4×10 war field). */
+  footprint: { w: number; d: number };
+  /** How many crowd extras the set can hold (for the Special: extras parameter). */
+  extrasCapacity: number;
+  /** Floor / wall colours for the diorama. */
+  palette: { floor: string; wall?: string; accent: string };
   /** Fit per scene type id, 0–100. Missing = default fit. */
   sceneFit: Record<string, number>;
   dayCost: number; // $K per shooting day
@@ -125,6 +141,10 @@ export interface Actor {
   rarity: Rarity;
   traits: ActorTrait[];
   age: AgeBracket;
+  /** Parody of a famous name ("Leonardo DiBario"). */
+  famous?: boolean;
+  /** Asset key for commissioned cartoon portrait art; undefined = procedural face. */
+  portrait?: string;
   /** Directors who discovered this actor (fee discount later). */
   discoveredBy?: string[];
 }
@@ -159,6 +179,7 @@ export interface Contract {
   hardReqs: HardRequirement[];
   bonusGoals: BonusGoal[];
   weights: ExpectationWeights;
+  delivery: DeliveryStrictness;
   /** Box office the studio expects, $K. */
   boxOfficeTarget: number;
   difficulty: number; // 1–5 stars
@@ -252,6 +273,8 @@ export interface Film {
   /** Casting state per role: redraws used and currently offered card ids. */
   casting: Record<string, { redraws: number; offered: string[]; rejected: string[] }>;
   fillerShot: boolean;
+  /** Script quality locked in when the script is finished. */
+  scriptQuality?: number;
   results?: FilmResults;
   grade?: Grade;
   gradeScore?: number;
