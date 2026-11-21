@@ -59,11 +59,14 @@ const stateOf = (film: Film): ShootingState => film.shooting ?? initShooting(fil
 
 export const weeksUsed = (film: Film) => film.calendar.shootWeeks + film.calendar.postWeeks;
 export const weeksLeft = (film: Film) => film.contract.deadlineWeeks - weeksUsed(film);
-export const crewWeekCost = (film: Film) => Math.round(Math.max(T().crewWeekMin, film.contract.budget * T().crewWeekShare));
+/** Budget Master discount on crew, sets and writing (1 = no discount). */
+export const budgetMult = (film: Film) => 1 - TUNING.directors.budgetDiscount * specialtyScale(directorById(film.directorId), 'budget', 1);
+
+export const crewWeekCost = (film: Film) => Math.round(Math.max(T().crewWeekMin, film.contract.budget * T().crewWeekShare) * budgetMult(film));
 
 export function shootWeekCost(film: Film, scene: Scene, set: FilmSet): number {
   const stunts = scene.beats.filter((b) => actionById(b.actionId).stunt).length;
-  return crewWeekCost(film) + set.dayCost * T().shootDaysPerWeek + Math.round(stunts * film.contract.budget * T().stuntShare);
+  return crewWeekCost(film) + Math.round(set.dayCost * T().shootDaysPerWeek * budgetMult(film)) + Math.round(stunts * film.contract.budget * T().stuntShare);
 }
 
 // ---------------- Fits ----------------
@@ -216,11 +219,13 @@ function makeBubbles(rng: Rng, meters: MeterMap, roleIds: string[]): Bubble[] {
 
 // ---------------- Week actions ----------------
 
-const addFatigue = (st: ShootingState, ids: string[], amount: number, film: Film) => {
+const addFatigue = (st: ShootingState, ids: string[], amountRaw: number, film: Film) => {
   const fatigue = { ...st.fatigue };
+  const amount = amountRaw;
+  const cut = 1 - TUNING.directors.scheduleFatigueCut * specialtyScale(directorById(film.directorId), 'schedule', 1);
   for (const id of ids) {
     const method = film.roles.find((r) => r.id === id)?.actor?.traits.includes('method');
-    fatigue[id] = clamp((fatigue[id] ?? 0) + amount + (method && amount === T().shootFatigue ? T().methodExtraFatigue : 0));
+    fatigue[id] = clamp((fatigue[id] ?? 0) + (amount + (method && amount === T().shootFatigue ? T().methodExtraFatigue : 0)) * cut);
   }
   return fatigue;
 };

@@ -125,29 +125,29 @@ export const SETS: FilmSet[] = [
   { id: 'rooftop', name: 'Rooftop', tags: ['exterior', 'urbanProfessional', 'crime'], dayCost: 45, style: 'exterior', footprint: { w: 3, d: 3 }, extrasCapacity: 6,
     palette: { floor: '#6b6f76', accent: '#e0a63b' },
    
-    unlock: { kind: 'credits', cost: 120, repTier: 1 },
+    unlock: { kind: 'credits', cost: 120 },
     toneFit: { happy: 65, sad: 70, thrill: 85, calm: 60, romantic: 90, scary: 55 } },
   { id: 'hospital', name: 'Hospital', tags: ['interior', 'smallTown', 'urbanProfessional'], dayCost: 35, style: 'interior', footprint: { w: 2, d: 3 }, extrasCapacity: 10,
     palette: { floor: '#d9e4e6', wall: '#f3f6f7', accent: '#3fa7a0' },
    
-    unlock: { kind: 'credits', cost: 120, repTier: 1 },
+    unlock: { kind: 'credits', cost: 120 },
     toneFit: { happy: 40, sad: 95, thrill: 60, calm: 70, romantic: 50, scary: 75 } },
   { id: 'forest', name: 'Forest', tags: ['exterior', 'smallTown', 'medieval'], dayCost: 30, style: 'exterior', footprint: { w: 4, d: 6 }, extrasCapacity: 20,
     palette: { floor: '#4f7a3a', accent: '#2f4f28' },
    
-    unlock: { kind: 'credits', cost: 150, repTier: 2 },
+    unlock: { kind: 'credits', cost: 150 },
     toneFit: { happy: 60, sad: 55, thrill: 80, calm: 70, romantic: 70, scary: 95 },
     actionFit: { scavenges: 60, duels: 60 } },
   { id: 'mansion', name: 'Mansion', tags: ['interior', 'crime', 'periodDrama'], dayCost: 65, style: 'interior', footprint: { w: 4, d: 4 }, extrasCapacity: 30,
     palette: { floor: '#5e3b2c', wall: '#bba68a', accent: '#7d2b3a' },
    
-    unlock: { kind: 'credits', cost: 220, repTier: 2 },
+    unlock: { kind: 'credits', cost: 220 },
     toneFit: { happy: 65, sad: 75, thrill: 70, calm: 70, romantic: 80, scary: 85 },
     actionFit: { ballDance: 80 } },
   { id: 'chromaStage', name: 'Green Screen Stage', tags: ['interior', 'future', 'epic'], dayCost: 80, style: 'chroma', footprint: { w: 3, d: 3 }, extrasCapacity: 40,
     palette: { floor: '#2fb34a', wall: '#2fb34a', accent: '#1f7a33' },
    
-    unlock: { kind: 'credits', cost: 300, repTier: 3 },
+    unlock: { kind: 'credits', cost: 300 },
     toneFit: { happy: 50, sad: 40, thrill: 85, calm: 40, romantic: 40, scary: 70 },
     actionFit: { dogfights: 90, arenaBattle: 80, leadsCharge: 80, boardsShip: 70 } },
 ];

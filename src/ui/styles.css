@@ -284,3 +284,12 @@ button.icon { min-width: 36px; padding: 0 8px; }
 .grade { font-size: 3.5rem; font-weight: 800; font-family: Georgia, serif; padding: 0 18px; border-radius: 12px; }
 .grade-A { color: #6fcf97; } .grade-B { color: #a3d977; } .grade-C { color: var(--accent); } .grade-D { color: #f2994a; } .grade-F { color: var(--bad); }
 .rewards { background: var(--panel-2); }
+
+/* ---- Careers ---- */
+.career-pill { background: #3a2f12; color: var(--accent); }
+.career-now { margin-bottom: 16px; border-color: var(--accent); }
+.profile-card { display: grid; gap: 6px; align-content: start; }
+.contract-wrap { display: grid; gap: 4px; }
+.fit-Genrematch, .fit-Yourgenre { color: var(--good); }
+.fit-Faroffgenre { color: var(--bad); }
+.cut-detail { padding: 6px 4px; }

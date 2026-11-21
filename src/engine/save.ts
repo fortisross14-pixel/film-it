@@ -23,7 +23,8 @@ export interface SlotSummary {
   slot: number;
   empty: boolean;
   name?: string;
-  reputation?: number;
+  career?: string;
+  careers?: number;
   credits?: number;
   films?: number;
   corrupt?: boolean;
@@ -66,7 +67,7 @@ export function listSlots(store = defaultStore()): SlotSummary[] {
     }
     const p = loadProfile(slot, store);
     if (!p) out.push({ slot, empty: false, corrupt: true });
-    else out.push({ slot, empty: false, name: p.name, reputation: p.reputation, credits: p.credits, films: p.filmography.length });
+    else out.push({ slot, empty: false, name: p.name, career: p.career?.directorId, careers: p.careers.length + (p.career ? 1 : 0), credits: p.credits, films: p.filmography.length });
   }
   return out;
 }

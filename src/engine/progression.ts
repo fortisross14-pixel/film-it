@@ -1,4 +1,5 @@
-// Progression: reputation tiers and unlock checks. Unlocks are global.
+// Progression: reputation tiers (per career), and everything bought with the bank's
+// credits — director profiles, topic packs and sets. Unlocks are global.
 
 import type { DirectorDef, FilmSet, Profile } from './types';
 import { TUNING } from './tuning';
@@ -6,7 +7,7 @@ import { DIRECTORS } from './data/directors';
 import { SETS } from './data/sets';
 import { TOPIC_PACKS } from './data/topics';
 
-/** Reputation tier, 1-based. */
+/** Reputation tier, 1-based. Higher tiers open bigger studios. */
 export function reputationTier(reputation: number): number {
   let tier = 1;
   TUNING.reputationTiers.forEach((min, i) => {
@@ -20,44 +21,10 @@ export function nextTierAt(reputation: number): number | undefined {
   return TUNING.reputationTiers.find((min) => min > reputation);
 }
 
+export const directorCost = (d: DirectorDef) => (d.unlock.kind === 'credits' ? d.unlock.cost : 0);
+
 export function directorUnlockText(d: DirectorDef): string {
-  switch (d.unlock.kind) {
-    case 'start':
-      return 'Available from the start';
-    case 'repTier':
-      return `Reach reputation tier ${d.unlock.tier}`;
-    case 'genreAwards':
-      return `Win ${d.unlock.wins} award${d.unlock.wins > 1 ? 's' : ''} with a ${d.unlock.genre} film`;
-  }
-}
-
-export function directorMeetsUnlock(d: DirectorDef, p: Profile): boolean {
-  switch (d.unlock.kind) {
-    case 'start':
-      return true;
-    case 'repTier':
-      return reputationTier(p.reputation) >= d.unlock.tier;
-    case 'genreAwards':
-      return (p.genreAwardWins[d.unlock.genre] ?? 0) >= d.unlock.wins;
-  }
-}
-
-/** Apply any unlocks the profile now qualifies for. Returns ids newly unlocked. */
-export function applyAutoUnlocks(p: Profile): { profile: Profile; newDirectors: string[] } {
-  const newDirectors = DIRECTORS.filter((d) => !p.unlocks.directors.includes(d.id) && directorMeetsUnlock(d, p)).map(
-    (d) => d.id,
-  );
-  if (!newDirectors.length) return { profile: p, newDirectors };
-  const directors = { ...p.directors };
-  for (const id of newDirectors) directors[id] = directors[id] ?? { id, level: 1, films: 0 };
-  return {
-    profile: { ...p, directors, unlocks: { ...p.unlocks, directors: [...p.unlocks.directors, ...newDirectors] } },
-    newDirectors,
-  };
-}
-
-export function isSetUnlocked(s: FilmSet, p: Profile): boolean {
-  return p.unlocks.sets.includes(s.id);
+  return d.unlock.kind === 'start' ? 'Starter profile' : `${d.unlock.cost} credits`;
 }
 
 export function setUnlockText(s: FilmSet): string {
@@ -65,22 +32,37 @@ export function setUnlockText(s: FilmSet): string {
     case 'start':
       return 'Starter set';
     case 'topic':
-      return `Comes with the topic pack that has this topic`;
+      return 'Comes with its topic pack';
     case 'credits':
-      return `${s.unlock.cost} credits · reputation tier ${s.unlock.repTier}`;
+      return `${s.unlock.cost} credits`;
   }
 }
 
 export type PurchaseResult = { ok: true; profile: Profile } | { ok: false; reason: string };
+
+export function buyDirector(p: Profile, directorId: string): PurchaseResult {
+  const d = DIRECTORS.find((x) => x.id === directorId);
+  if (!d) return { ok: false, reason: 'Unknown profile' };
+  if (p.unlocks.directors.includes(directorId)) return { ok: false, reason: 'Already unlocked' };
+  const cost = directorCost(d);
+  if (p.credits < cost) return { ok: false, reason: 'Not enough credits' };
+  return {
+    ok: true,
+    profile: {
+      ...p,
+      credits: p.credits - cost,
+      unlocks: { ...p.unlocks, directors: [...p.unlocks.directors, directorId] },
+      directors: { ...p.directors, [directorId]: p.directors[directorId] ?? { id: directorId, level: 1, films: 0 } },
+    },
+  };
+}
 
 export function buyTopicPack(p: Profile, packId: string): PurchaseResult {
   const pack = TOPIC_PACKS.find((x) => x.id === packId);
   if (!pack) return { ok: false, reason: 'Unknown pack' };
   if (p.unlocks.packs.includes(packId)) return { ok: false, reason: 'Already owned' };
   if (p.credits < pack.cost) return { ok: false, reason: 'Not enough credits' };
-  const topicSets = SETS.filter((s) => s.unlock.kind === 'topic' && pack.topicIds.includes(s.unlock.topicId)).map(
-    (s) => s.id,
-  );
+  const topicSets = SETS.filter((s) => s.unlock.kind === 'topic' && pack.topicIds.includes(s.unlock.topicId)).map((s) => s.id);
   return {
     ok: true,
     profile: {
@@ -101,10 +83,26 @@ export function buySet(p: Profile, setId: string): PurchaseResult {
   if (!s) return { ok: false, reason: 'Unknown set' };
   if (p.unlocks.sets.includes(setId)) return { ok: false, reason: 'Already unlocked' };
   if (s.unlock.kind !== 'credits') return { ok: false, reason: 'Not for sale' };
-  if (reputationTier(p.reputation) < s.unlock.repTier) return { ok: false, reason: `Needs reputation tier ${s.unlock.repTier}` };
   if (p.credits < s.unlock.cost) return { ok: false, reason: 'Not enough credits' };
   return {
     ok: true,
     profile: { ...p, credits: p.credits - s.unlock.cost, unlocks: { ...p.unlocks, sets: [...p.unlocks.sets, setId] } },
+  };
+}
+
+/** Everything still to buy and its total price: "unlock it all" progress. */
+export function unlockProgress(p: Profile): { owned: number; total: number; remainingCost: number } {
+  const items = [
+    ...DIRECTORS.map((d) => ({ owned: p.unlocks.directors.includes(d.id), cost: directorCost(d) })),
+    ...TOPIC_PACKS.map((x) => ({ owned: p.unlocks.packs.includes(x.id), cost: x.cost })),
+    ...SETS.filter((s) => s.unlock.kind === 'credits').map((s) => ({
+      owned: p.unlocks.sets.includes(s.id),
+      cost: s.unlock.kind === 'credits' ? s.unlock.cost : 0,
+    })),
+  ];
+  return {
+    owned: items.filter((i) => i.owned).length,
+    total: items.length,
+    remainingCost: items.filter((i) => !i.owned).reduce((a, i) => a + i.cost, 0),
   };
 }

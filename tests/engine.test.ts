@@ -1,7 +1,8 @@
 import { createRng } from '../src/engine/rng';
 import { generateBoard, generateContract } from '../src/engine/contracts';
 import { newProfile, refreshBoard, startFilm } from '../src/engine/profile';
-import { applyAutoUnlocks, buySet, buyTopicPack, reputationTier } from '../src/engine/progression';
+import { buyDirector, buySet, buyTopicPack, reputationTier, unlockProgress } from '../src/engine/progression';
+import { startCareer } from '../src/engine/career';
 import { deleteSlot, listSlots, loadProfile, saveProfile, type KeyValueStore } from '../src/engine/save';
 import { TUNING } from '../src/engine/tuning';
 import { ACTIONS, BASE_ACTIONS, GENRE_SIGNATURE_ACTIONS } from '../src/engine/data/actions';
@@ -106,44 +107,53 @@ describe('contracts', () => {
   });
 });
 
+/** A profile with a career started (board generated). */
+const careerProfile = (seed = 5, directorId = 'starterA') => {
+  const r = startCareer(newProfile('T', seed), directorId, 1);
+  if (!r.ok) throw new Error(r.reason);
+  return r.profile;
+};
+
 describe('profile & film start', () => {
-  it('creates a starting profile', () => {
+  it('creates a starting profile with no career yet', () => {
     const p = newProfile('Test', 123);
     expect(p.unlocks.directors).toEqual(['starterA', 'starterB']);
     expect(p.unlocks.topics).toHaveLength(4);
     expect(p.unlocks.sets).toHaveLength(8);
     expect(p.actorPool).toHaveLength(TUNING.actors.poolSize);
-    expect(p.contractBoard).toHaveLength(TUNING.contracts.boardSize);
+    expect(p.career).toBeUndefined();
+    expect(p.contractBoard).toHaveLength(0);
     expect(new Set(p.actorPool.map((a) => a.id)).size).toBe(p.actorPool.length);
   });
 
   it('is deterministic per seed', () => {
-    const a = newProfile('A', 99);
-    const b = newProfile('A', 99);
-    expect(a.contractBoard).toEqual(b.contractBoard);
-    expect(a.actorPool).toEqual(b.actorPool);
+    expect(careerProfile(99).contractBoard).toEqual(careerProfile(99).contractBoard);
+    expect(newProfile('A', 99).actorPool).toEqual(newProfile('A', 99).actorPool);
   });
 
-  it('starts a film from a contract', () => {
-    const p = newProfile('T', 5);
+  it('starts a film from a contract with the career director', () => {
+    const p = careerProfile();
     const c = p.contractBoard[0];
-    const r = startFilm(p, c.id, 'starterA');
+    const r = startFilm(p, c.id);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
+    expect(r.profile.activeFilm?.directorId).toBe('starterA');
     expect(r.profile.activeFilm?.phase).toBe('script');
     expect(r.profile.activeFilm?.runtime).toBe(c.runtime);
-    expect(r.profile.activeFilm?.scenes).toHaveLength(0);
     expect(r.profile.contractBoard.find((x) => x.id === c.id)).toBeUndefined();
-    expect(startFilm(r.profile, r.profile.contractBoard[0].id, 'starterA').ok).toBe(false);
+    expect(startFilm(r.profile, r.profile.contractBoard[0].id).ok).toBe(false);
+    expect(startFilm(p, c.id, 'starterB').ok).toBe(false); // not this career's director
   });
 
-  it('refuses locked directors', () => {
+  it('needs a career (or a director) to start a film', () => {
     const p = newProfile('T', 5);
-    expect(startFilm(p, p.contractBoard[0].id, 'writer').ok).toBe(false);
+    p.contractBoard = careerProfile().contractBoard;
+    expect(startFilm(p, p.contractBoard[0].id).ok).toBe(false);
+    expect(startFilm(p, p.contractBoard[0].id, 'writer').ok).toBe(false); // locked
   });
 
   it('refreshes the board', () => {
-    const p = newProfile('T', 5);
+    const p = careerProfile();
     const q = refreshBoard(p);
     expect(q.contractBoard).toHaveLength(TUNING.contracts.boardSize);
     expect(q.contractBoard[0].id).not.toBe(p.contractBoard[0].id);
@@ -157,17 +167,15 @@ describe('progression', () => {
     expect(reputationTier(99999)).toBe(TUNING.reputationTiers.length);
   });
 
-  it('unlocks directors by reputation tier', () => {
-    const p = { ...newProfile('T', 1), reputation: TUNING.reputationTiers[1] };
-    const { profile, newDirectors } = applyAutoUnlocks(p);
-    expect(newDirectors).toEqual(expect.arrayContaining(['writer', 'scout']));
-    expect(newDirectors).not.toContain('cinematographer');
-    expect(profile.directors.writer.level).toBe(1);
-  });
-
-  it('unlocks genre masters by awards', () => {
-    const p = { ...newProfile('T', 1), genreAwardWins: { horror: 1 } };
-    expect(applyAutoUnlocks(p).newDirectors).toContain('masterHorror');
+  it('buys director profiles with credits', () => {
+    const p = { ...newProfile('T', 1), credits: 1000 };
+    const r = buyDirector(p, 'masterScifi');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.profile.unlocks.directors).toContain('masterScifi');
+    expect(r.profile.credits).toBe(400);
+    expect(buyDirector(r.profile, 'masterScifi').ok).toBe(false);
+    expect(buyDirector({ ...p, credits: 10 }, 'budgetMaster').ok).toBe(false);
   });
 
   it('buys topic packs and their sets', () => {
@@ -182,11 +190,19 @@ describe('progression', () => {
     expect(buyTopicPack({ ...p, credits: 0 }, 'epic').ok).toBe(false);
   });
 
-  it('buys sets with credits and rep gate', () => {
+  it('buys sets with credits only', () => {
     const p = { ...newProfile('T', 1), credits: 1000 };
     expect(buySet(p, 'rooftop').ok).toBe(true);
-    expect(buySet(p, 'forest').ok).toBe(false); // tier 2
+    expect(buySet(p, 'forest').ok).toBe(true);
     expect(buySet(p, 'apartment').ok).toBe(false); // already owned
+    expect(buySet({ ...p, credits: 0 }, 'forest').ok).toBe(false);
+  });
+
+  it('tracks unlock-everything progress', () => {
+    const p = newProfile('T', 1);
+    const u = unlockProgress(p);
+    expect(u.owned).toBeGreaterThan(0);
+    expect(u.remainingCost).toBeGreaterThan(1000);
   });
 });
 

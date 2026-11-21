@@ -103,15 +103,20 @@ describe('premiere & delivery', () => {
     expect(f.results).toBeDefined();
     expect(f.grade).toMatch(/[A-F]/);
     expect(runPremiere(p).ok).toBe(false);
-    const rep = p.reputation, credits = p.credits, board = p.contractBoard.map((c) => c.id);
-    const q = okR(deliverFilm(p, 123));
+    const credits = p.credits, board = p.contractBoard.map((c) => c.id);
+    const r = deliverFilm(p, 123);
+    const q = okR(r);
     expect(q.activeFilm).toBeUndefined();
     expect(q.filmography).toHaveLength(1);
-    expect(q.filmography[0]).toMatchObject({ completedAt: 123, film: { phase: 'done', grade: f.grade } });
-    expect(q.reputation).toBe(rep + f.report!.rewards.reputation + f.report!.rewards.awardRep);
+    expect(q.filmography[0]).toMatchObject({ completedAt: 123, careerId: p.career!.id, film: { phase: 'done', grade: f.grade } });
     expect(q.credits).toBe(credits + f.report!.rewards.credits + f.report!.rewards.unspentCredits);
-    expect(q.directors[f.directorId].level).toBe(2);
-    expect(q.contractBoard.map((c) => c.id)).not.toEqual(board);
+    if (f.grade !== 'F') {
+      expect(q.career!.reputation).toBe(f.report!.rewards.reputation + f.report!.rewards.awardRep);
+      expect(q.career!.level).toBe(2);
+      expect(q.career!.films).toBe(1);
+      expect(q.directors[f.directorId].level).toBe(2);
+      expect(q.contractBoard.map((c) => c.id)).not.toEqual(board);
+    }
   });
   it('a cheap, well-reviewed film can reach festivals', () => {
     const f = premiereProfile('drama', 8000).activeFilm!;

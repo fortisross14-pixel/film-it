@@ -63,7 +63,7 @@ export type AgeBracket = 'young' | 'adult' | 'veteran';
 
 export type ActorTrait = 'method' | 'diva' | 'charming' | 'oneTake';
 
-export type Specialty = 'script' | 'casting' | 'shooting' | 'post' | 'genre';
+export type Specialty = 'script' | 'casting' | 'shooting' | 'post' | 'genre' | 'budget' | 'schedule' | 'festival';
 
 // ---------- Content (static catalogue) ----------
 
@@ -133,7 +133,7 @@ export interface FilmSet {
   actionFit?: Record<string, number>;
   dayCost: number; // $K per shooting day
   /** How the set is unlocked. */
-  unlock: { kind: 'start' } | { kind: 'topic'; topicId: string } | { kind: 'credits'; cost: number; repTier: number };
+  unlock: { kind: 'start' } | { kind: 'topic'; topicId: string } | { kind: 'credits'; cost: number };
 }
 
 export interface DirectorDef {
@@ -145,8 +145,7 @@ export interface DirectorDef {
   masterGenre?: GenreId;
   unlock:
     | { kind: 'start' }
-    | { kind: 'repTier'; tier: number }
-    | { kind: 'genreAwards'; genre: GenreId; wins: number };
+    | { kind: 'credits'; cost: number };
   blurb: string;
 }
 
@@ -395,7 +394,31 @@ export interface DirectorState {
 
 export interface FilmRecord {
   film: Film;
+  careerId?: string;
   completedAt: number; // ms timestamp
+}
+
+/**
+ * A career: one run with a director profile. Reputation (which opens higher-tier studios)
+ * and the director's level grow within the career; credits earned go to the global bank.
+ */
+export interface Career {
+  id: string;
+  directorId: string;
+  startedAt: number;
+  endedAt?: number;
+  status: 'active' | 'retired' | 'fired';
+  reputation: number;
+  level: number;
+  films: number;
+  /** Credits this career has paid into the bank. */
+  earnings: number;
+  /** Consecutive F grades (fired at the limit). */
+  fStreak: number;
+  grades: Grade[];
+  nominations: number;
+  wins: number;
+  boxOffice: number;
 }
 
 export interface Profile {
@@ -403,19 +426,22 @@ export interface Profile {
   name: string;
   createdAt: number;
   seed: number; // advances as content is generated
-  reputation: number;
+  /** The bank: credits earned across all careers. Buys profiles, topic packs and sets. */
   credits: number;
+  /** The career in progress, if any. */
+  career?: Career;
+  /** Finished careers. */
+  careers: Career[];
   unlocks: {
     directors: string[];
     topics: string[];
     packs: string[];
     sets: string[];
   };
+  /** Lifetime stats per director profile. */
   directors: Record<string, DirectorState>;
   actorPool: Actor[];
   contractBoard: Contract[];
   activeFilm?: Film;
   filmography: FilmRecord[];
-  /** Award wins per genre, for genre-master unlocks. */
-  genreAwardWins: Partial<Record<GenreId, number>>;
 }

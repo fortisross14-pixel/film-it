@@ -5,6 +5,7 @@ import { directorById } from '../../engine/data/directors';
 import { money } from '../../engine/format';
 import { deliverFilm, runPremiere } from '../../engine/premiere';
 import type { GradeComponent } from '../../engine/types';
+import { TUNING } from '../../engine/tuning';
 
 const STAGES = ['Red carpet', 'Public', 'Critics', 'Box office', 'Awards', 'Studio verdict'];
 const COMPONENT_LABEL: Record<GradeComponent, string> = { boxOffice: 'Box office', public: 'Public', critics: 'Critics', awards: 'Awards' };
@@ -139,14 +140,15 @@ export function PremiereScreen() {
                 {' · '}+{rep.rewards.credits + rep.rewards.unspentCredits} credits
                 {rep.rewards.unspentCredits > 0 && <span className="muted"> ({rep.rewards.unspentCredits} from unspent budget)</span>}
               </p>
-              <p className="small muted">{directorById(film.directorId).name} gains a level.</p>
+              <p className="small muted">Credits go to the bank. {directorById(film.directorId).name} gains a level and reputation in this career.</p>
+              {p.career && film.grade === 'F' && p.career.fStreak + 1 >= TUNING.career.firedAfterFs && <p className="bad">Another F: the studios will fire you.</p>}
             </div>
             <button
               className="primary"
               onClick={() => {
                 const res = deliverFilm(p);
                 if (!res.ok) return setMsg(res.reason);
-                if (res.newDirectors?.length) alert(`New director unlocked: ${res.newDirectors.map((d) => directorById(d).name).join(', ')}`);
+                if (res.fired) alert(`${directorById(film.directorId).name} was fired after too many flops. The career is over: start a new one from Careers.`);
                 update(() => res.profile);
               }}
             >

@@ -46,7 +46,7 @@ export function SlotsScreen() {
             ) : (
               <>
                 <p><strong>{s.name}</strong></p>
-                <p className="muted">Rep {s.reputation} · {s.credits} credits · {s.films} films</p>
+                <p className="muted">{s.credits} credits · {s.careers} career{s.careers === 1 ? '' : 's'} · {s.films} films</p>
                 <div className="row">
                   <button className="primary" onClick={() => open(s.slot, loadProfile(s.slot)!)}>Continue</button>
                   <button

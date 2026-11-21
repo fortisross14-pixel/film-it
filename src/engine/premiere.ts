@@ -9,15 +9,17 @@ import { topicById } from './data/topics';
 import { postSummary, isEmotional, sceneScores } from './post';
 import { chosenTake, weeksUsed } from './shooting';
 import { participants, spent } from './script';
-import { withRng, refreshBoard } from './profile';
+import { withRng } from './profile';
 import { gradeFilm } from './grade';
-import { applyAutoUnlocks } from './progression';
+import { recordFilm } from './career';
+import { directorById } from './data/directors';
+import { specialtyScale } from './director';
 
 const P = () => TUNING.premiere;
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-export type PremiereResult = { ok: true; profile: Profile; newDirectors?: string[] } | { ok: false; reason: string };
+export type PremiereResult = { ok: true; profile: Profile; fired?: boolean } | { ok: false; reason: string };
 const fail = (reason: string): PremiereResult => ({ ok: false, reason });
 
 export const FESTIVALS = ['Sunvale Film Festival', 'Golden Lantern Fest', 'Northlight Independent', 'Harbour Lights Festival'];
@@ -76,7 +78,10 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const publicWeights = { ...T.publicWeights, fx: fxGenre < T.fxPublicMinWeight ? 1 : T.publicWeights.fx * fxGenre };
   const charming = film.roles.filter((r) => r.actor?.traits.includes('charming')).length;
   const publicRating = Math.round(clamp(rate(factors, publicWeights) - boredom * T.boredomPublic + charming * 2 + noise()));
-  const criticsRating = Math.round(clamp(rate(factors, T.criticsWeights) - boredom * T.boredomCritics - post.overproduction + noise()));
+  const darling = specialtyScale(directorById(film.directorId), 'festival', 1);
+  const criticsRating = Math.round(clamp(rate(factors, T.criticsWeights) - boredom * T.boredomCritics - post.overproduction + noise()
+    + darling * TUNING.directors.festivalCritics));
+  const festivalCut = darling * TUNING.directors.festivalThresholdCut;
 
   // Buzz: stars, topic hype, charm.
   const topStar = Math.max(0, ...film.roles.map((r) => r.actor?.starPower ?? 0));
@@ -112,10 +117,10 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   };
 
   // Festivals: reachable early for small films with strong critics.
-  if (c.budget <= T.festivalBudgetMax ? criticsRating >= T.festivalNomCritics : criticsRating >= T.bigFilmFestivalCritics && rng.chance(0.3)) {
+  if (c.budget <= T.festivalBudgetMax ? criticsRating >= T.festivalNomCritics - festivalCut : criticsRating >= T.bigFilmFestivalCritics - festivalCut && rng.chance(0.3)) {
     const name = `Festival: ${rng.pick(FESTIVALS)}`;
     nominations.push(name);
-    if (criticsRating >= T.festivalWinCritics && rng.chance(0.5 + (criticsRating - T.festivalWinCritics) / 40)) wins.push(name);
+    if (criticsRating >= T.festivalWinCritics - festivalCut && rng.chance(0.5 + (criticsRating - T.festivalWinCritics) / 40)) wins.push(name);
   }
 
   contest('Best Picture', criticsRating * 0.6 + post.cutQuality * 0.4, 75);
@@ -154,27 +159,24 @@ export function runPremiere(p: Profile): PremiereResult {
 }
 
 /**
- * Deliver the film: rewards, director level, award tallies, filmography, a fresh
- * contract board and any unlocks earned.
+ * Deliver the film: credits to the bank, reputation and a level to the career, the film
+ * into the filmography, and a fresh contract board — or the career ends if the director
+ * is fired.
  */
 export function deliverFilm(p: Profile, now = Date.now()): PremiereResult {
   const film = p.activeFilm;
   if (!film?.results || !film.report) return fail('Premiere first');
   const r = film.report.rewards;
-  const d = p.directors[film.directorId] ?? { id: film.directorId, level: 1, films: 0 };
-  const genreWins = film.results.wins.length;
-  let next: Profile = {
+  const credits = r.credits + r.unspentCredits;
+  const reputation = r.reputation + r.awardRep;
+  const base: Profile = {
     ...p,
-    reputation: p.reputation + r.reputation + r.awardRep,
-    credits: p.credits + r.credits + r.unspentCredits,
-    directors: { ...p.directors, [film.directorId]: { ...d, films: d.films + 1, level: Math.min(TUNING.directors.maxLevel, d.level + 1) } },
-    genreAwardWins: { ...p.genreAwardWins, [film.contract.genre]: (p.genreAwardWins[film.contract.genre] ?? 0) + genreWins },
-    filmography: [...p.filmography, { film: { ...film, phase: 'done' }, completedAt: now }],
+    credits: p.credits + credits,
+    filmography: [...p.filmography, { film: { ...film, phase: 'done' }, careerId: p.career?.id, completedAt: now }],
     activeFilm: undefined,
   };
-  next = refreshBoard(next);
-  const unlocked = applyAutoUnlocks(next);
-  return { ok: true, profile: unlocked.profile, newDirectors: unlocked.newDirectors };
+  const { profile, fired } = recordFilm(base, film, credits, reputation, now);
+  return { ok: true, profile, fired };
 }
 
 /** Facts for the red carpet moment. */

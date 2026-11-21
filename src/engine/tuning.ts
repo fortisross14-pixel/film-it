@@ -5,7 +5,7 @@ import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from '
 
 export const TUNING = {
   saveSlots: 3,
-  saveVersion: 4,
+  saveVersion: 5,
 
   contracts: {
     boardSize: 4,
@@ -105,6 +105,14 @@ export const TUNING = {
     specialtyPerLevel: 0.08,
     writerQualityBonus: 6,
     writerCostDiscount: 0.12,
+    /** Budget Master: crew, set rental and writing cost less. */
+    budgetDiscount: 0.2,
+    /** Clockwork Director: less fatigue, faster post. */
+    scheduleFatigueCut: 0.3,
+    schedulePostDaysCut: 0.3,
+    /** Festival Darling: critics bonus, lower festival bar. */
+    festivalCritics: 4,
+    festivalThresholdCut: 5,
   },
 
   script: {
@@ -344,6 +352,12 @@ export const TUNING = {
     /** Unspent budget → credits per $K. */
     unspentCreditsPerK: 0.002,
     bonusGoalPoints: 1,
+  },
+  career: {
+    /** Retiring pays credits per reputation point earned in the career. */
+    retireCreditsPerRep: 0.25,
+    /** Fired after this many F grades in a row (no retirement bonus). */
+    firedAfterFs: 2,
   },
 } as const;
 

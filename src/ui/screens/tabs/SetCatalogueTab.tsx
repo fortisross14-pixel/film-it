@@ -4,7 +4,7 @@ import { SETS } from '../../../engine/data/sets';
 import { actionById } from '../../../engine/data/actions';
 import { toneById } from '../../../engine/data/tones';
 import type { Tone } from '../../../engine/types';
-import { buySet, reputationTier, setUnlockText } from '../../../engine/progression';
+import { buySet, setUnlockText } from '../../../engine/progression';
 import { money } from '../../../engine/format';
 import { IsoSet } from '../../components/IsoSet';
 
@@ -12,7 +12,6 @@ export function SetCatalogueTab() {
   const p = useProfile();
   const { update } = useGame();
   const [msg, setMsg] = useState<string | null>(null);
-  const tier = reputationTier(p.reputation);
   return (
     <div>
       <h2>Set catalogue</h2>
@@ -42,7 +41,7 @@ export function SetCatalogueTab() {
               {buyable && s.unlock.kind === 'credits' && (
                 <button
                   className="primary"
-                  disabled={p.credits < s.unlock.cost || tier < s.unlock.repTier}
+                  disabled={p.credits < s.unlock.cost}
                   onClick={() => {
                     const r = buySet(p, s.id);
                     if (r.ok) {

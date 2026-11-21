@@ -2,7 +2,7 @@
 // Contracts are generated from genre × runtime × budget tier × archetype and
 // scale with the player's reputation tier.
 
-import type { Archetype, BonusGoal, Contract, GenreId, HardRequirement, Profile } from './types';
+import type { Archetype, BonusGoal, Contract, GenreId, HardRequirement } from './types';
 import type { Rng } from './rng';
 import { makeId } from './rng';
 import { TUNING } from './tuning';
@@ -134,7 +134,7 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
 }
 
 /** Fill the contract board for a profile. Returns a new board. */
-export function generateBoard(rng: Rng, profile: Pick<Profile, 'reputation'>): Contract[] {
+export function generateBoard(rng: Rng, profile: { reputation: number }): Contract[] {
   const tier = reputationTier(profile.reputation);
   const board: Contract[] = [];
   const usedGenres = new Set<GenreId>();

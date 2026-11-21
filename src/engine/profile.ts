@@ -19,8 +19,8 @@ export function newProfile(name: string, seed = Date.now() >>> 0): Profile {
     name,
     createdAt: Date.now(),
     seed,
-    reputation: 0,
     credits: TUNING.startingCredits,
+    careers: [],
     unlocks: {
       directors: starterDirectors,
       topics: [...starterPack.topicIds],
@@ -31,9 +31,7 @@ export function newProfile(name: string, seed = Date.now() >>> 0): Profile {
     actorPool: generateActorPool(rng),
     contractBoard: [],
     filmography: [],
-    genreAwardWins: {},
   };
-  base.contractBoard = generateBoard(rng, base);
   base.seed = rng.state();
   return base;
 }
@@ -45,16 +43,24 @@ export function withRng<T>(p: Profile, fn: (rng: ReturnType<typeof createRng>) =
   return { profile: { ...p, seed: rng.state() }, value };
 }
 
+/** New briefs for the active career, scaled by its reputation. No career → no board. */
 export function refreshBoard(p: Profile): Profile {
-  const { profile, value } = withRng(p, (rng) => generateBoard(rng, p));
+  if (!p.career) return { ...p, contractBoard: [] };
+  const { profile, value } = withRng(p, (rng) => generateBoard(rng, { reputation: p.career!.reputation }));
   return { ...profile, contractBoard: value };
 }
 
 export type StartResult = { ok: true; profile: Profile } | { ok: false; reason: string };
 
-/** Accept a contract with a director. The film starts in the Script phase, 100% filler. */
-export function startFilm(p: Profile, contractId: string, directorId: string): StartResult {
+/**
+ * Accept a contract. In a career the career's director profile directs it; without a career
+ * (sandbox / tests) a director id must be given. The film starts in the Script phase.
+ */
+export function startFilm(p: Profile, contractId: string, directorIdArg?: string): StartResult {
   if (p.activeFilm) return { ok: false, reason: 'A film is already in production' };
+  if (p.career && directorIdArg && directorIdArg !== p.career.directorId) return { ok: false, reason: 'This career has its own director' };
+  const directorId = p.career?.directorId ?? directorIdArg;
+  if (!directorId) return { ok: false, reason: 'Start a career first' };
   const contract = p.contractBoard.find((c) => c.id === contractId);
   if (!contract) return { ok: false, reason: 'Contract not on the board' };
   if (!p.unlocks.directors.includes(directorId)) return { ok: false, reason: 'Director is locked' };

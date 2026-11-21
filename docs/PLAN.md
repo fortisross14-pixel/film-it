@@ -155,16 +155,28 @@ new phase playable in the browser.
   board, auto-unlocks (new directors announced).
 - Premiere UI: staged reveal (red carpet → public → critics → box office → awards → verdict).
 
-## Milestone 7 — Progression and meta loop
+## Milestone 7 — Careers and the meta loop (done)
 
-(Rewards, director levels, filmography and board refresh already land in Milestone 6.)
+Design (after Milestone 6 review): you play **careers**. A director is a profile, not a
+person ("The Heartbreaker", "The Adrenaline Junkie", "The Sci-Fi Genius", "The Budget
+Master"…). Two are free; every other profile, topic pack and set is bought with **credits**
+earned in careers — money is the only unlock currency.
 
-- Rewards (reputation, credits, unspent budget bonus), director levels (cap 10)
-  and specialty scaling, director unlocks (rep tiers, genre awards),
-  topic pack purchases, set unlocks, higher-tier studios.
-- Filmography (films with takes and final cut stored) and Trophy room.
-- Contract board refresh after delivery; full save/load of everything.
-- End-to-end test: play a whole contract through the engine with no UI.
+- `career.ts`: start a career with an owned profile (level and reputation from zero); the
+  board scales with career reputation (higher-tier studios open up); each delivered film
+  adds reputation, a level (cap 10) and credits to the bank; retire any time between films
+  for a bonus of credits per reputation point; fired after 2 F grades in a row (no bonus).
+  Finished careers go to the hall of fame.
+- `progression.ts`: buy profiles, topic packs and sets with credits; unlock-everything
+  progress.
+- 13 profiles: 2 starters, 4 phase specialists (Wordsmith, Star Whisperer, Visionary Lens,
+  Cutting Room Wizard), 3 production styles (Budget Master: cheaper crew/sets/writing;
+  Clockwork Director: less fatigue, faster post; Festival Darling: critics + easier festivals),
+  4 genre masters (Sci-Fi Genius, Scream King, Laugh Factory, Myth Maker).
+- UI: Careers tab (current career, retire, profiles to start or buy, hall of fame), career
+  header (profile, level, reputation & studio tier, bank), board without a director picker,
+  filmography with each film's final cut and stored takes, fired notice.
+- End-to-end engine test plays a full contract with no UI.
 
 ## Milestone 8 — "Later" features from the requirements
 

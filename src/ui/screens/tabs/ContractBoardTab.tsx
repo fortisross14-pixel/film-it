@@ -2,64 +2,47 @@ import { useState } from 'react';
 import { useGame, useProfile } from '../../store';
 import { ContractCard } from '../../components/ContractCard';
 import { directorById } from '../../../engine/data/directors';
-import { genreCloseness, genreName } from '../../../engine/data/genres';
-import { refreshBoard, startFilm } from '../../../engine/profile';
+import { genreCloseness } from '../../../engine/data/genres';
+import { startFilm } from '../../../engine/profile';
 
 export function ContractBoardTab() {
   const p = useProfile();
   const { update } = useGame();
   const [contractId, setContractId] = useState<string | null>(null);
-  const [directorId, setDirectorId] = useState<string>(p.unlocks.directors[0]);
   const [error, setError] = useState<string | null>(null);
   const contract = p.contractBoard.find((c) => c.id === contractId);
-
-  const accept = () => {
-    if (!contractId) return;
-    const r = startFilm(p, contractId, directorId);
-    if (r.ok) update(() => r.profile);
-    else setError(r.reason);
-  };
+  const d = directorById(p.career!.directorId);
+  const fit = (genre: Parameters<typeof genreCloseness>[1]) =>
+    d.masterGenre ? (d.masterGenre === genre ? 'Your genre!' : 'Small edge') :
+    d.genreAffinity.length === 0 ? 'Any genre' :
+    d.genreAffinity.some((g) => genreCloseness(g, genre) === 1) ? 'Genre match' :
+    d.genreAffinity.some((g) => genreCloseness(g, genre) > 0) ? 'Close genre' : 'Far off genre';
 
   return (
     <div>
-      <div className="row between">
-        <h2>Contract board</h2>
-        {/* Dev convenience until delivery refreshes the board (Milestone 7). */}
-        <button onClick={() => (update(refreshBoard), setContractId(null))}>Refresh board (dev)</button>
-      </div>
-      <p className="muted">Pick a brief, choose a director, and accept the contract.</p>
+      <h2>Contract board</h2>
+      <p className="muted">Studios offer briefs that match your reputation. Pick one and accept it as {d.name}.</p>
       <div className="grid">
         {p.contractBoard.map((c) => (
-          <ContractCard key={c.id} c={c} selected={c.id === contractId} onSelect={() => setContractId(c.id)} />
+          <div key={c.id} className="contract-wrap">
+            <ContractCard c={c} selected={c.id === contractId} onSelect={() => setContractId(c.id)} />
+            <span className={`small fit-${fit(c.genre).replace(/\W/g, '')}`}>{fit(c.genre)}</span>
+          </div>
         ))}
       </div>
-
       {contract && (
-        <div className="card accept-panel">
-          <h3>Who directs it?</h3>
-          <div className="row wrap">
-            {p.unlocks.directors.map((id) => {
-              const d = directorById(id);
-              const match = d.genreAffinity.length === 0
-                ? 'Any genre'
-                : d.genreAffinity.some((g) => genreCloseness(g, contract.genre) === 1)
-                  ? 'Genre match'
-                  : d.genreAffinity.some((g) => genreCloseness(g, contract.genre) > 0)
-                    ? 'Close genre'
-                    : 'Far off genre';
-              return (
-                <label key={id} className={`choice ${directorId === id ? 'selected' : ''}`}>
-                  <input type="radio" name="director" checked={directorId === id} onChange={() => setDirectorId(id)} />
-                  <strong>{d.name}</strong> <span className="muted">lvl {p.directors[id]?.level ?? 1}</span>
-                  <div className="small muted">
-                    {d.genreAffinity.length ? d.genreAffinity.map(genreName).join(', ') : 'Any'} · {match}
-                  </div>
-                </label>
-              );
-            })}
-          </div>
+        <div className="card accept-panel row between wrap">
+          <span>
+            Accept <strong>{contract.studio.name}</strong>'s brief? <span className="muted">You can't change it once production starts.</span>
+          </span>
+          <button className="primary" onClick={() => {
+            const r = startFilm(p, contract.id);
+            if (r.ok) update(() => r.profile);
+            else setError(r.reason);
+          }}>
+            Accept contract
+          </button>
           {error && <p className="bad">{error}</p>}
-          <button className="primary" onClick={accept}>Accept contract</button>
         </div>
       )}
     </div>

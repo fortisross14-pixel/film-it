@@ -330,7 +330,9 @@ export const budgetScale = (budget: number) =>
 export function sceneCost(scene: Scene, director?: DirectorDef, level = 1, budget: number = S().referenceBudget): number {
   const T = S();
   const raw = (T.sceneBaseCost + scene.beats.reduce((a, b) => a + T.beatCost + actionById(b.actionId).cost, 0)) * T.durationCostMult[scene.duration] * budgetScale(budget);
-  const discount = director ? TUNING.directors.writerCostDiscount * specialtyScale(director, 'script', level) : 0;
+  const discount = director
+    ? TUNING.directors.writerCostDiscount * specialtyScale(director, 'script', level) + TUNING.directors.budgetDiscount * specialtyScale(director, 'budget', level)
+    : 0;
   return Math.round(raw * (1 - Math.min(0.5, discount)));
 }
 

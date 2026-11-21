@@ -1,27 +1,38 @@
 import type { DirectorDef } from '../types';
 
+// Director profiles: archetypes you play a career with, not people.
+// Two are free; the rest are bought with credits earned in careers.
 export const DIRECTORS: DirectorDef[] = [
-  { id: 'starterA', name: 'Ava Lindqvist', genreAffinity: ['romance', 'drama'], specialties: [],
-    unlock: { kind: 'start' }, blurb: 'Starter director. At home with people and feelings.' },
-  { id: 'starterB', name: 'Marco Reyes', genreAffinity: ['action', 'thriller'], specialties: [],
-    unlock: { kind: 'start' }, blurb: 'Starter director. Speed, stakes and things exploding.' },
-  { id: 'writer', name: 'The Writer', genreAffinity: [], specialties: ['script'],
-    unlock: { kind: 'repTier', tier: 2 }, blurb: '+Script quality and cheaper scenes.' },
-  { id: 'scout', name: 'The Talent Scout', genreAffinity: [], specialties: ['casting'],
-    unlock: { kind: 'repTier', tier: 2 }, blurb: 'Better odds of hidden gems, cheaper rerolls.' },
-  { id: 'cinematographer', name: 'The Cinematographer', genreAffinity: [], specialties: ['shooting'],
-    unlock: { kind: 'repTier', tier: 3 }, blurb: 'Higher base take score, faster improvement on retakes.' },
-  { id: 'editor', name: 'The Editor', genreAffinity: [], specialties: ['post'],
-    unlock: { kind: 'repTier', tier: 3 }, blurb: 'Cheaper and stronger music, VFX and SFX.' },
-  // Genre masters
-  { id: 'masterHorror', name: 'Master of Horror', genreAffinity: ['horror'], specialties: ['genre'], masterGenre: 'horror',
-    unlock: { kind: 'genreAwards', genre: 'horror', wins: 1 }, blurb: 'Strong in Horror; small bonus everywhere.' },
-  { id: 'masterComedy', name: 'Master of Comedy', genreAffinity: ['comedy'], specialties: ['genre'], masterGenre: 'comedy',
-    unlock: { kind: 'genreAwards', genre: 'comedy', wins: 1 }, blurb: 'Strong in Comedy; small bonus everywhere.' },
-  { id: 'masterScifi', name: 'Master of Sci-Fi', genreAffinity: ['scifi'], specialties: ['genre'], masterGenre: 'scifi',
-    unlock: { kind: 'genreAwards', genre: 'scifi', wins: 1 }, blurb: 'Strong in Sci-Fi; small bonus everywhere.' },
-  { id: 'masterFantasy', name: 'Master of Fantasy', genreAffinity: ['fantasy'], specialties: ['genre'], masterGenre: 'fantasy',
-    unlock: { kind: 'genreAwards', genre: 'fantasy', wins: 1 }, blurb: 'Strong in Fantasy; small bonus everywhere.' },
+  // ---- Starters ----
+  { id: 'starterA', name: 'The Heartbreaker', genreAffinity: ['romance', 'drama'], specialties: [],
+    unlock: { kind: 'start' }, blurb: 'At home with people and feelings. Romance and drama come naturally.' },
+  { id: 'starterB', name: 'The Adrenaline Junkie', genreAffinity: ['action', 'thriller'], specialties: [],
+    unlock: { kind: 'start' }, blurb: 'Speed, stakes and things exploding. Action and thrillers come naturally.' },
+  // ---- Phase specialists ----
+  { id: 'writer', name: 'The Wordsmith', genreAffinity: [], specialties: ['script'],
+    unlock: { kind: 'credits', cost: 300 }, blurb: 'Better scripts, cheaper scenes.' },
+  { id: 'scout', name: 'The Star Whisperer', genreAffinity: [], specialties: ['casting'],
+    unlock: { kind: 'credits', cost: 300 }, blurb: 'Finds hidden gems; cheaper redraws.' },
+  { id: 'cinematographer', name: 'The Visionary Lens', genreAffinity: [], specialties: ['shooting'],
+    unlock: { kind: 'credits', cost: 450 }, blurb: 'Higher base take scores, learns faster on retakes.' },
+  { id: 'editor', name: 'The Cutting Room Wizard', genreAffinity: [], specialties: ['post'],
+    unlock: { kind: 'credits', cost: 450 }, blurb: 'Cheaper and stronger music, VFX and SFX.' },
+  // ---- Production styles ----
+  { id: 'budgetMaster', name: 'The Budget Master', genreAffinity: [], specialties: ['budget'],
+    unlock: { kind: 'credits', cost: 400 }, blurb: 'Crew, sets and writing cost less. Tight-ship studios love you.' },
+  { id: 'clockwork', name: 'The Clockwork Director', genreAffinity: [], specialties: ['schedule'],
+    unlock: { kind: 'credits', cost: 400 }, blurb: 'The cast tires less and post runs faster.' },
+  { id: 'festivalDarling', name: 'The Festival Darling', genreAffinity: ['drama'], specialties: ['festival'],
+    unlock: { kind: 'credits', cost: 500 }, blurb: 'Critics adore you; festivals come easier.' },
+  // ---- Genre masters ----
+  { id: 'masterScifi', name: 'The Sci-Fi Genius', genreAffinity: ['scifi'], specialties: ['genre'], masterGenre: 'scifi',
+    unlock: { kind: 'credits', cost: 600 }, blurb: 'Brilliant in Sci-Fi; a small edge everywhere.' },
+  { id: 'masterHorror', name: 'The Scream King', genreAffinity: ['horror'], specialties: ['genre'], masterGenre: 'horror',
+    unlock: { kind: 'credits', cost: 600 }, blurb: 'Brilliant in Horror; a small edge everywhere.' },
+  { id: 'masterComedy', name: 'The Laugh Factory', genreAffinity: ['comedy'], specialties: ['genre'], masterGenre: 'comedy',
+    unlock: { kind: 'credits', cost: 600 }, blurb: 'Brilliant in Comedy; a small edge everywhere.' },
+  { id: 'masterFantasy', name: 'The Myth Maker', genreAffinity: ['fantasy'], specialties: ['genre'], masterGenre: 'fantasy',
+    unlock: { kind: 'credits', cost: 600 }, blurb: 'Brilliant in Fantasy; a small edge everywhere.' },
 ];
 
 export const directorById = (id: string): DirectorDef => {

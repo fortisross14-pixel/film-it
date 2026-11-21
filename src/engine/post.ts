@@ -138,6 +138,7 @@ export function postSummary(film: Film, level = 1): PostSummary {
     }
   }
   polishCost = Math.round(polishCost);
+  days = Math.round(days * (1 - TUNING.directors.schedulePostDaysCut * specialtyScale(directorById(film.directorId), 'schedule', level)));
   const weeks = Math.ceil(days / P().daysPerWeek);
   const crewCost = Math.round(crewWeekCost(film) * P().crewShare) * weeks;
   const scores = sceneScores(film, level);
