@@ -8,6 +8,7 @@ import { ScriptEditor } from './ScriptEditor';
 import { CastingScreen } from './CastingScreen';
 import { ShootingScreen } from './ShootingScreen';
 import { PostScreen } from './PostScreen';
+import { PremiereScreen } from './PremiereScreen';
 
 const PHASES: { id: FilmPhase; label: string }[] = [
   { id: 'script', label: 'Script' },
@@ -31,6 +32,7 @@ export function ProductionScreen() {
             <h2>“{film.title}”</h2>
             <p className="muted">Directed by {directorById(film.directorId).name}</p>
           </div>
+          {!film.results && (
           <button
             className="danger"
             onClick={() => {
@@ -39,6 +41,7 @@ export function ProductionScreen() {
           >
             Abandon film
           </button>
+          )}
         </div>
         <ol className="stepper">
           {PHASES.map((ph, i) => (
@@ -55,6 +58,8 @@ export function ProductionScreen() {
           <ShootingScreen />
         ) : film.phase === 'post' ? (
           <PostScreen />
+        ) : film.phase === 'premiere' ? (
+          <PremiereScreen />
         ) : (
         <div className="production-body">
           <div className="card placeholder">

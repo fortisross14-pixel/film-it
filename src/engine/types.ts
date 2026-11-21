@@ -287,6 +287,8 @@ export type PolishTier = 'none' | 'basic' | 'pro' | 'premium';
 export interface Scene {
   id: string;
   duration: SceneDuration;
+  /** Minute the scene starts on the timeline (snapped to whole minutes). */
+  startMin?: number;
   tone: Tone;
   beats: Beat[];
   /** Others involved: present, no action of their own. */
@@ -322,10 +324,35 @@ export interface FilmResults {
   buzz: number;
   publicRating: number;
   criticsRating: number;
+  /** Factor scores (0–100) that fed the ratings, for the breakdown. */
+  factors: Record<string, number>;
+  boredom: number;
+  overproduction: number;
   openingWeekend: number;
+  /** Gross per week of the run, $K. */
+  weekly: number[];
   boxOffice: number;
+  /** "Best Picture", "Festival: Sunvale Film Festival", … */
   nominations: string[];
   wins: string[];
+  /** Award category → the film's driver value, for the breakdown. */
+  awardDrivers: Record<string, number>;
+}
+
+export interface GradeReport {
+  components: Record<GradeComponent, number>;
+  satisfaction: number;
+  bonusPoints: number;
+  bonusMet: string[];
+  weeksLate: number;
+  overBudgetPct: number;
+  latePenalty: number;
+  overBudgetPenalty: number;
+  score: number;
+  letterBeforeCaps: Grade;
+  missedReqs: string[];
+  grade: Grade;
+  rewards: { reputation: number; credits: number; unspentCredits: number; awardRep: number };
 }
 
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'F';
@@ -353,6 +380,7 @@ export interface Film {
   scriptQuality?: number;
   castingScore?: number;
   results?: FilmResults;
+  report?: GradeReport;
   grade?: Grade;
   gradeScore?: number;
 }

@@ -4,7 +4,7 @@ import { generateContract } from '../src/engine/contracts';
 import { createRng } from '../src/engine/rng';
 import { directorById } from '../src/engine/data/directors';
 import {
-  addBeat, addRole, addScene, availableActions, beatDepth, checkRequirements, fillerShare, finishScript, layout, moveScene,
+  addBeat, addRole, addScene, availableActions, placeScene, beatDepth, checkRequirements, fillerShare, finishScript, layout, moveScene,
   participants, removeBeat, removeRole, removeScene, renameRole, screenTime, scriptBlockers, scriptCost, scriptProfile,
   scriptQuality, setRuntime, setTopic, updateBeat, updateScene, type EditResult,
 } from '../src/engine/script';
@@ -106,17 +106,46 @@ describe('scenes and beats', () => {
     f = ok(r);
     expect(f.scenes[0].beats).toHaveLength(0);
   });
-  it('orders scenes and spreads filler', () => {
+  it('appends scenes, drags them anywhere, keeps them apart', () => {
     const f = dramaScript();
     const l = layout(f);
     expect(l.map((x) => x.minutes)).toEqual([18, 25, 25, 25]);
     expect(fillerShare(f)).toBeCloseTo(0.07, 2);
-    expect(l[0].start).toBeCloseTo(7 / 5);
-    expect(l[3].act).toBe(3);
-    const g = ok(moveScene(f, f.scenes[3].id, -1));
-    expect(g.scenes[2].id).toBe(f.scenes[3].id);
+    expect(l[0].start).toBe(3);
+    // No overlaps, all inside the runtime.
+    for (let i = 1; i < l.length; i++) expect(l[i].start).toBeGreaterThanOrEqual(l[i - 1].start + l[i - 1].minutes);
+    expect(l[3].start + l[3].minutes).toBeLessThanOrEqual(100);
+    // Drag the last scene to the start: it lands in the nearest free spot and order follows time.
+    const last = f.scenes[3].id;
+    const cleared = ok(removeScene(ok(removeScene(f, f.scenes[0].id)), f.scenes[1].id));
+    const g = ok(placeScene(cleared, last, 0));
+    expect(g.scenes[0].id).toBe(last);
+    expect(g.scenes[0].startMin).toBe(0);
+    // Dropping onto another scene finds the nearest free spot instead of overlapping.
+    const k = ok(placeScene(f, f.scenes[0].id, 50));
+    const lk = layout(k);
+    for (let i = 1; i < lk.length; i++) expect(lk[i].start).toBeGreaterThanOrEqual(lk[i - 1].start + lk[i - 1].minutes);
+    // Swap with the neighbour.
+    const h = ok(moveScene(f, f.scenes[3].id, -1));
+    expect(h.scenes[2].id).toBe(f.scenes[3].id);
     expect(moveScene(f, f.scenes[0].id, -1).ok).toBe(false);
     expect(ok(removeScene(f, f.scenes[0].id)).scenes).toHaveLength(3);
+  });
+  it('two scenes can share an act or straddle an act change', () => {
+    let f = withCast(filmFor({ runtime: 100 }));
+    f = ok(setRuntime(f, 100));
+    f = scene(f, 'short', 'calm', [{ roleId: 'role1', actionId: 'plans' }]);
+    f = scene(f, 'short', 'sad', [{ roleId: 'role1', actionId: 'cries' }]);
+    expect(layout(f).map((x) => x.act)).toEqual([1, 1]);
+    f = ok(placeScene(f, f.scenes[1].id, 70));
+    expect(layout(f)[1].act).toBe(3); // 70–82, midpoint 76 → act 3
+  });
+  it('runtime changes keep relative positions', () => {
+    const f = ok(placeScene(dramaScript(), dramaScript().scenes[3].id, 75));
+    const g = ok(setRuntime(f, 120));
+    const l = layout(g);
+    expect(l[3].start + l[3].minutes).toBeLessThanOrEqual(120);
+    expect(l[3].act).toBe(3);
   });
   it('computes participants and screen time', () => {
     const f = dramaScript();
@@ -176,9 +205,11 @@ describe('requirements & finish', () => {
     const g = { ...dramaScript(), contract: f.contract };
     expect(checkRequirements(g).map((c) => c.status)).toEqual(['met', 'met', 'met', 'met', 'pending']);
   });
-  it('needs 3 scenes with actions to lock', () => {
+  it('needs 2 scenes with actions to lock', () => {
     const f = scene(withCast(), 'short', 'calm', [{ roleId: 'role1', actionId: 'plans' }]);
-    expect(scriptBlockers(f)).toContain('Write at least 3 scenes');
+    expect(scriptBlockers(f)).toContain('Write at least 2 scenes');
+    const g = scene(f, 'long', 'sad', [{ roleId: 'role1', actionId: 'dies' }]);
+    expect(scriptBlockers(g)).toEqual([]);
     const done = ok(finishScript(dramaScript()));
     expect(done.phase).toBe('casting');
     expect(done.ledger[0]).toMatchObject({ label: 'Script', phase: 'script' });

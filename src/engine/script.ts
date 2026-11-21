@@ -63,23 +63,72 @@ export interface SlotLayout {
   act: 1 | 2 | 3;
 }
 
-/** Scenes in order, with filler spread evenly before, between and after them. */
-export function layout(film: Film): SlotLayout[] {
-  const gap = fillerMinutes(film) / (film.scenes.length + 1);
+const actOf = (start: number, minutes: number, runtime: number): 1 | 2 | 3 => {
+  const mid = (start + minutes / 2) / runtime;
+  return mid < 0.25 ? 1 : mid < 0.75 ? 2 : 3;
+};
+
+/**
+ * Normalise scene positions: scenes without a start are spread evenly; then every scene
+ * is clamped inside the runtime and pushed so none overlap. Scenes come back sorted by time.
+ */
+export function pack(film: Film): Film {
+  const n = film.scenes.length;
+  if (!n) return film;
+  const mins = (s: Scene) => sceneMinutes(s.duration, film.runtime);
+  const gap = fillerMinutes(film) / (n + 1);
   let cursor = gap;
-  return film.scenes.map((s) => {
-    const minutes = sceneMinutes(s.duration, film.runtime);
-    const start = cursor;
-    cursor += minutes + gap;
-    const mid = (start + minutes / 2) / film.runtime;
-    return { sceneId: s.id, start, minutes, act: mid < 0.25 ? 1 : mid < 0.75 ? 2 : 3 };
+  const withStart = film.scenes.map((s) => {
+    const fallback = Math.round(cursor);
+    cursor += mins(s) + gap;
+    return { ...s, startMin: s.startMin ?? fallback };
   });
+  const sorted = withStart.sort((a, b) => a.startMin! - b.startMin!);
+  // Forward pass: no overlaps, not before 0.
+  let end = 0;
+  for (const s of sorted) {
+    s.startMin = Math.max(end, Math.max(0, Math.round(s.startMin!)));
+    end = s.startMin + mins(s);
+  }
+  // Backward pass: nothing past the runtime.
+  let limit = film.runtime;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const s = sorted[i];
+    s.startMin = Math.min(s.startMin!, limit - mins(s));
+    limit = s.startMin;
+  }
+  return { ...film, scenes: sorted };
+}
+
+/** Scene positions on the timeline, in time order. */
+export function layout(film: Film): SlotLayout[] {
+  return pack(film).scenes.map((s) => {
+    const minutes = sceneMinutes(s.duration, film.runtime);
+    return { sceneId: s.id, start: s.startMin!, minutes, act: actOf(s.startMin!, minutes, film.runtime) };
+  });
+}
+
+/** Free [start, end) stretches of filler on the timeline. */
+export function freeGaps(film: Film, ignoreId?: string): [number, number][] {
+  const out: [number, number][] = [];
+  let cursor = 0;
+  for (const s of pack(film).scenes) {
+    if (s.id === ignoreId) continue;
+    if (s.startMin! > cursor) out.push([cursor, s.startMin!]);
+    cursor = Math.max(cursor, s.startMin! + sceneMinutes(s.duration, film.runtime));
+  }
+  if (cursor < film.runtime) out.push([cursor, film.runtime]);
+  return out;
 }
 
 export function setRuntime(film: Film, minutes: number): EditResult {
   const m = Math.round(minutes);
   if (!Number.isFinite(m) || m < S().minRuntime || m > S().maxRuntime) return fail(`Runtime must be ${S().minRuntime}–${S().maxRuntime} min`);
-  return { ok: true, film: { ...film, runtime: m } };
+  const next = { ...film, runtime: m };
+  if (realMinutes(next) > m) return fail('Scenes would be longer than the runtime');
+  // Keep scenes at the same relative place in the film.
+  const scale = m / film.runtime;
+  return { ok: true, film: pack({ ...next, scenes: pack(film).scenes.map((s) => ({ ...s, startMin: Math.round(s.startMin! * scale) })) }) };
 }
 
 // ---------------- Characters ----------------
@@ -148,9 +197,15 @@ export function addScene(film: Film, init: Partial<Pick<Scene, 'duration' | 'ton
     vfx: 'none',
     sfx: 'none',
   };
-  const next = { ...film, scenes: [...film.scenes, scene] };
-  if (realMinutes(next) > film.runtime) return fail('Not enough runtime left for another scene');
-  return { ok: true, film: next, sceneId: scene.id };
+  if (realMinutes({ ...film, scenes: [...film.scenes, scene] }) > film.runtime) return fail('Not enough runtime left for another scene');
+  // Append after the last scene with a small gap (drag it anywhere afterwards).
+  const minutes = sceneMinutes(scene.duration, film.runtime);
+  const packed = pack(film).scenes;
+  const last = packed[packed.length - 1];
+  const lastEnd = last ? last.startMin! + sceneMinutes(last.duration, film.runtime) : 0;
+  const margin = Math.round(film.runtime * S().newSceneGap);
+  scene.startMin = Math.min(lastEnd + margin, film.runtime - minutes);
+  return { ok: true, film: pack({ ...film, scenes: [...film.scenes, scene] }), sceneId: scene.id };
 }
 
 export function updateScene(film: Film, sceneId: string, patch: Partial<Pick<Scene, 'duration' | 'tone' | 'others'>>): EditResult {
@@ -159,7 +214,7 @@ export function updateScene(film: Film, sceneId: string, patch: Partial<Pick<Sce
   if (patch.others?.some((id) => !film.roles.some((r) => r.id === id))) return fail('Unknown role');
   const next = replaceScene(film, { ...s, ...patch });
   if (realMinutes(next) > film.runtime) return fail('Scenes would be longer than the runtime');
-  return { ok: true, film: next };
+  return { ok: true, film: pack(next) };
 }
 
 export function removeScene(film: Film, sceneId: string): EditResult {
@@ -167,15 +222,39 @@ export function removeScene(film: Film, sceneId: string): EditResult {
   return { ok: true, film: { ...film, scenes: film.scenes.filter((s) => s.id !== sceneId) } };
 }
 
-/** Move a scene earlier (-1) or later (+1) on the timeline. */
+/** Move a scene earlier (-1) or later (+1): it swaps places with its neighbour. */
 export function moveScene(film: Film, sceneId: string, delta: number): EditResult {
-  const i = film.scenes.findIndex((s) => s.id === sceneId);
+  const scenes = pack(film).scenes;
+  const i = scenes.findIndex((s) => s.id === sceneId);
   if (i < 0) return fail('Unknown scene');
   const j = i + delta;
-  if (j < 0 || j >= film.scenes.length) return fail('Cannot move further');
-  const scenes = [...film.scenes];
-  [scenes[i], scenes[j]] = [scenes[j], scenes[i]];
-  return { ok: true, film: { ...film, scenes } };
+  if (j < 0 || j >= scenes.length) return fail('Cannot move further');
+  const [a, b] = [scenes[Math.min(i, j)], scenes[Math.max(i, j)]];
+  const bStart = a.startMin!;
+  const aStart = bStart + sceneMinutes(b.duration, film.runtime) + (b.startMin! - a.startMin! - sceneMinutes(a.duration, film.runtime));
+  const swapped = scenes.map((s) => (s.id === a.id ? { ...s, startMin: aStart } : s.id === b.id ? { ...s, startMin: bStart } : s));
+  return { ok: true, film: pack({ ...film, scenes: swapped }) };
+}
+
+/**
+ * Drag and drop: place a scene to start at a minute (snapped). If it would overlap another
+ * scene it goes to the nearest free spot that fits.
+ */
+export function placeScene(film: Film, sceneId: string, minute: number): EditResult {
+  const packed = pack(film);
+  const s = packed.scenes.find((x) => x.id === sceneId);
+  if (!s) return fail('Unknown scene');
+  const minutes = sceneMinutes(s.duration, film.runtime);
+  const want = Math.max(0, Math.min(film.runtime - minutes, Math.round(minute)));
+  const fits = (start: number) => freeGaps(packed, sceneId).some(([a, b]) => start >= a && start + minutes <= b);
+  for (let d = 0; d <= film.runtime; d++) {
+    for (const start of [want - d, want + d]) {
+      if (start >= 0 && start + minutes <= film.runtime && fits(start)) {
+        return { ok: true, film: pack(replaceScene(packed, { ...s, startMin: start })) };
+      }
+    }
+  }
+  return fail('No free space for that scene');
 }
 
 // ---------------- Beats ----------------

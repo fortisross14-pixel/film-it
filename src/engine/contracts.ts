@@ -74,7 +74,7 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
 
   const signature = GENRE_SIGNATURE_ACTIONS[genre].filter((id) => ratingIndex(actionById(id).minRating) <= ratingIndex(rating));
   if (signature.length && rng.chance(0.7)) hardReqs.push({ kind: 'action', actionId: rng.pick(signature) });
-  else hardReqs.push({ kind: 'tone', tone: GENRE_TONE[genre], count: rng.int(1, 2) });
+  else hardReqs.push({ kind: 'tone', tone: GENRE_TONE[genre], count: 1 });
   if (archetype === 'blockbuster' || archetype === 'crowd' || (budgetTier >= 2 && rng.chance(0.5))) {
     hardReqs.push({ kind: 'leadStarPower', min: T.leadStarPowerMin[budgetTier] });
   }

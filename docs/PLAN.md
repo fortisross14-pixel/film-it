@@ -127,16 +127,37 @@ new phase playable in the browser.
   playback on its set with the cast and beats as captions, music, auto-polish, cost/time
   summary, lock → premiere.
 
-## Milestone 6 — Premiere, results and grade
+## Design updates (after Milestone 5 review)
 
-- `premiere.ts`: buzz, public rating, critics rating, box office (opening +
-  run), festivals and academy-style awards with a rival-film competition roll.
-- `grade.ts`: weighted satisfaction (box office, public, critics, awards), then late /
-  over-budget penalties, hard-requirement letter caps, bonus goals, final A–F.
-- Premiere UI: staged reveal (red carpet → public → critics → box office →
-  awards → verdict) and the results breakdown.
+- Scenes have a start minute: drag them anywhere on the timeline (snapped to 1 minute,
+  no overlaps; a drop on another scene lands in the nearest free spot). Two scenes may share
+  an act or straddle an act change; order follows time. New scenes append after the last one.
+- A script can be locked with 2 scenes. Brief tone requirements ask for 1 scene, so two
+  well-built scenes can meet a brief.
+
+## Milestone 6 — Premiere, results and grade (done)
+
+- `premiere.ts`: rating factors (script, star power, weakest scene, best scene, acting,
+  chemistry, VFX/SFX, originality, final cut) weighted per the requirements table for the
+  public and the critics; boredom from filler above a free 20%; overproduction hits critics;
+  ±3 noise. Buzz from stars, topic hype and charm. Box office: opening from market (genre,
+  rating, budget) × buzz × a small critics effect, then an 8-week run whose legs come from
+  the public rating (sleeper hits for small films with great word of mouth).
+- Festivals for small, well-reviewed films (big films rarely); academy-style categories
+  (Picture, Director, Lead/Supporting Performance, Original Script, Score with a star
+  composer, Visual Effects, Sound) with thresholds on their driver, a nomination roll and a
+  competition roll against the year's rivals.
+- `grade.ts` `gradeFilm`: weighted satisfaction (box office vs target, public, critics, awards
+  vs what the archetype expects) + bonus goals, then late / over-budget penalties, then one
+  letter lower per missed hard requirement. Rewards scale with grade; awards add reputation;
+  unspent budget adds credits.
+- `deliverFilm`: rewards, director level-up, genre award tally, filmography, fresh contract
+  board, auto-unlocks (new directors announced).
+- Premiere UI: staged reveal (red carpet → public → critics → box office → awards → verdict).
 
 ## Milestone 7 — Progression and meta loop
+
+(Rewards, director levels, filmography and board refresh already land in Milestone 6.)
 
 - Rewards (reputation, credits, unspent budget bonus), director levels (cap 10)
   and specialty scaling, director unlocks (rep tiers, genre awards),

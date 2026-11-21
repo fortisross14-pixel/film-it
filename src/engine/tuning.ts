@@ -110,10 +110,12 @@ export const TUNING = {
   script: {
     minRuntime: 60,
     maxRuntime: 180,
-    minScenes: 3,
+    minScenes: 2,
+    /** New scenes are appended after the last one with this gap (share of runtime). */
+    newSceneGap: 0.03,
     maxScenes: 7,
     /** Scene count → pacing score (index = number of scenes). Usually 4–5. */
-    sceneCountScore: [0, 0, 0, 80, 100, 100, 85, 65],
+    sceneCountScore: [0, 0, 65, 85, 100, 100, 85, 65],
     /** Scene length as a share of runtime. Filler fills the rest. */
     durationShare: { short: 0.12, medium: 0.18, long: 0.25 },
     /** Beats per scene → depth score (index = beats; 4+ uses the last). 1 shallow, 2 ideal, 3 good, 4 too complex. */
@@ -283,6 +285,65 @@ export const TUNING = {
     editorBoost: 0.25,
     /** Cutting a scene returns its minutes to filler; keep at least this many. */
     minScenesAfterCut: 2,
+  },
+  premiere: {
+    /** Rating factor weights (High 3 / Medium 2 / Low 1, per the requirements table). */
+    publicWeights: { script: 3, star: 3, worst: 3, peak: 1, acting: 2, chemistry: 2, fx: 3, originality: 1, execution: 2 },
+    criticsWeights: { script: 2, star: 1, worst: 2, peak: 3, acting: 3, chemistry: 3, fx: 1, originality: 2, execution: 2 },
+    /** FX matter to the public only as much as the genre cares (vfx/sfx weight); below this they count as Low. */
+    fxPublicMinWeight: 0.3,
+    /** Boredom: (filler share − free share) × this, off each rating. Some filler is normal. */
+    boredomFreeShare: 0.2,
+    boredomPublic: 60,
+    boredomCritics: 40,
+    /** "On the night" noise, ± points. */
+    ratingNoise: 3,
+    /** Buzz = star power, topic hype, charming cast. */
+    buzzStar: 0.6,
+    buzzTopic: 0.25,
+    buzzCharming: 5,
+    buzzBase: 10,
+    /** Market size multipliers. */
+    genreMarket: { action: 1.0, scifi: 0.95, fantasy: 0.9, comedy: 0.85, horror: 0.75, thriller: 0.8, romance: 0.65, drama: 0.55 },
+    ratingMarket: { G: 0.9, PG: 1.0, 'PG-13': 1.05, R: 0.85 },
+    /** Opening weekend = budget × openingShare × genre × rating × (buzzBase + buzz/100) × critics effect. */
+    openingShare: 0.7,
+    openingBuzzBase: 0.4,
+    criticsEffectBase: 0.9,
+    criticsEffectPer: 1 / 500,
+    /** Weekly retention from the public rating, over runWeeks. */
+    runWeeks: 8,
+    retentionBase: 0.35,
+    retentionPerPublic: 1 / 200,
+    /** Sleeper hit: small films with a great public rating hold longer. */
+    sleeperBudgetMax: 12_000,
+    sleeperPublicMin: 75,
+    sleeperBonus: 0.08,
+    /** Box office score: 100 × (gross / target)^exp × atTarget/100, capped. */
+    boxOfficeAtTarget: 80,
+    boxOfficeExp: 0.8,
+    /** Awards. */
+    festivalBudgetMax: 12_000,
+    festivalNomCritics: 70,
+    festivalWinCritics: 82,
+    bigFilmFestivalCritics: 85,
+    nominationBase: 0.35,
+    nominationPerPoint: 1 / 15,
+    rivalRange: [72, 95] as [number, number],
+    winNoise: 8,
+    /** Award points: nomination / win; festival counts the same. Expected points per archetype. */
+    nominationPoints: 1,
+    winPoints: 2.5,
+    expectedAwardPoints: { blockbuster: 1.5, award: 6, crowd: 1.5, indie: 3, tightship: 1.5 },
+  },
+
+  rewards: {
+    gradeMult: { A: 1.5, B: 1.2, C: 1, D: 0.6, F: 0.3 },
+    nominationRep: 10,
+    winRep: 30,
+    /** Unspent budget → credits per $K. */
+    unspentCreditsPerK: 0.002,
+    bonusGoalPoints: 1,
   },
 } as const;
 
