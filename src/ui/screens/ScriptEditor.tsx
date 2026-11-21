@@ -7,6 +7,7 @@ import { AXES, TONES, toneById } from '../../engine/data/tones';
 import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
 import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
+import { Film as FilmIcon } from '../components/Icons';
 import { TUNING } from '../../engine/tuning';
 import {
   DURATIONS, ROLE_TYPES, addBeat, addRole, addScene, availableActions, canAddRole, checkRequirements, fillerShare,
@@ -36,6 +37,7 @@ export function ScriptEditor() {
   const level = p.directors[film.directorId]?.level ?? 1;
   const [msg, setMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const current = film.scenes.find((s) => s.id === selected) ?? film.scenes[0];
 
   const apply: Apply = (r) => {
     if (!r.ok) return setMsg(r.reason), false;
@@ -55,37 +57,25 @@ export function ScriptEditor() {
       <div className="script-main">
         <CharactersPanel film={film} onApply={apply} />
         <RuntimeTopicBar film={film} onApply={apply} unlocked={p.unlocks.topics} />
-        <Timeline film={film} selected={selected} onSelect={setSelected} onApply={apply} />
+        <Timeline film={film} selected={current?.id ?? null} onSelect={setSelected} onApply={apply}
+          onAdd={film.scenes.length < TUNING.script.maxScenes && film.roles.length > 0 ? () => {
+            const r = addScene(film, { duration: 'medium', tone: 'calm' });
+            if (apply(r) && r.ok) setSelected(r.sceneId ?? null);
+          } : undefined} />
+        {film.roles.length === 0 && <p className="muted">Define your characters first, then add scenes to the strip.</p>}
         {msg && <p className="bad">{msg}</p>}
-        <div className="scene-cards">
-          {film.scenes.map((s, i) => (
-            <SceneCard
-              key={s.id}
-              film={film}
-              scene={s}
-              index={i}
-              level={level}
-              selected={selected === s.id}
-              onFocus={() => setSelected(s.id)}
-              onApply={apply}
-            />
-          ))}
-          {film.scenes.length < TUNING.script.maxScenes && (
-            <button
-              className="card add-scene"
-              disabled={film.roles.length === 0}
-              onClick={() => {
-                const r = addScene(film, { duration: 'medium', tone: 'calm' });
-                if (apply(r) && r.ok) setSelected(r.sceneId ?? null);
-              }}
-            >
-              + Add scene
-              <span className="small muted">
-                {film.roles.length === 0 ? 'Define characters first' : `${film.scenes.length}/${TUNING.script.maxScenes} · usually 4–5`}
-              </span>
-            </button>
-          )}
-        </div>
+        {current && (
+          <SceneCard
+            key={current.id}
+            film={film}
+            scene={current}
+            index={film.scenes.indexOf(current)}
+            level={level}
+            selected
+            onFocus={() => {}}
+            onApply={apply}
+          />
+        )}
       </div>
 
       <aside className="script-side">
@@ -237,40 +227,45 @@ function RuntimeTopicBar({ film, unlocked, onApply }: { film: Film; unlocked: st
   );
 }
 
-function Timeline({ film, selected, onSelect, onApply }: { film: Film; selected: string | null; onSelect: (id: string) => void; onApply: Apply }) {
+/** The script as one long film strip: scenes are frames you drag along it; empty film is filler. */
+function Timeline({ film, selected, onSelect, onApply, onAdd }: {
+  film: Film; selected: string | null; onSelect: (id: string) => void; onApply: Apply; onAdd?: () => void;
+}) {
   const slots = layout(film);
   const ref = useRef<HTMLDivElement>(null);
-  // Drag state: which scene, where the pointer grabbed it (minutes from its start), live minute.
   const [drag, setDrag] = useState<{ id: string; grab: number; minute: number; moved: boolean } | null>(null);
   const pct = (m: number) => `${(m / film.runtime) * 100}%`;
   const minuteAt = (clientX: number) => {
     const r = ref.current!.getBoundingClientRect();
     return ((clientX - r.left) / r.width) * film.runtime;
   };
+  const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
   return (
-    <div className="card">
+    <div className="card strip-card">
       <div className="row between">
-        <h3>Timeline</h3>
-        <span className="muted small">Drag scenes anywhere (or focus one and use ← →) · filler fills the gaps</span>
+        <h3 className="panel-title small-title"><FilmIcon size={22} /> The script</h3>
+        <span className="muted small">Drag scenes along the film (or focus one and use ← →) · blank film is filler</span>
       </div>
-      <div className="acts">
-        <span style={{ width: '25%' }}>Act 1</span>
-        <span style={{ width: '50%' }}>Act 2</span>
-        <span style={{ width: '25%' }}>Act 3</span>
+      <div className="strip-acts">
+        <span style={{ width: '25%' }}>Act I</span>
+        <span style={{ width: '50%' }}>Act II</span>
+        <span style={{ width: '25%' }}>Act III</span>
       </div>
-      <div className="timeline" ref={ref}>
+      <div className="filmstrip" ref={ref}>
         <div className="act-line" style={{ left: '25%' }} />
         <div className="act-line" style={{ left: '75%' }} />
         {slots.map((sl, i) => {
           const s = film.scenes.find((x) => x.id === sl.sceneId)!;
           const dragging = drag?.id === s.id;
           const left = dragging ? Math.max(0, Math.min(film.runtime - sl.minutes, Math.round(drag.minute - drag.grab))) : sl.start;
+          const first = s.beats[0];
+          const who = participants(s).map((id) => film.roles.find((r) => r.id === id)).filter(Boolean);
           return (
             <button
               key={s.id}
-              className={`tl-scene t-${s.tone} ${selected === s.id ? 'selected' : ''} ${dragging ? 'dragging' : ''}`}
+              className={`frame t-${s.tone} ${selected === s.id ? 'selected' : ''} ${dragging ? 'dragging' : ''}`}
               style={{ left: pct(left), width: pct(sl.minutes) }}
-              title={`Scene ${i + 1} · ${toneById(s.tone).name} · ${sl.minutes} min · Act ${sl.act}`}
+              aria-label={`Scene ${i + 1}, ${toneById(s.tone).name}, starts at minute ${sl.start}, act ${sl.act}. Arrow keys move it.`}
               onPointerDown={(e) => {
                 e.currentTarget.setPointerCapture(e.pointerId);
                 const m = minuteAt(e.clientX);
@@ -288,32 +283,35 @@ function Timeline({ film, selected, onSelect, onApply }: { film: Film; selected:
               }}
               onPointerCancel={() => setDrag(null)}
               onKeyDown={(e) => {
-                // Keyboard alternative to dragging: arrows move 1 minute, Shift+arrows 5.
                 if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
                 e.preventDefault();
-                const step = (e.shiftKey ? 5 : 1) * (e.key === 'ArrowLeft' ? -1 : 1);
-                onApply(placeScene(film, s.id, sl.start + step));
+                onApply(placeScene(film, s.id, sl.start + (e.shiftKey ? 5 : 1) * (e.key === 'ArrowLeft' ? -1 : 1)));
                 onSelect(s.id);
               }}
-              aria-label={`Scene ${i + 1}, ${toneById(s.tone).name}, starts at minute ${sl.start}, act ${sl.act}. Arrow keys move it.`}
             >
-              {i + 1}. {toneById(s.tone).name}
-              {dragging && <span className="tl-min"> @{left}′</span>}
+              <span className="frame-num">{i + 1}</span>
+              <span className="frame-tone">{toneById(s.tone).name}</span>
+              <span className="frame-name">{first ? describeBeat(roleName(first.roleId), first.actionId) : 'No action yet'}</span>
+              <span className="frame-cast">{who.map((r) => <span key={r!.id} className="initial" title={r!.name}>{r!.name.replace(/^The /, '')[0]}</span>)}</span>
+              <span className="frame-min">{dragging ? `@${left}′` : `${sl.minutes}′`}</span>
             </button>
           );
         })}
       </div>
       <div className="ticks">
-        {Array.from({ length: Math.floor(film.runtime / 10) + 1 }, (_, i) => i * 10).map((m) => (
-          <span key={m} style={{ left: pct(m) }}>{m}</span>
-        ))}
+        {Array.from({ length: Math.floor(film.runtime / 10) + 1 }, (_, i) => i * 10).map((m) => <span key={m} style={{ left: pct(m) }}>{m}</span>)}
       </div>
-      {selected && film.scenes.some((s) => s.id === selected) && (
-        <div className="row">
-          <button onClick={() => onApply(moveScene(film, selected, -1))}>◀ Swap earlier</button>
-          <button onClick={() => onApply(moveScene(film, selected, 1))}>Swap later ▶</button>
-        </div>
-      )}
+      <div className="row">
+        {onAdd && <button className="primary" onClick={onAdd}>+ Add scene</button>}
+        <span className="small muted">{film.scenes.length}/{TUNING.script.maxScenes} scenes · usually 4–5 · lock with at least {TUNING.script.minScenes}</span>
+        {selected && film.scenes.length > 1 && (
+          <>
+            <span className="spacer" />
+            <button onClick={() => onApply(moveScene(film, selected, -1))}>◀ Swap earlier</button>
+            <button onClick={() => onApply(moveScene(film, selected, 1))}>Swap later ▶</button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

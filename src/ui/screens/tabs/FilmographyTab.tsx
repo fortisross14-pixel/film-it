@@ -5,7 +5,8 @@ import { directorById } from '../../../engine/data/directors';
 import { toneById } from '../../../engine/data/tones';
 import { setById } from '../../../engine/data/sets';
 import { actionById } from '../../../engine/data/actions';
-import { money } from '../../../engine/format';
+import { audienceScore, criticsScore, money } from '../../../engine/format';
+import { Popcorn, Tomato } from '../../components/Icons';
 import { sceneScores } from '../../../engine/post';
 
 export function FilmographyTab() {
@@ -20,7 +21,7 @@ export function FilmographyTab() {
         <table className="table">
           <thead>
             <tr>
-              <th>Title</th><th>Profile</th><th>Genre</th><th>Grade</th><th>Box office</th><th>Public</th><th>Critics</th><th>Awards</th><th />
+              <th>Title</th><th>Profile</th><th>Genre</th><th>Grade</th><th>Box office</th><th><Popcorn size={18} title="Audience" /> Audience</th><th><Tomato size={18} title="Critics" /> Critics</th><th>Awards</th><th />
             </tr>
           </thead>
           <tbody>
@@ -32,8 +33,8 @@ export function FilmographyTab() {
                   <td>{genreName(film.contract.genre)}</td>
                   <td><strong className={`grade-${film.grade}`}>{film.grade ?? '—'}</strong></td>
                   <td>{film.results ? money(film.results.boxOffice) : '—'}</td>
-                  <td>{film.results?.publicRating ?? '—'}</td>
-                  <td>{film.results?.criticsRating ?? '—'}</td>
+                  <td>{film.results ? `${audienceScore(film.results.publicRating)}/10` : '—'}</td>
+                  <td>{film.results ? criticsScore(film.results.criticsRating) : '—'}</td>
                   <td>{film.results ? `${film.results.wins.length} 🏆 / ${film.results.nominations.length}` : '—'}</td>
                   <td><button onClick={() => setOpen(open === film.id ? null : film.id)}>{open === film.id ? 'Hide' : 'Final cut'}</button></td>
                 </tr>

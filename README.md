@@ -1,4 +1,4 @@
-# Director's Cut
+# Film it!
 
 A film-making creation game: take a studio brief, write the script, cast it, shoot it,
 finish it in post and premiere it. Graded A–F against what the studio wanted.

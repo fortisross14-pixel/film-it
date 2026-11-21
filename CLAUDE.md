@@ -1,4 +1,4 @@
-# Director's Cut — working notes
+# Film it! — working notes
 
 - Follow `docs/PLAN.md` milestone by milestone. The requirements doc is the source of truth.
 - Engine (`src/engine/`) is pure TypeScript: no React, no DOM, no Math.random — use the seeded RNG in `rng.ts`

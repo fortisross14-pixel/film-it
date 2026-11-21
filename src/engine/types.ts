@@ -1,4 +1,4 @@
-// Core entity types for Director's Cut. Pure data, no logic.
+// Core entity types for Film it!. Pure data, no logic.
 
 export type GenreId =
   | 'action'
@@ -185,6 +185,8 @@ export type BonusGoal =
 
 export interface Contract {
   id: string;
+  /** Working title of the film the studio wants ("The Last Signal"). */
+  title?: string;
   studio: Studio;
   archetype: Archetype;
   genre: GenreId;

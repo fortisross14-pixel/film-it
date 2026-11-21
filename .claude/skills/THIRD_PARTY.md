@@ -6,7 +6,7 @@ Apache-2.0. Licence and NOTICE are in this folder (`LICENSE-awesome-gamedev-agen
 `NOTICE-awesome-gamedev-agent-skills.txt`). Every file was read before adding: Markdown only, no
 scripts or install steps.
 
-| Skill | Source path | Why it applies to Director's Cut |
+| Skill | Source path | Why it applies to Film it! |
 |---|---|---|
 | `game-feel` | `skills/disciplines/game-feel` | Shoot bubbles, premiere reveal, feedback on actions |
 | `game-ui-ux` | `skills/disciplines/game-ui-ux` | Every screen is UI: layout, focus, accessibility, screen flow |

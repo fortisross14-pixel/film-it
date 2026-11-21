@@ -16,7 +16,7 @@ export function SlotsScreen() {
 
   return (
     <div className="screen center">
-      <h1 className="logo">Director's Cut</h1>
+      <h1 className="logo">Film it!</h1>
       <p className="muted">Choose a save slot</p>
       <SettingsButton />
       <div className="slots">

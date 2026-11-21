@@ -1,5 +1,9 @@
 import { useGame, useProfile } from '../store';
-import { ProfileHeader } from './BaseMenu';
+import { Shell, type NavItem } from '../components/Shell';
+import { Calendar as CalIcon, Clapper, Coins, Film, Masks, People, Trophy } from '../components/Icons';
+import { money } from '../../engine/format';
+import { spent } from '../../engine/script';
+import { weeksUsed } from '../../engine/shooting';
 import { ContractCard } from '../components/ContractCard';
 import { directorById } from '../../engine/data/directors';
 import { abandonFilm } from '../../engine/profile';
@@ -10,12 +14,12 @@ import { ShootingScreen } from './ShootingScreen';
 import { PostScreen } from './PostScreen';
 import { PremiereScreen } from './PremiereScreen';
 
-const PHASES: { id: FilmPhase; label: string }[] = [
-  { id: 'script', label: 'Script' },
-  { id: 'casting', label: 'Casting' },
-  { id: 'shooting', label: 'Shooting' },
-  { id: 'post', label: 'Post' },
-  { id: 'premiere', label: 'Premiere' },
+const PHASES: { id: FilmPhase; label: string; icon: JSX.Element }[] = [
+  { id: 'script', label: 'Script', icon: <Masks size={22} /> },
+  { id: 'casting', label: 'Casting', icon: <People size={22} /> },
+  { id: 'shooting', label: 'Shooting', icon: <Clapper size={22} /> },
+  { id: 'post', label: 'Edit', icon: <Film size={22} /> },
+  { id: 'premiere', label: 'Premiere', icon: <Trophy size={22} /> },
 ];
 
 export function ProductionScreen() {
@@ -23,10 +27,16 @@ export function ProductionScreen() {
   const { update } = useGame();
   const film = p.activeFilm!;
   const phaseIdx = PHASES.findIndex((x) => x.id === film.phase);
+  const nav: NavItem[] = PHASES.map((ph, i) => ({ id: ph.id, label: ph.label, icon: ph.icon, done: i < phaseIdx }));
+  const extra = (
+    <>
+      <span className="hud-pill"><CalIcon size={18} /> Week {String(weeksUsed(film)).padStart(2, '0')} / {film.contract.deadlineWeeks}</span>
+      <span className="hud-pill"><Coins size={18} /> Budget {money(film.contract.budget - spent(film))}</span>
+      <span className="title-plate">{film.title}</span>
+    </>
+  );
   return (
-    <div className="screen">
-      <ProfileHeader />
-      <div className="content">
+    <Shell nav={nav} active={film.phase} extra={extra}>
         <div className="row between">
           <div>
             <h2>“{film.title}”</h2>
@@ -43,13 +53,6 @@ export function ProductionScreen() {
           </button>
           )}
         </div>
-        <ol className="stepper">
-          {PHASES.map((ph, i) => (
-            <li key={ph.id} className={i === phaseIdx ? 'active' : i < phaseIdx ? 'done' : ''}>
-              {ph.label}
-            </li>
-          ))}
-        </ol>
         {film.phase === 'script' ? (
           <ScriptEditor />
         ) : film.phase === 'casting' ? (
@@ -74,7 +77,6 @@ export function ProductionScreen() {
           </div>
         </div>
         )}
-      </div>
-    </div>
+    </Shell>
   );
 }

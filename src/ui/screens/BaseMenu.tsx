@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useGame, useProfile } from '../store';
-import { nextTierAt, reputationTier } from '../../engine/progression';
-import { directorById } from '../../engine/data/directors';
-import { TUNING } from '../../engine/tuning';
-import { SettingsButton } from '../prefs';
+import { useProfile } from '../store';
+import { Shell, type NavItem } from '../components/Shell';
+import { Box, Film, Home, Masks, Reel, Trophy } from '../components/Icons';
 import { ContractBoardTab } from './tabs/ContractBoardTab';
 import { CareersTab } from './tabs/CareersTab';
 import { TopicPacksTab } from './tabs/TopicPacksTab';
@@ -12,65 +10,26 @@ import { FilmographyTab } from './tabs/FilmographyTab';
 import { TrophyRoomTab } from './tabs/TrophyRoomTab';
 
 const TABS = [
-  { id: 'board', label: 'Contracts', C: ContractBoardTab, needsCareer: true },
-  { id: 'careers', label: 'Careers', C: CareersTab, needsCareer: false },
-  { id: 'topics', label: 'Topic packs', C: TopicPacksTab, needsCareer: false },
-  { id: 'sets', label: 'Sets', C: SetCatalogueTab, needsCareer: false },
-  { id: 'films', label: 'Filmography', C: FilmographyTab, needsCareer: false },
-  { id: 'trophies', label: 'Trophy room', C: TrophyRoomTab, needsCareer: false },
+  { id: 'careers', label: 'Studio', icon: <Home size={22} />, C: CareersTab, needsCareer: false },
+  { id: 'board', label: 'Projects', icon: <Reel size={22} />, C: ContractBoardTab, needsCareer: true },
+  { id: 'sets', label: 'Sets', icon: <Box size={22} />, C: SetCatalogueTab, needsCareer: false },
+  { id: 'topics', label: 'Topic packs', icon: <Masks size={22} />, C: TopicPacksTab, needsCareer: false },
+  { id: 'films', label: 'Filmography', icon: <Film size={22} />, C: FilmographyTab, needsCareer: false },
+  { id: 'trophies', label: 'Trophy room', icon: <Trophy size={22} />, C: TrophyRoomTab, needsCareer: false },
 ] as const;
-
-export function ProfileHeader() {
-  const p = useProfile();
-  const { close } = useGame();
-  const c = p.career;
-  const tier = reputationTier(c?.reputation ?? 0);
-  const next = nextTierAt(c?.reputation ?? 0);
-  return (
-    <header className="topbar">
-      <span className="logo small">Director's Cut</span>
-      <span className="pill">{p.name}</span>
-      {c ? (
-        <>
-          <span className="pill career-pill">🎬 {directorById(c.directorId).name} · lvl {c.level}/{TUNING.directors.maxLevel} · {c.films} films</span>
-          <span className="pill" title={next ? `Next studio tier at ${next}` : 'Top tier'}>
-            Reputation {c.reputation} · studio tier {tier}
-            {next !== undefined && <span className="muted"> / {next}</span>}
-          </span>
-        </>
-      ) : (
-        <span className="pill muted">No career running</span>
-      )}
-      <span className="pill" title="The bank: earned across all careers">🏦 {p.credits} credits</span>
-      <span className="spacer" />
-      <SettingsButton />
-      <button onClick={close}>Save &amp; quit</button>
-    </header>
-  );
-}
 
 export function BaseMenu() {
   const p = useProfile();
-  const tabs = TABS.filter((t) => !t.needsCareer || p.career);
   const [tab, setTab] = useState<(typeof TABS)[number]['id']>(p.career ? 'board' : 'careers');
-  // Career ended (retired / fired) while on the board → go to careers.
+  // Career ended (retired / fired) while on the board → go to the studio.
   useEffect(() => {
     if (!p.career && tab === 'board') setTab('careers');
   }, [p.career, tab]);
-  const Active = (tabs.find((t) => t.id === tab) ?? tabs[0]).C;
+  const nav: NavItem[] = TABS.map((t) => ({ id: t.id, label: t.label, icon: t.icon, disabled: t.needsCareer && !p.career }));
+  const Active = TABS.find((t) => t.id === tab)!.C;
   return (
-    <div className="screen">
-      <ProfileHeader />
-      <nav className="tabs" role="tablist">
-        {tabs.map((t) => (
-          <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-      <main className="content">
-        <Active onGoTo={(id: string) => setTab(id as typeof tab)} />
-      </main>
-    </div>
+    <Shell nav={nav} active={tab} onNav={(id) => setTab(id as typeof tab)}>
+      <Active onGoTo={(id: string) => setTab(id as typeof tab)} />
+    </Shell>
   );
 }

@@ -1,6 +1,6 @@
-# Director's Cut — Build Plan
+# Film it! — Build Plan
 
-Source of truth: the "Director's Cut — Game Requirements" doc.
+Source of truth: the "Film it! — Game Requirements" doc.
 Goal of this plan: get every mechanic in the requirements working end to end.
 Balancing and polish come after; all balance numbers live in `src/engine/tuning.ts`
 so they can be tuned in one place later.
@@ -182,6 +182,28 @@ earned in careers — money is the only unlock currency.
 
 See `docs/AUDIT.md`: dependency upgrade, and fixes against the game-dev skills (saves, generation checks,
 casting invariants, accessibility and layout at 200% text, reduce motion, tiered feedback).
+
+## Visual pass toward the concept art (done)
+
+- Name: **Film it!**. Warm cinema theme: dark frame, cream paper with sprocket edges, maroon and
+  gold, Cinzel display + Nunito body; side nav with icons; top HUD (director level, credits,
+  reputation; in production: week, budget, title plate).
+- Ratings: critics 🍅 as a %, audience 🍿 on a 1–10 scale with one decimal (`format.ts`).
+- Contract board as in concept 2 (list with posters, detail with poster + facts + Start Production,
+  director / set catalogue / topic packs). Briefs carry working titles (`titles.ts`).
+- Script is one long film strip: scenes are frames dragged along it; one scene edited at a time.
+- Sets: hand-placed low-poly furniture and props for the main sets, glowing lamps and windows,
+  studio rig (lights with beams, camera on dolly track, director's chair), low-poly actors.
+- Shooting as in concept 3: on-set scene list with thumbnails, studio stage, directing focus with
+  meter icons and a big Record Take button, cast and set pickers; speech bubbles (⚡ pace,
+  ❤ chemistry, 💬 dialogue) pop over the actor who earned them.
+- Premiere as in concept 1: poster in a marquee on a red carpet with curtains and spotlights,
+  rating cards, studio verdict with laurels and ribbon, awards row, box office by week chart.
+- Procedural posters (`Poster.tsx`) and icons (`Icons.tsx`) stand in for commissioned art.
+
+### Art wanted (to replace the procedural placeholders)
+See the end-of-turn message / issue list: actor portraits, posters per genre, set backdrops or
+sprites, prop sprites, UI ornaments (laurels, reels, film strip, tickets), award statuettes.
 
 ## Milestone 8 — "Later" features from the requirements
 

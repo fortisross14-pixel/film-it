@@ -12,6 +12,7 @@ import { GENRE_TONE } from './data/tones';
 import { STUDIOS } from './data/studios';
 import { TOPICS } from './data/topics';
 import { reputationTier } from './progression';
+import { workingTitle } from './titles';
 
 export const ARCHETYPE_NAMES: Record<Archetype, string> = {
   blockbuster: 'Blockbuster',
@@ -114,6 +115,7 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
 
   return {
     id: makeId('con', rng),
+    title: workingTitle(rng, genre),
     studio,
     archetype,
     genre,

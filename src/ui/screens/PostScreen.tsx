@@ -1,15 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
-import { Calendar } from './ShootingScreen';
-import { Face } from '../components/Face';
+import { Calendar, stageCast } from './ShootingScreen';
 import { IsoSet } from '../components/IsoSet';
 import { setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
 import { actionById } from '../../engine/data/actions';
 import { describeBeat, money } from '../../engine/format';
 import { TUNING } from '../../engine/tuning';
-import { participants, spent } from '../../engine/script';
+import { spent } from '../../engine/script';
 import { METERS, chosenTake, weeksUsed } from '../../engine/shooting';
 import {
   MUSIC_TIERS, POLISH_TIERS, autoPolish, chooseTake, finishPost, isEmotional, postSummary, setCut, setMusic, setPolish,
@@ -175,7 +174,6 @@ function SceneEdit({
 function Playback({ film, scene, score, onClose }: { film: Film; scene: Scene; score?: SceneScore; onClose: () => void }) {
   const take = chosenTake(scene)!;
   const set = setById(take.setId);
-  const ids = participants(scene);
   const [step, setStep] = useState(0);
   const timer = useRef<number>();
   const total = scene.beats.length + 1; // beats, then the score
@@ -194,19 +192,8 @@ function Playback({ film, scene, score, onClose }: { film: Film; scene: Scene; s
         <button onClick={onClose}>Close</button>
       </div>
       <div className={`stage tone-${scene.tone}`}>
-        <IsoSet set={set} extras={Math.min(set.extrasCapacity, 30)} height={260} />
-        <div className="stage-actors">
-          {ids.map((id, i) => {
-            const r = film.roles.find((x) => x.id === id);
-            return r?.actor ? (
-              <div key={id} className={`stage-actor ${active.has(id) ? 'acting' : ''}`} style={{ left: `${((i + 1) / (ids.length + 1)) * 100}%` }}>
-                <Face actor={r.actor} size={56} />
-                <span className="small">{r.name}</span>
-              </div>
-            ) : null;
-          })}
-          {scene.vfx !== 'none' && !done && <span className="fx-flash">✦</span>}
-        </div>
+        <IsoSet set={set} extras={Math.min(set.extrasCapacity, 20)} height={340} studio={false} actors={stageCast(film, scene)} acting={[...active] as string[]} />
+        {scene.vfx !== 'none' && !done && <span className="fx-flash">✦</span>}
         <div className="caption">
           {done ? (
             <>Scene score <strong className="big">{score?.total ?? take.score}</strong></>

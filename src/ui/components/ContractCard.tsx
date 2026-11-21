@@ -5,7 +5,7 @@ import { describeBonus, describeHardReq, money } from '../../engine/format';
 
 const WEIGHT_LABELS = {
   boxOffice: 'Box office',
-  public: 'Public',
+  public: 'Audience',
   critics: 'Critics',
   awards: 'Awards',
 } as const;

@@ -5,6 +5,14 @@ import { actionById } from './data/actions';
 import { toneById } from './data/tones';
 import { topicById } from './data/topics';
 
+/** Audience score: ratings are 0–100 internally, shown on a 1–10 scale with one decimal ("6.8"). */
+export function audienceScore(rating: number): string {
+  return (Math.max(10, Math.min(100, rating)) / 10).toFixed(1);
+}
+
+/** Critics score: a percentage ("87%"). */
+export const criticsScore = (rating: number) => `${Math.round(rating)}%`;
+
 /** $K → "$25M" / "$750K". */
 export function money(k: number): string {
   if (Math.abs(k) >= 1000) {

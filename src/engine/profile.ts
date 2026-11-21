@@ -67,7 +67,7 @@ export function startFilm(p: Profile, contractId: string, directorIdArg?: string
 
   const { profile, value: film } = withRng(p, (rng): Film => ({
     id: makeId('film', rng),
-    title: `${rng.pick(FILM_TITLE_PARTS.first)} ${rng.pick(FILM_TITLE_PARTS.second)}`,
+    title: contract.title ?? `${rng.pick(FILM_TITLE_PARTS.first)} ${rng.pick(FILM_TITLE_PARTS.second)}`,
     contract: structuredClone(contract) as Contract,
     directorId,
     phase: 'script',
