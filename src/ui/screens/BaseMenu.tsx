@@ -3,6 +3,7 @@ import { useGame, useProfile } from '../store';
 import { nextTierAt, reputationTier } from '../../engine/progression';
 import { directorById } from '../../engine/data/directors';
 import { TUNING } from '../../engine/tuning';
+import { SettingsButton } from '../prefs';
 import { ContractBoardTab } from './tabs/ContractBoardTab';
 import { CareersTab } from './tabs/CareersTab';
 import { TopicPacksTab } from './tabs/TopicPacksTab';
@@ -42,6 +43,7 @@ export function ProfileHeader() {
       )}
       <span className="pill" title="The bank: earned across all careers">🏦 {p.credits} credits</span>
       <span className="spacer" />
+      <SettingsButton />
       <button onClick={close}>Save &amp; quit</button>
     </header>
   );

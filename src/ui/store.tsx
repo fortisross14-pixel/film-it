@@ -17,9 +17,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [slot, setSlot] = useState<number | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  // Autosave whenever the profile changes.
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Autosave whenever the profile changes; surface failures instead of losing progress silently.
   useEffect(() => {
-    if (slot !== null && profile) saveProfile(slot, profile);
+    if (slot === null || !profile) return;
+    const r = saveProfile(slot, profile);
+    setSaveError(r.ok ? null : r.reason);
   }, [slot, profile]);
 
   const open = useCallback((s: number, p: Profile) => {
@@ -32,7 +35,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, []);
   const update = useCallback((fn: (p: Profile) => Profile) => setProfile((p) => (p ? fn(p) : p)), []);
 
-  return <Ctx.Provider value={{ slot, profile, open, close, update }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ slot, profile, open, close, update }}>
+      {saveError && <div className="save-error" role="alert">⚠ {saveError} Your latest changes are not saved.</div>}
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useGame(): GameStore {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { deleteSlot, listSlots, loadProfile } from '../../engine/save';
 import { newProfile } from '../../engine/profile';
 import { useGame } from '../store';
+import { SettingsButton } from '../prefs';
 
 export function SlotsScreen() {
   const { open } = useGame();
@@ -17,6 +18,7 @@ export function SlotsScreen() {
     <div className="screen center">
       <h1 className="logo">Director's Cut</h1>
       <p className="muted">Choose a save slot</p>
+      <SettingsButton />
       <div className="slots">
         {slots.map((s) => (
           <div key={s.slot} className="card slot">
@@ -40,12 +42,13 @@ export function SlotsScreen() {
               )
             ) : s.corrupt ? (
               <>
-                <p className="bad">Unreadable save</p>
+                <p className="bad">{s.message ?? 'Unreadable save'}</p>
                 <button onClick={() => (deleteSlot(s.slot), setSlots(listSlots()))}>Clear slot</button>
               </>
             ) : (
               <>
                 <p><strong>{s.name}</strong></p>
+                {s.status === 'fromBackup' && <p className="small bad">{s.message}</p>}
                 <p className="muted">{s.credits} credits · {s.careers} career{s.careers === 1 ? '' : 's'} · {s.films} films</p>
                 <div className="row">
                   <button className="primary" onClick={() => open(s.slot, loadProfile(s.slot)!)}>Continue</button>

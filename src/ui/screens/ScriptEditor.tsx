@@ -251,7 +251,7 @@ function Timeline({ film, selected, onSelect, onApply }: { film: Film; selected:
     <div className="card">
       <div className="row between">
         <h3>Timeline</h3>
-        <span className="muted small">Drag scenes anywhere · filler fills the gaps</span>
+        <span className="muted small">Drag scenes anywhere (or focus one and use ← →) · filler fills the gaps</span>
       </div>
       <div className="acts">
         <span style={{ width: '25%' }}>Act 1</span>
@@ -287,6 +287,15 @@ function Timeline({ film, selected, onSelect, onApply }: { film: Film; selected:
                 setDrag(null);
               }}
               onPointerCancel={() => setDrag(null)}
+              onKeyDown={(e) => {
+                // Keyboard alternative to dragging: arrows move 1 minute, Shift+arrows 5.
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                e.preventDefault();
+                const step = (e.shiftKey ? 5 : 1) * (e.key === 'ArrowLeft' ? -1 : 1);
+                onApply(placeScene(film, s.id, sl.start + step));
+                onSelect(s.id);
+              }}
+              aria-label={`Scene ${i + 1}, ${toneById(s.tone).name}, starts at minute ${sl.start}, act ${sl.act}. Arrow keys move it.`}
             >
               {i + 1}. {toneById(s.tone).name}
               {dragging && <span className="tl-min"> @{left}′</span>}
@@ -367,6 +376,7 @@ function SceneCard({
               </>
             )}
             <button className="danger icon" aria-label="Remove action" onClick={() => onApply(removeBeat(film, scene.id, i))}>✕</button>
+            {!a.tones.includes(scene.tone) && <span className="small bad clash-note">Doesn't suit a {toneById(scene.tone).name.toLowerCase()} scene</span>}
           </div>
         );
       })}

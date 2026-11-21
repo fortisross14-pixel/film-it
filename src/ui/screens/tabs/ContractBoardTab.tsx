@@ -31,10 +31,10 @@ export function ContractBoardTab() {
         ))}
       </div>
       {contract && (
-        <div className="card accept-panel row between wrap">
-          <span>
+        <div className="card accept-panel">
+          <p>
             Accept <strong>{contract.studio.name}</strong>'s brief? <span className="muted">You can't change it once production starts.</span>
-          </span>
+          </p>
           <button className="primary" onClick={() => {
             const r = startFilm(p, contract.id);
             if (r.ok) update(() => r.profile);

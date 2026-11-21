@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Film, Meter, PendingShoot, Profile } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { Face } from '../components/Face';
+import { reducedMotion } from '../prefs';
 import { IsoSet } from '../components/IsoSet';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
@@ -215,9 +216,10 @@ function ShootStage({ p, pending, onPick, onRetry }: { p: Profile; pending: Pend
   const scene = film.scenes.find((s) => s.id === pending.sceneId)!;
   const set = setById(pending.setId);
   const ids = participants(scene);
-  const [time, setTime] = useState(0);
+  const [time, setTime] = useState(() => (reducedMotion() ? 1 : 0));
   const start = useRef<number | null>(null);
   useEffect(() => {
+    if (reducedMotion()) return;
     let raf = 0;
     const tick = (now: number) => {
       start.current ??= now;

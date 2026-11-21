@@ -178,6 +178,11 @@ earned in careers — money is the only unlock currency.
   filmography with each film's final cut and stored takes, fired notice.
 - End-to-end engine test plays a full contract with no UI.
 
+## Audit (after Milestone 7)
+
+See `docs/AUDIT.md`: dependency upgrade, and fixes against the game-dev skills (saves, generation checks,
+casting invariants, accessibility and layout at 200% text, reduce motion, tiered feedback).
+
 ## Milestone 8 — "Later" features from the requirements
 
 - Chemistry between actor pairs (hidden, revealed after first shared scene).

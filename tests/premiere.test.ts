@@ -117,6 +117,10 @@ describe('premiere & delivery', () => {
       expect(q.directors[f.directorId].level).toBe(2);
       expect(q.contractBoard.map((c) => c.id)).not.toEqual(board);
     }
+    // save-systems: a stored film (cast, every take, results) must stay small — 40 of them
+    // plus the profile should fit comfortably in localStorage (~5 MB per origin).
+    const filmBytes = JSON.stringify(q.filmography[0]).length;
+    expect(filmBytes * 40 + JSON.stringify({ ...q, filmography: [] }).length).toBeLessThan(2_000_000);
   });
   it('a cheap, well-reviewed film can reach festivals', () => {
     const f = premiereProfile('drama', 8000).activeFilm!;

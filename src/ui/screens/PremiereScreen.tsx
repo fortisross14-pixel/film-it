@@ -49,7 +49,7 @@ export function PremiereScreen() {
         ))}
       </ol>
 
-      <div className="card reveal" key={stage}>
+      <div className={`card reveal ${stage === 5 ? 'verdict' : ''}`} key={stage}>
         {stage === 0 && (
           <>
             <h2>🎞️ The red carpet</h2>
@@ -113,7 +113,7 @@ export function PremiereScreen() {
           <>
             <div className="row between">
               <h2>🎬 Studio verdict: {film.contract.studio.name}</h2>
-              <span className={`grade grade-${rep.grade}`}>{rep.grade}</span>
+              <span className={`grade grade-${rep.grade} stamp`}>{rep.grade}</span>
             </div>
             <table className="table">
               <tbody>

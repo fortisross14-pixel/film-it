@@ -3,7 +3,7 @@ import { generateBoard, generateContract } from '../src/engine/contracts';
 import { newProfile, refreshBoard, startFilm } from '../src/engine/profile';
 import { buyDirector, buySet, buyTopicPack, reputationTier, unlockProgress } from '../src/engine/progression';
 import { startCareer } from '../src/engine/career';
-import { deleteSlot, listSlots, loadProfile, saveProfile, type KeyValueStore } from '../src/engine/save';
+import { deleteSlot, listSlots, loadProfile, loadSlot, saveProfile, type KeyValueStore } from '../src/engine/save';
 import { TUNING } from '../src/engine/tuning';
 import { ACTIONS, BASE_ACTIONS, GENRE_SIGNATURE_ACTIONS } from '../src/engine/data/actions';
 import { GENRE_PROFILE } from '../src/engine/data/tones';
@@ -206,25 +206,69 @@ describe('progression', () => {
   });
 });
 
-describe('save slots', () => {
+describe('save slots (save-systems skill checks)', () => {
   it('saves, lists, loads and deletes', () => {
     const store = memoryStore();
     expect(listSlots(store).every((s) => s.empty)).toBe(true);
     const p = newProfile('Slot', 2);
-    saveProfile(1, p, store);
+    expect(saveProfile(1, p, store)).toEqual({ ok: true });
     expect(loadProfile(1, store)).toEqual(p);
     const slots = listSlots(store);
     expect(slots).toHaveLength(3);
-    expect(slots[1]).toMatchObject({ empty: false, name: 'Slot' });
+    expect(slots[1]).toMatchObject({ empty: false, status: 'ok', name: 'Slot' });
     deleteSlot(1, store);
     expect(loadProfile(1, store)).toBeUndefined();
     expect(() => saveProfile(3, p, store)).toThrow();
   });
 
-  it('flags corrupt saves', () => {
+  it('round-trips a career mid-production', () => {
+    const store = memoryStore();
+    const r = startCareer(newProfile('R', 4), 'starterA', 1);
+    if (!r.ok) throw new Error(r.reason);
+    const s = startFilm(r.profile, r.profile.contractBoard[0].id);
+    if (!s.ok) throw new Error(s.reason);
+    saveProfile(0, s.profile, store);
+    expect(loadProfile(0, store)).toEqual(s.profile);
+  });
+
+  it('flags corrupt saves and falls back to the backup', () => {
     const store = memoryStore();
     store.setItem('directors-cut:slot:0', '{nope');
-    expect(listSlots(store)[0].corrupt).toBe(true);
+    expect(listSlots(store)[0]).toMatchObject({ status: 'corrupt', corrupt: true });
     expect(loadProfile(0, store)).toBeUndefined();
+    // Two good saves: the first becomes the backup; truncating the primary loads the backup.
+    const a = newProfile('A', 1), b = { ...a, credits: 999 };
+    saveProfile(0, a, store);
+    saveProfile(0, b, store);
+    store.setItem('directors-cut:slot:0', '{"version": 5, "na');
+    const r = loadSlot(0, store);
+    expect(r.status).toBe('fromBackup');
+    expect(r.profile?.credits).toBe(a.credits);
   });
+
+  it('refuses newer saves and explains older ones', () => {
+    const store = memoryStore();
+    store.setItem('directors-cut:slot:0', JSON.stringify({ ...newProfile('N', 1), version: TUNING.saveVersion + 1 }));
+    store.setItem('directors-cut:slot:1', JSON.stringify({ version: 2, name: 'old' }));
+    expect(loadSlot(0, store)).toMatchObject({ status: 'newer' });
+    expect(loadSlot(1, store)).toMatchObject({ status: 'older' });
+    expect(listSlots(store)[1].message).toMatch(/early test build/);
+  });
+
+  it('validates on load and drops ids that no longer exist', () => {
+    const store = memoryStore();
+    const p = newProfile('V', 1);
+    store.setItem('directors-cut:slot:0', JSON.stringify({ ...p, unlocks: { ...p.unlocks, sets: [...p.unlocks.sets, 'deletedSet'] } }));
+    expect(loadProfile(0, store)!.unlocks.sets).not.toContain('deletedSet');
+    store.setItem('directors-cut:slot:1', JSON.stringify({ ...p, credits: 'lots' }));
+    expect(loadSlot(1, store).status).toBe('corrupt');
+  });
+
+  it('reports a full storage instead of throwing', () => {
+    const full: KeyValueStore = { getItem: () => null, setItem: () => { throw Object.assign(new Error('exceeded'), { name: 'QuotaExceededError' }); }, removeItem: () => {} };
+    const r = saveProfile(0, newProfile('F', 1), full);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.reason).toMatch(/full/);
+  });
+
 });
