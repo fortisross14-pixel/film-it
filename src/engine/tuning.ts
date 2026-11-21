@@ -359,6 +359,36 @@ export const TUNING = {
     /** Fired after this many F grades in a row (no retirement bonus). */
     firedAfterFs: 2,
   },
+  poster: {
+    /** Regenerating the background costs budget × share × 2^n. */
+    regenFeeShare: 0.003,
+    regenFeeMin: 10,
+    /** Score weights (sum 1). */
+    weights: { style: 0.3, title: 0.2, billing: 0.25, faces: 0.15, director: 0.1 },
+    /** Star power that counts as a star (bill big) / a superstar (face worth showing). */
+    starAt: 60,
+    superstarAt: 80,
+    nobodyBelow: 35,
+    maxFaces: 4,
+    /** Director "known" after this many films in the career. */
+    knownDirectorFilms: 3,
+    /** Poster score → buzz points and opening multiplier. */
+    buzzAt100: 12,
+    openingMin: 0.85,
+    openingMax: 1.2,
+  },
+  marketing: {
+    /** Studio marketing budget as a share of the production budget. */
+    shareOfBudget: 0.35,
+    /** Asking for a change takes this many post weeks. */
+    changeWeeks: 1,
+    spendMult: { cut: 0.6, standard: 1, push: 1.6 },
+    /** Opening weekend multiplier and box office target multiplier per level. */
+    openingMult: { cut: 0.72, standard: 1, push: 1.4 },
+    targetMult: { cut: 0.75, standard: 1, push: 1.3 },
+    /** Awards campaign: nomination chance bonus. */
+    nominationBonus: { cut: -0.03, standard: 0, push: 0.06 },
+  },
 } as const;
 
 export type Tuning = typeof TUNING;

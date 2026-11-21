@@ -130,6 +130,7 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
     weights: { ...TUNING.weights[archetype] },
     delivery: { ...TUNING.delivery[archetype] },
     boxOfficeTarget,
+    marketing: roundTo(budget * TUNING.marketing.shareOfBudget, 100),
     difficulty,
     rewards,
   };

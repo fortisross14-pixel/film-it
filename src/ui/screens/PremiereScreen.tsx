@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useGame, useProfile } from '../store';
 import { Face } from '../components/Face';
-import { Poster } from '../components/Poster';
+import { FilmPoster } from '../components/Poster';
 import { Laurels, Popcorn, Tomato, Ticket, Trophy, Star, Clapper } from '../components/Icons';
 import { directorById } from '../../engine/data/directors';
 import { audienceScore, criticsScore, money } from '../../engine/format';
 import { deliverFilm, runPremiere } from '../../engine/premiere';
+import { effectiveBoxOfficeTarget } from '../../engine/marketing';
 import { TUNING } from '../../engine/tuning';
 import type { Grade, GradeComponent } from '../../engine/types';
 
@@ -34,7 +35,7 @@ export function PremiereScreen() {
         <div className="curtain left" /><div className="curtain right" />
         <div className="spot s1" /><div className="spot s2" />
         <div className="marquee">
-          <Poster title={film.title} genre={film.contract.genre} seed={film.id} width={210} />
+          <FilmPoster film={film} width={210} />
         </div>
         <div className="carpet" />
         <div className="stanchion l" /><div className="stanchion r" />
@@ -93,7 +94,8 @@ export function PremiereScreen() {
                 {shown(3) ? (
                   <>
                     <div className="stat-value reveal">{money(r.boxOffice)}</div>
-                    <span className="kicker muted-k">Total · target {money(film.contract.boxOfficeTarget)}</span>
+                    <span className="kicker muted-k">Total · target {money(effectiveBoxOfficeTarget(film))}</span>
+                    <span className="small muted">Poster {r.posterScore ?? '—'} · marketing {r.marketing === 'push' ? 'big push' : r.marketing === 'cut' ? 'reduced' : 'standard'}</span>
                   </>
                 ) : <div className="stat-value hidden">?</div>}
               </div>

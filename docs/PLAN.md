@@ -201,6 +201,18 @@ casting invariants, accessibility and layout at 200% text, reduce motion, tiered
   rating cards, studio verdict with laurels and ribbon, awards row, box office by week chart.
 - Procedural posters (`Poster.tsx`) and icons (`Icons.tsx`) stand in for commissioned art.
 
+## Poster studio and marketing (done)
+
+- `marketing.ts`: poster = generated background (style + seed; regenerate for a fee that doubles)
+  plus title font/size, director credit, billing size per star, faces lineup, frame. Scored on
+  style/genre fit, font fit and title size, billing (stars big, unknowns small), faces (superstars
+  yes, unknowns no, at most 4), director credit (only once known: 3+ films). Score adds buzz and an
+  opening multiplier (0.85–1.2×).
+- Marketing: the studio funds a campaign (35% of budget). In post ask for more (opening ×1.4,
+  nomination chance +6%, target ×1.3) or less (opening ×0.72, target ×0.75); each change takes a week.
+- UI: Edit screen tab "Poster & marketing" with live poster preview, controls, score and tips;
+  premiere shows the designed poster, poster score and marketing level.
+
 ### Art wanted (to replace the procedural placeholders)
 See the end-of-turn message / issue list: actor portraits, posters per genre, set backdrops or
 sprites, prop sprites, UI ornaments (laurels, reels, film strip, tickets), award statuettes.

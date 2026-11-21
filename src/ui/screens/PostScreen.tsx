@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { Calendar, stageCast } from './ShootingScreen';
+import { MarketingCard, PosterStudio } from '../components/PosterStudio';
 import { IsoSet } from '../components/IsoSet';
 import { setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
@@ -30,6 +31,7 @@ export function PostScreen() {
   const level = p.directors[film.directorId]?.level ?? 1;
   const [msg, setMsg] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+  const [view, setView] = useState<'cut' | 'poster'>('cut');
   const summary = postSummary(film, level);
   const budgetLeft = film.contract.budget - spent(film);
   const [autoBudget, setAutoBudget] = useState(Math.max(0, Math.round(budgetLeft * 0.3)));
@@ -51,7 +53,12 @@ export function PostScreen() {
       {playing && <Playback key={playing} film={film} scene={film.scenes.find((s) => s.id === playing)!} score={scoreOf(playing)} onClose={() => setPlaying(null)} />}
       <div className="script-grid">
         <div className="script-main">
-          {film.scenes.map((s, i) => (
+          <div className="seg-tabs" role="tablist">
+            <button role="tab" aria-selected={view === 'cut'} className={view === 'cut' ? 'primary' : ''} onClick={() => setView('cut')}>🎞 Final cut</button>
+            <button role="tab" aria-selected={view === 'poster'} className={view === 'poster' ? 'primary' : ''} onClick={() => setView('poster')}>🖼 Poster & marketing</button>
+          </div>
+          {view === 'poster' && <PosterStudio film={film} history={p.filmography} onApply={apply} />}
+          {view === 'cut' && film.scenes.map((s, i) => (
             <SceneEdit
               key={s.id}
               film={film}
@@ -65,6 +72,7 @@ export function PostScreen() {
         </div>
 
         <aside className="script-side">
+          <MarketingCard film={film} onApply={apply} />
           <div className="card">
             <h3>Music</h3>
             {MUSIC_TIERS.map((m) => {

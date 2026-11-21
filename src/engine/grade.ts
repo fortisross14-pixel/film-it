@@ -5,6 +5,7 @@ import type { Contract, ExpectationWeights, Film, FilmRecord, FilmResults, Grade
 import { checkRequirements, spent } from './script';
 import { weeksUsed } from './shooting';
 import { describeBonus, describeHardReq } from './format';
+import { effectiveBoxOfficeTarget } from './marketing';
 import { TUNING } from './tuning';
 
 /** Linear interpolation over [x, y] points, clamped at both ends. */
@@ -74,7 +75,7 @@ export function awardPoints(results: Pick<FilmResults, 'nominations' | 'wins'>):
 export function gradeFilm(film: Film, results: FilmResults, _history: FilmRecord[] = []): GradeReport {
   const c = film.contract;
   const components: Record<GradeComponent, number> = {
-    boxOffice: boxOfficeScore(results.boxOffice, c.boxOfficeTarget),
+    boxOffice: boxOfficeScore(results.boxOffice, effectiveBoxOfficeTarget(film)),
     public: results.publicRating,
     critics: results.criticsRating,
     awards: Math.round(Math.min(100, (100 * awardPoints(results)) / TUNING.premiere.expectedAwardPoints[c.archetype])),

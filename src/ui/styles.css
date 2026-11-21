@@ -601,3 +601,17 @@ button.record { font-size: 1.1rem; letter-spacing: 0.08em; }
 .shoot > * { min-width: 0; }
 .frame-tone { font-size: 0.78rem; }
 .initial { width: 22px; height: 22px; font-size: 0.78rem; }
+
+/* ==== Poster studio & marketing ==== */
+.seg-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.poster-studio-grid { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.poster-preview { flex: 0 1 260px; display: grid; gap: 8px; justify-items: center; }
+.poster-controls { flex: 1 1 20rem; min-width: 0; display: grid; gap: 8px; }
+.poster-score { display: flex; gap: 12px; align-items: center; }
+.tips li { color: var(--primary); }
+.font-btn { font-weight: 400; font-size: 1.05rem; min-width: 5.5rem; }
+.billing-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px; border-radius: 10px; background: var(--panel-2); }
+.billing-name { flex: 1 1 8rem; display: grid; min-width: 0; }
+.seg { display: inline-flex; gap: 2px; }
+.seg button { min-width: 44px; padding: 0 8px; }
+.marketing p { margin: 4px 0; }

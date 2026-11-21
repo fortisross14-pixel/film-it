@@ -70,6 +70,7 @@ export function startFilm(p: Profile, contractId: string, directorIdArg?: string
     title: contract.title ?? `${rng.pick(FILM_TITLE_PARTS.first)} ${rng.pick(FILM_TITLE_PARTS.second)}`,
     contract: structuredClone(contract) as Contract,
     directorId,
+    directorName: p.name,
     phase: 'script',
     runtime: contract.runtime,
     roles: [],

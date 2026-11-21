@@ -12,6 +12,7 @@ import { participants, spent } from './script';
 import { withRng } from './profile';
 import { gradeFilm } from './grade';
 import { recordFilm } from './career';
+import { marketingLevel, posterEffect, posterScore } from './marketing';
 import { directorById } from './data/directors';
 import { specialtyScale } from './director';
 
@@ -86,12 +87,16 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   // Buzz: stars, topic hype, charm.
   const topStar = Math.max(0, ...film.roles.map((r) => r.actor?.starPower ?? 0));
   const hype = film.topicId ? topicById(film.topicId).genreFit[film.contract.genre] : 40;
-  const buzz = Math.round(clamp(T.buzzBase + topStar * T.buzzStar + hype * T.buzzTopic + charming * T.buzzCharming));
+  const poster = posterScore(film, history);
+  const pe = posterEffect(poster.total);
+  const level = marketingLevel(film);
+  const buzz = Math.round(clamp(T.buzzBase + topStar * T.buzzStar + hype * T.buzzTopic + charming * T.buzzCharming + pe.buzz));
 
   // Box office: opening from market × buzz (× a little critics), legs from the public.
   const c = film.contract;
   const opening = c.budget * T.openingShare * T.genreMarket[c.genre] * T.ratingMarket[c.rating]
-    * (T.openingBuzzBase + buzz / 100) * (T.criticsEffectBase + criticsRating * T.criticsEffectPer);
+    * (T.openingBuzzBase + buzz / 100) * (T.criticsEffectBase + criticsRating * T.criticsEffectPer)
+    * pe.opening * TUNING.marketing.openingMult[level];
   let retention = T.retentionBase + publicRating * T.retentionPerPublic;
   if (c.budget <= T.sleeperBudgetMax && publicRating >= T.sleeperPublicMin) retention += T.sleeperBonus;
   const weekly: number[] = [];
@@ -109,7 +114,7 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const contest = (name: string, driver: number, threshold: number) => {
     awardDrivers[name] = Math.round(driver);
     if (driver < threshold) return;
-    const p = clamp(T.nominationBase + (driver - threshold) * T.nominationPerPoint, 0.1, 0.95);
+    const p = clamp(T.nominationBase + TUNING.marketing.nominationBonus[level] + (driver - threshold) * T.nominationPerPoint, 0.1, 0.95);
     if (!rng.chance(p)) return;
     nominations.push(name);
     const rival = rng.int(T.rivalRange[0], T.rivalRange[1]);
@@ -144,7 +149,7 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
 
   return {
     buzz, publicRating, criticsRating, factors, boredom: Math.round(fillerShare * 100), overproduction: post.overproduction,
-    openingWeekend: Math.round(opening), weekly, boxOffice, nominations, wins, awardDrivers,
+    openingWeekend: Math.round(opening), weekly, boxOffice, nominations, wins, awardDrivers, posterScore: poster.total, marketing: level,
   };
 }
 

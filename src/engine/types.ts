@@ -202,6 +202,8 @@ export interface Contract {
   delivery: DeliveryStrictness;
   /** Box office the studio expects, $K. */
   boxOfficeTarget: number;
+  /** Marketing budget the studio puts behind the film, $K (studio money, not ours). */
+  marketing?: number;
   difficulty: number; // 1–5 stars
   rewards: { reputation: number; credits: number };
 }
@@ -304,6 +306,33 @@ export interface Scene {
 
 export type MusicTier = 'none' | 'library' | 'composer' | 'star';
 
+// ---------- Poster & marketing ----------
+
+export type PosterStyle = 'moon' | 'skyline' | 'sunset' | 'haunted' | 'confetti' | 'castle' | 'blast' | 'portrait';
+export type PosterFont = 'classic' | 'bold' | 'elegant' | 'scratch' | 'playful' | 'future' | 'epic';
+export type PosterSize = 'hidden' | 's' | 'm' | 'l';
+
+export interface PosterDesign {
+  /** Background variant: style + seed. Regenerating rolls new ones. */
+  style: PosterStyle;
+  seed: number;
+  regenerations: number;
+  titleFont: PosterFont;
+  titleSize: Exclude<PosterSize, 'hidden'>;
+  directorSize: PosterSize;
+  /** Billing size per role id. */
+  billing: Record<string, PosterSize>;
+  /** Role ids whose faces appear on the poster. */
+  faces: string[];
+  frame: 'none' | 'gold' | 'film' | 'neon';
+}
+
+export type MarketingLevel = 'cut' | 'standard' | 'push';
+export interface MarketingState {
+  level: MarketingLevel;
+  changes: number;
+}
+
 export interface RoleCasting {
   draws: number; // 0 = never drawn; the first draw is free
   offered: Actor[];
@@ -338,6 +367,8 @@ export interface FilmResults {
   wins: string[];
   /** Award category → the film's driver value, for the breakdown. */
   awardDrivers: Record<string, number>;
+  posterScore?: number;
+  marketing?: MarketingLevel;
 }
 
 export interface GradeReport {
@@ -363,6 +394,8 @@ export interface Film {
   title: string;
   contract: Contract;
   directorId: string;
+  /** Display name for credits ("A film by …"). */
+  directorName?: string;
   phase: FilmPhase;
   runtime: number;
   topicId?: string;
@@ -376,6 +409,8 @@ export interface Film {
   /** Actor ids rejected anywhere in this film: gone for this film. */
   rejected: string[];
   fillerShot: boolean;
+  poster?: PosterDesign;
+  marketing?: MarketingState;
   shooting?: ShootingState;
   /** Script quality locked in when the script is finished. */
   scriptQuality?: number;
