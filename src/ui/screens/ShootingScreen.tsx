@@ -3,6 +3,7 @@ import type { Film, Meter, PendingShoot, Profile, Scene } from '../../engine/typ
 import { useGame, useProfile } from '../store';
 import { Face } from '../components/Face';
 import { reducedMotion } from '../prefs';
+import { art } from '../art';
 import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../components/IsoSet';
 import { Bolt, Clapper, Heart, People, Speech } from '../components/Icons';
 import { SETS, setById } from '../../engine/data/sets';
@@ -92,8 +93,8 @@ export function ShootingScreen() {
           {pending ? (
             <ShootStage key={pending.versions[0].id} p={p} pending={pending} onPick={(id) => apply(chooseVersion(p, id))} onRetry={() => apply(tryAgain(p))} />
           ) : (
-            <div className="studio-stage">
-              <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={400} studio actors={stageCast(film, scene)} />
+            <div className="studio-stage" style={{ backgroundImage: `url(${art('stage-bg')})` }}>
+              <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={400} studio lights={false} actors={stageCast(film, scene)} />
               <div className="stage-caption">{scene.beats.map((b) => {
                 const name = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
                 return describeBeat(name(b.roleId), b.actionId, b.targetId ? name(b.targetId) : undefined);
@@ -244,13 +245,13 @@ function ShootStage({ p, pending, onPick, onRetry }: { p: Profile; pending: Pend
   const nameOf = (actorId: string) => film.roles.find((r) => r.actor?.id === actorId)?.actor?.name ?? '?';
 
   return (
-    <div className="studio-stage shooting-now">
+    <div className="studio-stage shooting-now" style={{ backgroundImage: `url(${art('stage-bg')})` }}>
       <div className="row between stage-top">
         <span className="rec-badge">● REC</span>
         <span className="kicker light">Scene {film.scenes.indexOf(scene) + 1} · {set.name} · focus {METER_LABEL[pending.focus]}</span>
         {!done && <button className="ghost-dark" onClick={() => setTime(1)}>Skip ▶▶</button>}
       </div>
-      <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={400} studio actors={cast} acting={acting} bubbles={live} />
+      <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={400} studio lights={false} actors={cast} acting={acting} bubbles={live} />
       <div className="live-meters">
         {METERS.map((m) => (
           <div key={m} className="weight live">

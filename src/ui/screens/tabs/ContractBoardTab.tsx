@@ -11,6 +11,7 @@ import { SETS } from '../../../engine/data/sets';
 import { TOPIC_PACKS } from '../../../engine/data/topics';
 import { ARCHETYPE_NAMES } from '../../../engine/contracts';
 import { startFilm } from '../../../engine/profile';
+import { packArt } from '../../art';
 import { TUNING } from '../../../engine/tuning';
 import type { Contract } from '../../../engine/types';
 
@@ -93,7 +94,7 @@ export function ContractBoardTab({ onGoTo }: { onGoTo?: (tab: string) => void })
           <h3 className="panel-title small-title"><Star size={22} /> Topic packs</h3>
           <span className="pack-fan">
             {TOPIC_PACKS.filter((x) => x.id !== 'starter').slice(0, 3).map((x, i) => (
-              <span key={x.id} className={`pack-card pk-${i}`}>{x.name}</span>
+              <img key={x.id} src={packArt(x.id)} alt={`${x.name} pack`} className={`pack-card-img pk-${i}`} />
             ))}
           </span>
         </button>

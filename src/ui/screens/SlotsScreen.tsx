@@ -3,6 +3,7 @@ import { deleteSlot, listSlots, loadProfile } from '../../engine/save';
 import { newProfile } from '../../engine/profile';
 import { useGame } from '../store';
 import { SettingsButton } from '../prefs';
+import { art } from '../art';
 
 export function SlotsScreen() {
   const { open } = useGame();
@@ -15,9 +16,10 @@ export function SlotsScreen() {
   };
 
   return (
-    <div className="screen center">
-      <h1 className="logo">Film it!</h1>
-      <p className="muted">Choose a save slot</p>
+    <div className="screen center title-screen" style={{ backgroundImage: `url(${art('home-bg')})` }}>
+      <h1 className="title-logo"><img src={art('logo')} alt="Film it!" /></h1>
+      <img className="title-hero" src={art('home-hero')} alt="" />
+      <p className="title-sub">Choose a save slot</p>
       <SettingsButton />
       <div className="slots">
         {slots.map((s) => (

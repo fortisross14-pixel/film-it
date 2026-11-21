@@ -1,26 +1,31 @@
 import { useProfile } from '../../store';
+import { art } from '../../art';
+import { Laurels } from '../../components/Icons';
 
 export function TrophyRoomTab() {
   const p = useProfile();
   const entries = p.filmography.flatMap(({ film }) => [
     ...(film.results?.wins ?? []).map((w) => ({ film: film.title, award: w, won: true })),
-    ...(film.results?.nominations ?? [])
-      .filter((n) => !film.results?.wins.includes(n))
-      .map((n) => ({ film: film.title, award: n, won: false })),
+    ...(film.results?.nominations ?? []).filter((n) => !film.results?.wins.includes(n)).map((n) => ({ film: film.title, award: n, won: false })),
   ]);
+  const wins = entries.filter((e) => e.won).length;
   return (
     <div>
-      <h2>Trophy room</h2>
+      <h2 className="panel-title"><Laurels size={70}><span className="kicker">Trophies</span></Laurels> Trophy room</h2>
+      <p className="muted">{wins} won · {entries.length - wins} nominations</p>
       {entries.length === 0 ? (
-        <p className="muted">No festival awards or nominations yet.</p>
+        <p className="muted">No festival awards or nominations yet. Great films get noticed.</p>
       ) : (
-        <ul className="reqs">
+        <div className="trophy-shelf">
           {entries.map((e, i) => (
-            <li key={i}>
-              {e.won ? '🏆' : '🎗️'} {e.award} — <em>{e.film}</em> {e.won ? '' : <span className="muted">(nominated)</span>}
-            </li>
+            <div key={i} className={`card trophy-card ${e.won ? 'won' : 'nominated'}`}>
+              <img src={art('trophy')} alt="" />
+              <strong>{e.award.replace('Festival: ', '')}</strong>
+              <span className="small muted"><em>{e.film}</em></span>
+              <span className={`chip ${e.won ? 'win' : ''}`}>{e.won ? 'Winner' : 'Nominated'}</span>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

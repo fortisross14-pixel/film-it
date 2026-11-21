@@ -124,7 +124,7 @@ function themedFallback(set: FilmSet, rng: ReturnType<typeof createRng>, z: numb
 
 // ---------------- Scene assembly ----------------
 
-function buildScene(set: FilmSet, extras: number, actors: StageActor[], acting: Set<string>, studio: boolean) {
+function buildScene(set: FilmSet, extras: number, actors: StageActor[], acting: Set<string>, studio: boolean, lights = true) {
   const rng = createRng(hashString(set.id));
   const { w, d } = set.footprint;
   const slab = 0.3;
@@ -159,8 +159,8 @@ function buildScene(set: FilmSet, extras: number, actors: StageActor[], acting: 
 
   if (studio) {
     // Light stands with beams, a camera on a dolly track, the director's chair.
-    const lights: [number, number][] = [[w + 0.8, -0.4], [-0.6, d + 0.6]];
-    for (const [lx, ly] of lights) {
+    const stands: [number, number][] = lights ? [[w + 0.8, -0.4], [-0.6, d + 0.6]] : [];
+    for (const [lx, ly] of stands) {
       out.push(B(lx, ly, 0, 0.06, 0.06, 2.6, '#2b2f36'), B(lx - 0.15, ly - 0.15, 2.6, 0.36, 0.36, 0.28, '#1f2329'));
       out.push({ kind: 'cone', from: [lx + 0.03, ly + 0.03, 2.6], to: [w / 2, d / 2, slab], spread: 1.4 });
     }
@@ -228,15 +228,17 @@ function BubbleIcon({ meter }: { meter: Meter }) {
 }
 
 export function IsoSet({
-  set, extras = 0, height = 150, actors = [], acting = [], bubbles = [], studio = false,
+  set, extras = 0, height = 150, actors = [], acting = [], bubbles = [], studio = false, lights = true,
 }: {
   set: FilmSet; extras?: number; height?: number; actors?: StageActor[]; acting?: string[]; bubbles?: StageBubble[]; studio?: boolean;
+  /** Draw the studio light stands (off when a backdrop already shows lights). */
+  lights?: boolean;
 }) {
   const actingKey = acting.join(',');
   const scene = useMemo(
-    () => buildScene(set, extras, actors, new Set(acting), studio),
+    () => buildScene(set, extras, actors, new Set(acting), studio, lights),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [set, extras, actors.map((a) => a.id).join(','), actingKey, studio],
+    [set, extras, actors.map((a) => a.id).join(','), actingKey, studio, lights],
   );
   const { w, d } = set.footprint;
   const pad = studio ? 1.6 : 0.3;

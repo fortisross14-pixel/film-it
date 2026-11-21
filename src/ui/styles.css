@@ -615,3 +615,31 @@ button.record { font-size: 1.1rem; letter-spacing: 0.08em; }
 .seg { display: inline-flex; gap: 2px; }
 .seg button { min-width: 44px; padding: 0 8px; }
 .marketing p { margin: 4px 0; }
+
+/* ==== Commissioned art ==== */
+.brand-logo { width: 100%; max-width: 11rem; height: auto; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5)); }
+.title-screen { background-size: cover; background-position: center; min-height: 100vh; gap: 10px; }
+.title-logo { margin: 0; }
+.title-logo img { width: min(560px, 90vw); height: auto; filter: drop-shadow(0 8px 20px rgba(0,0,0,0.6)); }
+.title-hero { width: min(300px, 60vw); height: auto; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.6)); }
+.title-sub { color: var(--chrome-text); font-family: var(--display); letter-spacing: 0.2em; text-transform: uppercase; }
+.title-screen .slots .card { background: var(--panel); color: var(--text); }
+.title-screen .settings > button { background: rgba(0,0,0,0.4); color: var(--chrome-text); border-color: #6b5848; }
+.studio-stage { background-size: cover; background-position: center; }
+.carpet-col { background: none; min-height: 0; padding: 0; display: grid; gap: 10px; align-content: start; overflow: visible; }
+.carpet-art { position: relative; width: 100%; aspect-ratio: 2 / 3; background-size: cover; background-position: center; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); overflow: hidden; }
+.marquee-title { position: absolute; left: 18%; right: 18%; top: 22%; height: 17%; display: grid; place-items: center; text-align: center;
+  font-family: var(--display); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #5a1d14; font-size: clamp(0.9rem, 2.3vw, 1.6rem); line-height: 1.1; }
+.steps-poster { position: absolute; left: 50%; top: 43%; transform: translateX(-50%); width: 34%; }
+.steps-poster .poster { width: 100%; height: auto; box-shadow: 0 10px 24px rgba(0,0,0,0.6); }
+.carpet-col .arrivals { position: static; }
+.trophy-img { width: 34px; height: auto; flex: none; }
+.pack-card-img { width: 70px; height: auto; margin: 0 -10px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35)); }
+.pack-card-img.pk-1 { z-index: 1; }
+.pack-tile { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: start; }
+.pack-tile > *:not(.pack-tile-img) { grid-column: 2; }
+.pack-tile-img { grid-row: span 4; width: 84px; height: auto; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
+.trophy-shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr)); gap: 12px; }
+.trophy-card { display: grid; justify-items: center; gap: 4px; text-align: center; }
+.trophy-card img { width: 56px; height: auto; }
+.trophy-card.nominated img { filter: grayscale(0.7) opacity(0.55); }

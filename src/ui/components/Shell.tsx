@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { useGame, useProfile } from '../store';
 import { SettingsButton } from '../prefs';
+import { art } from '../art';
 import { Clapper, Star, Ticket } from './Icons';
 import { directorById } from '../../engine/data/directors';
 import { nextTierAt, reputationTier } from '../../engine/progression';
@@ -25,8 +26,7 @@ export function Shell({ nav, active, onNav, extra, children }: {
     <div className="shell">
       <aside className="sidenav" aria-label="Main menu">
         <div className="brand">
-          <Clapper size={34} className="brand-icon" />
-          <span className="brand-name">Film it!</span>
+          <img src={art('logo')} alt="Film it!" className="brand-logo" />
         </div>
         <nav>
           {nav.map((n) => (

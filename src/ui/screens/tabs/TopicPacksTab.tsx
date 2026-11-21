@@ -4,6 +4,7 @@ import { TOPIC_PACKS, topicById } from '../../../engine/data/topics';
 import { setById } from '../../../engine/data/sets';
 import { actionById } from '../../../engine/data/actions';
 import { buyTopicPack } from '../../../engine/progression';
+import { packArt } from '../../art';
 
 export function TopicPacksTab() {
   const p = useProfile();
@@ -18,7 +19,8 @@ export function TopicPacksTab() {
         {TOPIC_PACKS.map((pack) => {
           const owned = p.unlocks.packs.includes(pack.id);
           return (
-            <div key={pack.id} className={`card ${owned ? '' : 'locked'}`}>
+            <div key={pack.id} className={`card pack-tile ${owned ? '' : 'locked'}`}>
+              {packArt(pack.id) && <img src={packArt(pack.id)} alt="" className="pack-tile-img" />}
               <div className="row between">
                 <h3>{pack.name}</h3>
                 {owned ? <span className="tag">Owned</span> : <span className="tag">{pack.cost} credits</span>}

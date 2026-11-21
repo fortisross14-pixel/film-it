@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGame, useProfile } from '../store';
 import { Face } from '../components/Face';
 import { FilmPoster } from '../components/Poster';
+import { art } from '../art';
 import { Laurels, Popcorn, Tomato, Ticket, Trophy, Star, Clapper } from '../components/Icons';
 import { directorById } from '../../engine/data/directors';
 import { audienceScore, criticsScore, money } from '../../engine/format';
@@ -32,13 +33,10 @@ export function PremiereScreen() {
   return (
     <div className="premiere-layout">
       <div className="carpet-col">
-        <div className="curtain left" /><div className="curtain right" />
-        <div className="spot s1" /><div className="spot s2" />
-        <div className="marquee">
-          <FilmPoster film={film} width={210} />
+        <div className="carpet-art" style={{ backgroundImage: `url(${art('premiere-bg')})` }}>
+          <span className="marquee-title">{film.title}</span>
+          <div className="steps-poster"><FilmPoster film={film} width={180} /></div>
         </div>
-        <div className="carpet" />
-        <div className="stanchion l" /><div className="stanchion r" />
         {r && (
           <div className="arrivals">
             {film.roles.filter((x) => x.actor).map((x) => (
@@ -119,7 +117,7 @@ export function PremiereScreen() {
               ) : (
                 r.nominations.map((n) => (
                   <span key={n} className="award reveal">
-                    <Trophy size={38} />
+                    <img src={art('trophy')} alt="" className="trophy-img" />
                     <span>
                       <strong>{n.replace('Festival: ', '')}</strong>
                       <span className={`chip ${r.wins.includes(n) ? 'win' : ''}`}>{r.wins.includes(n) ? <><Trophy size={14} /> Winner</> : <><Star size={14} /> Nominated</>}</span>
