@@ -5,7 +5,7 @@ import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from '
 
 export const TUNING = {
   saveSlots: 3,
-  saveVersion: 2,
+  saveVersion: 3,
 
   contracts: {
     boardSize: 4,
@@ -110,36 +110,82 @@ export const TUNING = {
   script: {
     minRuntime: 60,
     maxRuntime: 180,
-    sceneMinMinutes: 1,
-    sceneMaxMinutes: 10,
-    /** Act boundaries as share of runtime. */
-    actSplits: [0.25, 0.75],
-    roleLimits: { main: [1, 1], coMain: [0, 1], villain: [0, 1], romanticInterest: [0, 1], sidekick: [0, 2], supporting: [0, 4] },
-    /** Coverage: score at the knee and the knee share (diminishing returns above it). */
-    coverageKnee: 0.8,
+    minScenes: 3,
+    maxScenes: 7,
+    /** Scene count → pacing score (index = number of scenes). Usually 4–5. */
+    sceneCountScore: [0, 0, 0, 80, 100, 100, 85, 65],
+    /** Scene length as a share of runtime. Filler fills the rest. */
+    durationShare: { short: 0.12, medium: 0.18, long: 0.25 },
+    /** Beats per scene → depth score (index = beats; 4+ uses the last). 1 shallow, 2 ideal, 3 good, 4 too complex. */
+    depthByBeats: [0, 40, 100, 85, 45],
+    /** Passive beats (impact 0, e.g. "watches") count as this much of a beat for depth. */
+    passiveBeatWeight: 0.5,
+    roleLimits: { main: [1, 1], villain: [0, 1], coVillain: [0, 1], romanticInterest: [0, 1], comicRelief: [0, 1], supporting: [0, 2] },
+    /** Coverage (real scenes vs filler) with diminishing returns above the knee. */
+    coverageKnee: 0.75,
     coverageKneeScore: 85,
-    /** Structure points. */
-    strongSceneFit: 60,
-    actStrongPoints: 20,
-    climaxPoints: 25,
-    gapPoints: 15,
-    gapMaxMinutes: 12,
-    gapPenaltyEach: 4,
-    /** Variety. */
-    varietyTarget: 6,
-    repeatFreeCount: 2,
-    repeatPenaltyEach: 8,
-    /** Topic fit multiplier range (topic genreFit 0 → min, 100 → max). No topic → noTopic. */
-    topicMultMin: 0.7,
-    topicMultMax: 1.15,
-    noTopicMult: 0.8,
+    /** Scene profile: share from the tone vs from its actions. */
+    toneWeightInScene: 0.5,
+    /** Fit: score = 100 - weighted distance × this. */
+    fitDistanceScale: 1.6,
+    topicMultMin: 0.75,
+    topicMultMax: 1.1,
+    noTopicMult: 0.85,
     secondaryGenreWeight: 0.3,
-    /** Role balance: share of runtime each billing should be on screen. */
-    leadScreenShare: 0.25,
-    secondScreenShare: 0.1,
-    unusedRolePenalty: 15,
-    /** Weights of the five quality components. */
-    qualityWeights: { coverage: 0.25, structure: 0.2, variety: 0.15, fit: 0.25, roles: 0.15 },
+    /** Structure points. */
+    openingWithMain: 20,
+    climaxEnding: 40,
+    escalation: 20,
+    toneVariety: 20,
+    /** Characters. */
+    unusedRolePenalty: 20,
+    mainPresenceShare: 0.6,
+    purposePenalty: 10,
+    /** Weights of the quality components. */
+    qualityWeights: { fit: 0.25, depth: 0.2, structure: 0.2, characters: 0.15, coherence: 0.1, pacing: 0.1 },
+    /** Writing cost, $K: per scene, per beat, plus the action's own cost. Scaled by duration. */
+    sceneBaseCost: 120,
+    beatCost: 40,
+    durationCostMult: { short: 0.8, medium: 1, long: 1.3 },
+    /** Writing costs × budget / referenceBudget, clamped. */
+    referenceBudget: 25_000,
+    budgetScaleMin: 0.15,
+    budgetScaleMax: 3,
+  },
+
+  casting: {
+    cardsPerDraw: 3,
+    /** Redraw fee = baseFeeShare × budget × 2^(paid redraws so far): 1×, 2×, 4×… */
+    redrawFeeShare: 0.004,
+    redrawFeeMin: 15,
+    /** Rarity weights per billing tier (lead draws lean to stars). */
+    rarityWeights: {
+      lead: { common: 1, rare: 2, epic: 3, legendary: 3 },
+      second: { common: 1.5, rare: 2, epic: 2, legendary: 1 },
+      support: { common: 3, rare: 2, epic: 1, legendary: 0.5 },
+      minor: { common: 4, rare: 2, epic: 0.5, legendary: 0.2 },
+    },
+    scoutGemWeight: 2.5,
+    scoutFeeDiscount: 0.4,
+    /** Pay: baseFee = feeAt30 × (starPower/30)^feeExponent × billing mult, floor feeMin. */
+    feeAt30: 150,
+    feeExponent: 4.2,
+    feeMin: 25,
+    billingFeeMult: { lead: 1, second: 0.7, support: 0.45, minor: 0.3 },
+    /** Per-minute rate as a share of base fee. */
+    perMinuteShare: 0.012,
+    divaFeeMult: 1.25,
+    /** Fit = skill × skillWeight + acting × (1 - skillWeight). */
+    skillWeight: 0.65,
+    /** Expected top star power per budget tier, for the casting star score. */
+    expectedStar: [25, 40, 55, 70, 80],
+    billingScoreWeight: { lead: 3, second: 2, support: 1, minor: 0.5 },
+    starShare: 0.3,
+    /** Default skill needs per role type before any beats. */
+    roleDefaultSkill: { main: 'drama', villain: 'menace', coVillain: 'menace', romanticInterest: 'romance', comicRelief: 'comedy', supporting: 'drama' },
+    roleDefaultWeight: 0.3,
+    targetSkill: 'drama',
+    targetWeight: 0.3,
   },
 } as const;
 

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useGame, useProfile } from '../../store';
 import { SETS } from '../../../engine/data/sets';
-import { sceneTypeById } from '../../../engine/data/sceneTypes';
+import { actionById } from '../../../engine/data/actions';
+import { toneById } from '../../../engine/data/tones';
+import type { Tone } from '../../../engine/types';
 import { buySet, reputationTier, setUnlockText } from '../../../engine/progression';
 import { money } from '../../../engine/format';
 import { IsoSet } from '../../components/IsoSet';
@@ -19,10 +21,11 @@ export function SetCatalogueTab() {
       <div className="grid">
         {SETS.map((s) => {
           const unlocked = p.unlocks.sets.includes(s.id);
-          const best = Object.entries(s.sceneFit)
+          const best = (Object.entries(s.toneFit) as [Tone, number][])
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
-            .map(([id]) => sceneTypeById(id).name);
+            .slice(0, 2)
+            .map(([id]) => toneById(id).name.toLowerCase());
+          const special = Object.keys(s.actionFit ?? {}).map((id) => actionById(id).verb);
           const buyable = !unlocked && s.unlock.kind === 'credits';
           return (
             <div key={s.id} className={`card ${unlocked ? '' : 'locked'}`}>
@@ -34,7 +37,7 @@ export function SetCatalogueTab() {
               <p className="small muted">
                 {s.footprint.w}×{s.footprint.d} {s.style} · up to {s.extrasCapacity} extras · {s.tags.filter((t) => t !== 'interior' && t !== 'exterior').join(' · ')}
               </p>
-              <p className="small">Best for: {best.join(', ')}</p>
+              <p className="small">Best for {best.join(' and ')} scenes{special.length > 0 && <> · {special.join(', ')}</>}</p>
               {!unlocked && <p className="small">🔒 {setUnlockText(s)}</p>}
               {buyable && s.unlock.kind === 'credits' && (
                 <button

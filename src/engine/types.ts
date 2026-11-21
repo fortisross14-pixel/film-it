@@ -36,15 +36,26 @@ export interface DeliveryStrictness {
 
 export type RoleType =
   | 'main'
-  | 'coMain'
   | 'villain'
+  | 'coVillain'
   | 'romanticInterest'
-  | 'sidekick'
+  | 'comicRelief'
   | 'supporting';
 
 export type Billing = 'lead' | 'second' | 'support' | 'minor';
 
-export type Intensity = 'low' | 'medium' | 'high';
+/** A scene's tone. */
+export type Tone = 'happy' | 'sad' | 'thrill' | 'calm' | 'romantic' | 'scary';
+
+/** Script profile axes, each 0–100: action (calm→thrill), humor (sad→happy), romance, fear. */
+export type Axis = 'action' | 'humor' | 'romance' | 'fear';
+export type AxisVector = Record<Axis, number>;
+
+export type SceneDuration = 'short' | 'medium' | 'long';
+
+/** Actor skills. An action beat uses one skill. */
+export type Skill = 'action' | 'comedy' | 'drama' | 'romance' | 'menace';
+export type SkillMap = Record<Skill, number>;
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 
@@ -62,30 +73,35 @@ export interface Studio {
   tier: number; // 1–5
 }
 
-export interface SceneType {
+/** An action a character can do in a scene ("fights and wins", "declares love"). */
+export interface ActionDef {
   id: string;
-  name: string;
-  genreFit: GenreMap; // 0–100
-  /** Role types that must participate in the scene. */
-  requiredRoles: RoleType[];
-  minParticipants: number;
-  maxParticipants: number;
-  baseCost: number; // $K
-  costPerMin: number; // $K per minute
-  difficulty: number; // 1–5, drives take variance
-  /** Lowest age rating that allows this scene type (e.g. gore needs R). */
-  minRating: AgeRating;
-  /** Topic that adds this scene type; undefined = always available. */
-  topicId?: string;
-  /** Scene types that can serve as an Act 3 climax. */
+  verb: string;
+  /** Whether the beat names a target, and the word shown before it ("To", "With", "From"). */
+  target: 'none' | 'optional' | 'required';
+  prep: string;
+  skill: Skill;
+  /** Dramatic weight 0–3. 0 = passive (e.g. "watches"). */
+  impact: number;
+  /** Can end the story: a climax beat. */
   climax?: boolean;
+  /** Tones this action sits naturally in. */
+  tones: Tone[];
+  /** Where this action pushes the script profile. */
+  vec: AxisVector;
+  /** Writing cost $K, and whether it needs stunts when shooting. */
+  cost: number;
+  stunt?: boolean;
+  minRating: AgeRating;
+  /** Topic that adds this action; undefined = always available. */
+  topicId?: string;
 }
 
 export interface Topic {
   id: string;
   name: string;
   genreFit: GenreMap; // multiplier input, 0–100
-  sceneTypes: string[]; // topic-specific scene types it adds
+  actions: string[]; // topic-specific actions it adds
   setIds: string[]; // sets it unlocks
   packId: string; // 'starter' for starter topics
 }
@@ -111,8 +127,10 @@ export interface FilmSet {
   extrasCapacity: number;
   /** Floor / wall colours for the diorama. */
   palette: { floor: string; wall?: string; accent: string };
-  /** Fit per scene type id, 0–100. Missing = default fit. */
-  sceneFit: Record<string, number>;
+  /** Fit per tone, 0–100. */
+  toneFit: Record<Tone, number>;
+  /** Fit for specific actions (e.g. the Colosseum for arena battles). Missing = stunt/default fit. */
+  actionFit?: Record<string, number>;
   dayCost: number; // $K per shooting day
   /** How the set is unlocked. */
   unlock: { kind: 'start' } | { kind: 'topic'; topicId: string } | { kind: 'credits'; cost: number; repTier: number };
@@ -136,8 +154,8 @@ export interface Actor {
   id: string;
   name: string;
   starPower: number; // 0–100
-  acting: number; // 0–100
-  genreRange: GenreMap; // 0–100
+  acting: number; // 0–100, general craft
+  skills: SkillMap; // 0–100 each
   rarity: Rarity;
   traits: ActorTrait[];
   age: AgeBracket;
@@ -153,7 +171,8 @@ export interface Actor {
 
 export type HardRequirement =
   | { kind: 'runtime'; target: number; tolerance: number }
-  | { kind: 'sceneType'; sceneTypeId: string; count: number }
+  | { kind: 'tone'; tone: Tone; count: number }
+  | { kind: 'action'; actionId: string }
   | { kind: 'leadStarPower'; min: number }
   | { kind: 'role'; roleType: RoleType }
   | { kind: 'maxRating'; rating: AgeRating };
@@ -195,7 +214,17 @@ export interface Role {
   name: string;
   type: RoleType;
   billing: Billing;
-  actorId?: string;
+  /** Snapshot of the cast actor (films keep their cast even as actors change later). */
+  actor?: Actor;
+  /** Agreed pay for this role, $K. */
+  pay?: number;
+}
+
+/** One action beat: "<role> <does action> <prep> <target>". */
+export interface Beat {
+  roleId: string;
+  actionId: string;
+  targetId?: string;
 }
 
 export interface TakeParams {
@@ -219,11 +248,11 @@ export type PolishTier = 'none' | 'basic' | 'pro' | 'premium';
 
 export interface Scene {
   id: string;
-  typeId: string;
-  roleIds: string[];
-  minutes: number;
-  startMin: number;
-  intensity: Intensity;
+  duration: SceneDuration;
+  tone: Tone;
+  beats: Beat[];
+  /** Others involved: present, no action of their own. */
+  others: string[];
   setId?: string;
   takes: Take[];
   chosenTakeId?: string;
@@ -233,6 +262,11 @@ export interface Scene {
 }
 
 export type MusicTier = 'none' | 'library' | 'composer' | 'star';
+
+export interface RoleCasting {
+  draws: number; // 0 = never drawn; the first draw is free
+  offered: Actor[];
+}
 
 export interface LedgerEntry {
   label: string;
@@ -270,11 +304,14 @@ export interface Film {
   music: MusicTier;
   ledger: LedgerEntry[];
   calendar: Calendar;
-  /** Casting state per role: redraws used and currently offered card ids. */
-  casting: Record<string, { redraws: number; offered: string[]; rejected: string[] }>;
+  /** Casting state per role: draws made, cards on the table, rejected actor ids. */
+  casting: Record<string, RoleCasting>;
+  /** Actor ids rejected anywhere in this film: gone for this film. */
+  rejected: string[];
   fillerShot: boolean;
   /** Script quality locked in when the script is finished. */
   scriptQuality?: number;
+  castingScore?: number;
   results?: FilmResults;
   grade?: Grade;
   gradeScore?: number;

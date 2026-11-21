@@ -5,6 +5,7 @@ import { directorById } from '../../engine/data/directors';
 import { abandonFilm } from '../../engine/profile';
 import type { FilmPhase } from '../../engine/types';
 import { ScriptEditor } from './ScriptEditor';
+import { CastingScreen } from './CastingScreen';
 
 const PHASES: { id: FilmPhase; label: string }[] = [
   { id: 'script', label: 'Script' },
@@ -46,12 +47,14 @@ export function ProductionScreen() {
         </ol>
         {film.phase === 'script' ? (
           <ScriptEditor />
+        ) : film.phase === 'casting' ? (
+          <CastingScreen />
         ) : (
         <div className="production-body">
           <div className="card placeholder">
             <h3>{PHASES[phaseIdx]?.label} phase</h3>
             <p className="muted">
-              Script locked (quality {film.scriptQuality}). The {PHASES[phaseIdx]?.label.toLowerCase()} phase arrives in the next milestone.
+              Script {film.scriptQuality} · Casting {film.castingScore ?? '—'}. The {PHASES[phaseIdx]?.label.toLowerCase()} phase arrives in the next milestone.
             </p>
           </div>
           <div className="brief-side">

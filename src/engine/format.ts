@@ -1,7 +1,8 @@
 // Display helpers shared by UI (pure functions, safe for engine tests).
 
 import type { BonusGoal, HardRequirement } from './types';
-import { sceneTypeById } from './data/sceneTypes';
+import { actionById } from './data/actions';
+import { toneById } from './data/tones';
 import { topicById } from './data/topics';
 
 /** $K → "$25M" / "$750K". */
@@ -14,11 +15,11 @@ export function money(k: number): string {
 }
 
 export const ROLE_TYPE_NAMES = {
-  main: 'Main (lead)',
-  coMain: 'Co-main',
+  main: 'Main',
   villain: 'Villain',
+  coVillain: 'Co-villain',
   romanticInterest: 'Romantic interest',
-  sidekick: 'Sidekick / Mentor',
+  comicRelief: 'Comic relief',
   supporting: 'Supporting',
 } as const;
 
@@ -26,8 +27,10 @@ export function describeHardReq(r: HardRequirement): string {
   switch (r.kind) {
     case 'runtime':
       return `Runtime ${r.target} min (±${r.tolerance})`;
-    case 'sceneType':
-      return `At least ${r.count} ${sceneTypeById(r.sceneTypeId).name} scene${r.count > 1 ? 's' : ''}`;
+    case 'tone':
+      return `At least ${r.count} ${toneById(r.tone).name.toLowerCase()} scene${r.count > 1 ? 's' : ''}`;
+    case 'action':
+      return `Someone ${actionById(r.actionId).verb}`;
     case 'leadStarPower':
       return `Main lead star power ≥ ${r.min}`;
     case 'role':

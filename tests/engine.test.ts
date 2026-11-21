@@ -4,7 +4,8 @@ import { newProfile, refreshBoard, startFilm } from '../src/engine/profile';
 import { applyAutoUnlocks, buySet, buyTopicPack, reputationTier } from '../src/engine/progression';
 import { deleteSlot, listSlots, loadProfile, saveProfile, type KeyValueStore } from '../src/engine/save';
 import { TUNING } from '../src/engine/tuning';
-import { SCENE_TYPES } from '../src/engine/data/sceneTypes';
+import { ACTIONS, BASE_ACTIONS, GENRE_SIGNATURE_ACTIONS } from '../src/engine/data/actions';
+import { GENRE_PROFILE } from '../src/engine/data/tones';
 import { SETS } from '../src/engine/data/sets';
 import { TOPICS, TOPIC_PACKS } from '../src/engine/data/topics';
 import { DIRECTORS } from '../src/engine/data/directors';
@@ -21,20 +22,22 @@ describe('content', () => {
     expect(DIRECTORS.filter((d) => d.unlock.kind === 'start')).toHaveLength(2);
     expect(TOPIC_PACKS.find((p) => p.id === 'starter')!.topicIds).toHaveLength(4);
     expect(SETS.filter((s) => s.unlock.kind === 'start')).toHaveLength(8);
-    expect(SCENE_TYPES.filter((s) => !s.topicId).length).toBeGreaterThanOrEqual(12);
+    expect(BASE_ACTIONS.length).toBeGreaterThanOrEqual(20);
+    expect(Object.keys(GENRE_PROFILE)).toHaveLength(8);
   });
 
   it('references only existing ids', () => {
-    const sceneIds = new Set(SCENE_TYPES.map((s) => s.id));
+    const actionIds = new Set(ACTIONS.map((s) => s.id));
     const setIds = new Set(SETS.map((s) => s.id));
     const topicIds = new Set(TOPICS.map((t) => t.id));
     for (const t of TOPICS) {
-      t.sceneTypes.forEach((id) => expect(sceneIds.has(id), id).toBe(true));
+      t.actions.forEach((id) => expect(actionIds.has(id), id).toBe(true));
       t.setIds.forEach((id) => expect(setIds.has(id), id).toBe(true));
     }
-    for (const s of SETS) Object.keys(s.sceneFit).forEach((id) => expect(sceneIds.has(id), `${s.id}:${id}`).toBe(true));
+    for (const s of SETS) Object.keys(s.actionFit ?? {}).forEach((id) => expect(actionIds.has(id), `${s.id}:${id}`).toBe(true));
+    for (const ids of Object.values(GENRE_SIGNATURE_ACTIONS)) ids.forEach((id) => expect(actionIds.has(id), id).toBe(true));
     for (const p of TOPIC_PACKS) p.topicIds.forEach((id) => expect(topicIds.has(id), id).toBe(true));
-    for (const st of SCENE_TYPES) if (st.topicId) expect(topicIds.has(st.topicId)).toBe(true);
+    for (const a of ACTIONS) if (a.topicId) expect(topicIds.has(a.topicId), a.id).toBe(true);
   });
 
   it('applies delivery effects after weighting', () => {

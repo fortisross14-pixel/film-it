@@ -47,47 +47,70 @@ new phase playable in the browser.
   are subtracted on a curve (90 → 88 slightly late, → 85 a bit late, → 8 very late).
   Each archetype has a strictness multiplier (Tight ship is strictest). See `grade.ts`.
 
-## Milestone 2 — Script phase (done)
+## Design updates (after Milestone 2 review)
 
-- `script.ts`: runtime, filler timeline, roles (types, billing, limits),
-  scene placement (type, participants, length, intensity, act derived from
-  position), topic choice, required-role checks per scene type.
-- Script quality score (coverage, structure, variety, fit, role balance),
-  script cost, derived screen time, live hard-requirement checklist.
-- Script editor UI: timeline with filler, role list, scene editor, topic picker,
-  quality breakdown, running cost vs budget, requirements checklist.
+- **Script is scene-and-action based, not minute-based.** Characters first (Main, Villain,
+  Co-villain, Romantic interest, Comic relief, up to 2 Supporting). Then 3–7 scenes
+  (usually 4–5). Each scene: duration (short / medium / long = 12 / 18 / 25% of runtime),
+  a tone (happy, sad, thrill, calm, romantic, scary), action beats
+  ("Villain · fights and wins · To: Main"), and others involved. 2 beats per scene is
+  ideal, 1 is shallow, 3 good, 4 too complex. Scenes are ordered on the timeline; filler is
+  spread evenly between them.
+- **Script profile axes:** Action (calm↔thrill), Humor (sad↔happy), Romance, Fear. Each genre
+  has an ideal profile; fit is the weighted distance from it.
+- **Script quality:** fit, depth, structure (open with the main, climax ending, escalation,
+  tone variety), characters (everyone used, each type does its job), coherence (actions suit
+  the tone), pacing (scene count + filler).
+- **Brief hard requirements** now ask for a tone ("at least 1 sad scene") or an action
+  ("someone declares love") instead of scene types. Topics add actions (Medieval → duels).
+- **Actors have skills** (action, comedy, drama, romance, menace). A role's fit comes from the
+  skills its beats use.
+- **Shooting (M4)** becomes a Game-Dev-Tycoon-style minigame: the cast walks onto the set and,
+  for a few seconds, bubbles add to three meters (pace, chemistry, dialogue). The shoot yields
+  3 versions: one best in pace, one best in chemistry, one bad. Pick one or shoot again
+  (costs days).
+- **Post (M5):** go through each scene, watch it play back with its score, add music and FX.
 
-## Milestone 3 — Casting phase
+## Milestone 2 — Script phase (done, then reworked to the scene/action model)
 
-- `casting.ts`: card draws (3 cards, first free, escalating redraw fee),
-  odds by billing tier and rarity, hidden gems, director (Talent Scout) bonuses.
-- Compensation: base fee + screen-time minutes × per-minute rate.
-- Casting score (genre range, age fit, star power vs brief).
-- Casting UI: role-by-role card draws, pick or redraw, cast summary and payroll.
+- `script.ts`: characters, scenes with duration/tone/beats/others, ordering, layout with
+  filler, topic actions, rating filter, screen time, cost, profile axes, quality breakdown,
+  live hard-requirement checklist, lock → casting.
+- Script editor UI: characters, runtime/topic, timeline, scene cards with beat rows,
+  profile and quality sidebar.
+
+## Milestone 3 — Casting phase (done)
+
+- `casting.ts`: 3-card draws per role (first free, redraws 1×, 2×, 4× a budget-scaled fee),
+  rarity odds by billing, Talent Scout gem odds and cheaper redraws, rejected cards gone for
+  the film, fresh faces when the pool runs low, release and recast.
+- Pay = base fee (star power⁴·², billing, diva) + screen minutes × per-minute rate.
+- Fit from the skills each role's beats need, plus acting and age; casting score = fit +
+  star power against the budget tier.
+- Casting UI: role list, actor cards with procedural cartoon faces (`Face`; commissioned art
+  plugs into `actor.portrait`), budget, requirements, sign the cast → shooting.
 
 ## Milestone 4 — Shooting phase
 
-- `shooting.ts`: set choice with fit per scene type/topic, parameters
-  (coverage, rehearsal, tone, special), take score formula with variance and
-  learning curve, feedback lines, filler auto-shoot.
-- Schedule: shooting days per take, weeks calendar, daily crew cost, set rental,
-  projected finish, lateness.
-- Shooting UI: scene list, set picker, tableau, parameter controls, Shoot /
-  Retake, take history, calendar bar, ledger.
+- Per scene: pick the set (fit for the scene's tone and actions), cast walks onto the iso set,
+  bubbles pop for a few seconds filling Pace / Chemistry / Dialogue meters. Inputs: actor
+  skills for the beats, acting, set fit, director, traits (one-take, method), retake number.
+- 3 versions per shoot (best pace, best chemistry, a bad one). Choose one or reshoot.
+- Schedule: shooting days per take, weeks calendar, crew cost per day, set rental, lateness.
+- Shooting UI: scene list, set picker, animated tableau with bubbles, version picker, calendar.
 
 ## Milestone 5 — Post-production
 
-- `post.ts`: take selection (default best), cutting scenes back to filler,
-  film-wide music tier, per-scene VFX/SFX slots with genre weights,
-  diminishing returns, overproduction, post days, Auto-polish.
-- Post UI: take picker per scene, music choice, polish grid, budget + schedule.
+- Scene-by-scene playback of the chosen version with its score; optional cut of a weak scene.
+- Film-wide music tier; per-scene VFX and SFX with genre weights, diminishing returns and
+  overproduction; post days; Auto-polish.
 
 ## Milestone 6 — Premiere, results and grade
 
 - `premiere.ts`: buzz, public rating, critics rating, box office (opening +
   run), festivals and academy-style awards with a rival-film competition roll.
-- `grade.ts`: component scores, weighting by expectation profile, hard
-  requirement letter caps, bonus goals, final A–F.
+- `grade.ts`: weighted satisfaction (box office, public, critics, awards), then late /
+  over-budget penalties, hard-requirement letter caps, bonus goals, final A–F.
 - Premiere UI: staged reveal (red carpet → public → critics → box office →
   awards → verdict) and the results breakdown.
 

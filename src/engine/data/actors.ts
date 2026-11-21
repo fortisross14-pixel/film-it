@@ -1,8 +1,9 @@
-import type { Actor, ActorTrait, AgeBracket, Rarity } from '../types';
+import type { Actor, ActorTrait, AgeBracket, Rarity, Skill, SkillMap } from '../types';
 import type { Rng } from '../rng';
 import { makeId } from '../rng';
 import { TUNING } from '../tuning';
-import { GENRE_IDS } from './genres';
+
+export const SKILLS: Skill[] = ['action', 'comedy', 'drama', 'romance', 'menace'];
 
 // Common everyday names ("John Smith", "Hannah Myers").
 const COMMON_FIRST = ['John', 'Chris', 'Hannah', 'Sarah', 'Mike', 'Emily', 'David', 'Laura', 'James', 'Anna', 'Tom', 'Kate', 'Paul', 'Lisa', 'Mark', 'Rachel', 'Dan', 'Megan', 'Steve', 'Julia', 'Ben', 'Amy', 'Sam', 'Nina'];
@@ -55,10 +56,13 @@ export function generateActor(rng: Rng, usedNames: Set<string>, forcedRarity?: R
     acting = inRange(rng, t.hiddenGemActing);
   }
 
-  // Genre range: 2 strong genres, the rest middling or weak.
-  const strong = rng.shuffle(GENRE_IDS).slice(0, 2);
-  const genreRange = {} as Actor['genreRange'];
-  for (const g of GENRE_IDS) genreRange[g] = strong.includes(g) ? rng.int(75, 100) : rng.int(25, 70);
+  // Skills: 1–2 strong skills, the rest middling or weak, nudged by overall acting.
+  const strong = rng.shuffle(SKILLS).slice(0, rng.chance(0.5) ? 1 : 2);
+  const skills = {} as SkillMap;
+  for (const s of SKILLS) {
+    const raw = strong.includes(s) ? rng.int(75, 100) : rng.int(20, 65);
+    skills[s] = Math.max(5, Math.min(100, Math.round(raw * 0.75 + acting * 0.25)));
+  }
 
   const traits: ActorTrait[] = [];
   if (rng.chance(t.traitChance)) traits.push(rng.pick(TRAITS));
@@ -67,13 +71,12 @@ export function generateActor(rng: Rng, usedNames: Set<string>, forcedRarity?: R
     if (!traits.includes(second)) traits.push(second);
   }
 
-  const actor: Actor = { id: makeId('act', rng), name, starPower, acting, genreRange, rarity, traits, age: rng.pick(AGES) };
+  const actor: Actor = { id: makeId('act', rng), name, starPower, acting, skills, rarity, traits, age: rng.pick(AGES) };
   if (famous) actor.famous = true;
   return actor;
 }
 
-export function generateActorPool(rng: Rng, size = TUNING.actors.poolSize): Actor[] {
-  const used = new Set<string>();
+export function generateActorPool(rng: Rng, size: number = TUNING.actors.poolSize, used = new Set<string>()): Actor[] {
   const pool: Actor[] = [];
   // Guarantee at least a couple of legendaries and epics for the lead draws.
   pool.push(generateActor(rng, used, 'legendary'), generateActor(rng, used, 'legendary'));

@@ -160,3 +160,54 @@ input.num { width: 72px; }
   .script-grid { grid-template-columns: 1fr; }
   .script-side { position: static; }
 }
+
+/* ---- Script v2: characters, scene cards, beats ---- */
+button.icon { min-width: 36px; padding: 0 8px; }
+.chars { display: grid; gap: 6px; margin-bottom: 8px; }
+.char { display: grid; grid-template-columns: 130px 1fr 60px 40px; gap: 8px; align-items: center; }
+.char input { margin: 0; width: 100%; }
+.field-label { width: 70px; font-size: 0.8rem; color: var(--muted); }
+.scene-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; }
+.scene-card { display: grid; gap: 8px; border-left-width: 4px; }
+.add-scene { display: grid; place-items: center; min-height: 160px; font-size: 1.1rem; border-style: dashed; }
+.beat { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px; border-radius: 8px; background: var(--panel-2); }
+.beat select { min-height: 36px; }
+.beat.clash { outline: 1px dashed var(--bad); }
+.tone-btn { min-height: 34px; padding: 0 10px; font-size: 0.85rem; }
+.tone-btn.on { color: #111; font-weight: 600; }
+.t-happy.on, .tl-scene.t-happy { background: #f4d35e; }
+.t-sad.on, .tl-scene.t-sad { background: #7aa6d6; }
+.t-thrill.on, .tl-scene.t-thrill { background: #ee6c4d; }
+.t-calm.on, .tl-scene.t-calm { background: #9fd8b5; }
+.t-romantic.on, .tl-scene.t-romantic { background: #f28dbb; }
+.t-scary.on, .tl-scene.t-scary { background: #a78bfa; }
+.t-border-happy { border-left-color: #f4d35e; }
+.t-border-sad { border-left-color: #7aa6d6; }
+.t-border-thrill { border-left-color: #ee6c4d; }
+.t-border-calm { border-left-color: #9fd8b5; }
+.t-border-romantic { border-left-color: #f28dbb; }
+.t-border-scary { border-left-color: #a78bfa; }
+.axis { margin: 6px 0; }
+.axis-bar { position: relative; height: 10px; overflow: visible; }
+.axis-bar .target { position: absolute; top: -3px; width: 3px; height: 16px; background: #fff; border-radius: 2px; transform: translateX(-50%); }
+
+/* ---- Casting ---- */
+.role-list { display: grid; gap: 6px; }
+.role-row { display: flex; gap: 10px; align-items: center; text-align: left; min-height: 56px; padding: 6px 10px; }
+.role-row.selected { border-color: var(--accent); }
+.face { border-radius: 50%; flex: none; }
+.face-empty { width: 40px; height: 40px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; color: var(--muted); flex: none; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 10px; }
+.actor-card { display: grid; gap: 8px; border-width: 2px; }
+.actor-card.r-common { border-color: #6b6880; }
+.actor-card.r-rare { border-color: #3b82f6; }
+.actor-card.r-epic { border-color: #a855f7; }
+.actor-card.r-legendary { border-color: #f5b700; box-shadow: 0 0 12px rgba(245, 183, 0, 0.35); }
+.actor-name { font-weight: 700; }
+.skills .weight { grid-template-columns: 64px 1fr 28px; }
+.skills .weight.need span:first-child { color: var(--accent); font-weight: 600; }
+.skills .weight.need .bar > span { background: var(--good); }
+@media (max-width: 600px) {
+  .scene-cards { grid-template-columns: 1fr; }
+  .char { grid-template-columns: 1fr 1fr; }
+}

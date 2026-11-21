@@ -72,6 +72,7 @@ export function startFilm(p: Profile, contractId: string, directorId: string): S
     ledger: [],
     calendar: { shootDays: 0, postDays: 0 },
     casting: {},
+    rejected: [],
     fillerShot: false,
   }));
   return {

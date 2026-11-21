@@ -7,7 +7,8 @@ import type { Rng } from './rng';
 import { makeId } from './rng';
 import { TUNING } from './tuning';
 import { GENRE_IDS, GENRE_RATINGS, GENRE_REQUIRED_ROLES, genreCloseness, ratingIndex } from './data/genres';
-import { BASE_SCENE_TYPES } from './data/sceneTypes';
+import { actionById, GENRE_SIGNATURE_ACTIONS } from './data/actions';
+import { GENRE_TONE } from './data/tones';
 import { STUDIOS } from './data/studios';
 import { TOPICS } from './data/topics';
 import { reputationTier } from './progression';
@@ -71,12 +72,9 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
   const hardReqs: HardRequirement[] = [{ kind: 'runtime', target: runtime, tolerance: T.runtimeTolerance }];
   for (const roleType of GENRE_REQUIRED_ROLES[genre] ?? []) hardReqs.push({ kind: 'role', roleType });
 
-  const allowedTypes = BASE_SCENE_TYPES.filter((s) => ratingIndex(s.minRating) <= ratingIndex(rating));
-  const goodTypes = allowedTypes.filter((s) => s.genreFit[genre] >= 75);
-  if (goodTypes.length && rng.chance(0.85)) {
-    const st = rng.pick(goodTypes);
-    hardReqs.push({ kind: 'sceneType', sceneTypeId: st.id, count: rng.int(1, 2) });
-  }
+  const signature = GENRE_SIGNATURE_ACTIONS[genre].filter((id) => ratingIndex(actionById(id).minRating) <= ratingIndex(rating));
+  if (signature.length && rng.chance(0.7)) hardReqs.push({ kind: 'action', actionId: rng.pick(signature) });
+  else hardReqs.push({ kind: 'tone', tone: GENRE_TONE[genre], count: rng.int(1, 2) });
   if (archetype === 'blockbuster' || archetype === 'crowd' || (budgetTier >= 2 && rng.chance(0.5))) {
     hardReqs.push({ kind: 'leadStarPower', min: T.leadStarPowerMin[budgetTier] });
   }
