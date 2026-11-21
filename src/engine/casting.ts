@@ -98,12 +98,12 @@ export function redrawFee(film: Film, roleId: string, level = 1): number {
 /** Budget left after money spent and the pay owed to everyone cast so far. */
 export const budgetLeft = (film: Film) => film.contract.budget - spent(film) - pendingPayroll(film);
 
-function drawFrom(rng: Rng, pool: Actor[], billing: Billing, gemBoost: number, n: number): Actor[] {
+function drawFrom(rng: Rng, pool: Actor[], billing: Billing, gemBoost: number, n: number, affordable: (a: Actor) => boolean = () => true): Actor[] {
   const weights = C().rarityWeights[billing] as Record<Rarity, number>;
   const picked: Actor[] = [];
   const left = [...pool];
   while (picked.length < n && left.length) {
-    const ws = left.map((a) => weights[a.rarity] * (isHiddenGem(a) ? gemBoost : 1));
+    const ws = left.map((a) => weights[a.rarity] * (isHiddenGem(a) ? gemBoost : 1) * (affordable(a) ? 1 : C().overBudgetDrawWeight));
     const total = ws.reduce((a, b) => a + b, 0);
     let r = rng.next() * total;
     let i = 0;
@@ -114,6 +114,9 @@ function drawFrom(rng: Rng, pool: Actor[], billing: Billing, gemBoost: number, n
     picked.push(left[i]);
     left.splice(i, 1);
   }
+  // Always at least one card the film can afford.
+  const cheap = left.filter(affordable);
+  if (picked.length && !picked.some(affordable) && cheap.length) picked[picked.length - 1] = cheap[Math.floor(rng.next() * cheap.length)];
   return picked;
 }
 
@@ -151,7 +154,10 @@ export function drawCards(p: Profile, roleId: string): CastResult {
     }
     // A sequel's first draw for the lead brings back the original star (if still available).
     const returning = role.type === 'main' && state.draws === 0 ? available.find((a) => a.id === film.contract.sequelOf?.leadActorId) : undefined;
-    const rest = drawFrom(rng, available.filter((a) => a.id !== returning?.id), role.billing, gemBoost, C().cardsPerDraw - (returning ? 1 : 0));
+    // Stars far beyond this film's means turn up less often (agents know the budget).
+    const cap = film.contract.budget * C().affordShare[role.billing];
+    const affordable = (a: Actor) => rolePay(film, role, a) <= cap;
+    const rest = drawFrom(rng, available.filter((a) => a.id !== returning?.id), role.billing, gemBoost, C().cardsPerDraw - (returning ? 1 : 0), affordable);
     return { pool, cards: returning ? [returning, ...rest] : rest };
   });
 

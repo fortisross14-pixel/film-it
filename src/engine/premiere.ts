@@ -83,9 +83,10 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const fxGenre = Math.max(TUNING.post.vfxWeight[film.contract.genre], TUNING.post.sfxWeight[film.contract.genre]);
   const publicWeights = { ...T.publicWeights, fx: fxGenre < T.fxPublicMinWeight ? 1 : T.publicWeights.fx * fxGenre };
   const charming = film.roles.filter((r) => r.actor?.traits.includes('charming')).length;
-  const publicRating = Math.round(clamp(rate(factors, publicWeights) - boredom * T.boredomPublic + charming * 2 + noise()));
+  const curve = (raw: number) => T.ratingCenter + (raw - T.ratingCenter) * T.ratingSpread + T.ratingLift;
+  const publicRating = Math.round(clamp(curve(rate(factors, publicWeights)) - boredom * T.boredomPublic + charming * 2 + noise()));
   const darling = specialtyScale(directorById(film.directorId), 'festival', 1);
-  const criticsRating = Math.round(clamp(rate(factors, T.criticsWeights) - boredom * T.boredomCritics - post.overproduction + noise()
+  const criticsRating = Math.round(clamp(curve(rate(factors, T.criticsWeights)) - boredom * T.boredomCritics - post.overproduction + noise()
     + darling * TUNING.directors.festivalCritics + fx.critics));
   const festivalCut = darling * TUNING.directors.festivalThresholdCut;
 
@@ -139,30 +140,30 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   };
 
   // Festivals: reachable early for small films with strong critics.
-  if (c.budget <= T.festivalBudgetMax ? criticsRating >= T.festivalNomCritics - festivalCut : criticsRating >= T.bigFilmFestivalCritics - festivalCut && rng.chance(0.3)) {
+  if (c.budget <= T.festivalBudgetMax ? criticsRating >= T.festivalNomCritics - festivalCut && rng.chance(T.festivalNomChance) : criticsRating >= T.bigFilmFestivalCritics - festivalCut && rng.chance(T.bigFilmFestivalChance)) {
     const name = `Festival: ${rng.pick(FESTIVALS)}`;
     nominations.push(name);
     if (criticsRating >= T.festivalWinCritics - festivalCut && rng.chance(0.5 + (criticsRating - T.festivalWinCritics) / 40)) wins.push(name);
   }
 
-  contest('Best Picture', criticsRating * 0.6 + post.cutQuality * 0.4, 75);
-  contest('Best Director', post.cutQuality * 0.5 + (film.scriptQuality ?? 0) * 0.5, 75);
+  contest('Best Picture', criticsRating * 0.6 + post.cutQuality * 0.4, T.pictureAwardThreshold);
+  contest('Best Director', post.cutQuality * T.directorCutWeight + (film.scriptQuality ?? 0) * (1 - T.directorCutWeight), T.directorAwardThreshold);
   const perf = film.roles.filter((r) => r.actor).map((r) => {
     const mine = cut.scenes.filter((s) => participants(s).includes(r.id)).map((s) => chosenTake(s)?.score ?? 0);
     return { r, v: avg(mine) * 0.6 + r.actor!.acting * 0.4 };
   });
   const lead = perf.find((x) => x.r.type === 'main');
-  if (lead) contest(`Best Lead Performance: ${lead.r.actor!.name}`, lead.v, 75);
+  if (lead) contest(`Best Lead Performance: ${lead.r.actor!.name}`, lead.v, T.leadAwardThreshold);
   const support = perf.filter((x) => x.r.type !== 'main').sort((a, b) => b.v - a.v)[0];
-  if (support) contest(`Best Supporting Performance: ${support.r.actor!.name}`, support.v, 72);
-  contest('Best Original Script', film.scriptQuality ?? 0, 85);
+  if (support) contest(`Best Supporting Performance: ${support.r.actor!.name}`, support.v, T.supportAwardThreshold);
+  contest('Best Original Script', (film.scriptQuality ?? 0) * 0.6 + criticsRating * 0.4, T.scriptAwardThreshold);
   if (film.music === 'star') {
     const emo = sceneScores(film).filter((s) => isEmotional(cut.scenes.find((x) => x.id === s.sceneId)!));
-    contest('Best Score', avg(emo.map((s) => s.total)), 65);
+    contest('Best Score', avg(emo.map((s) => s.total)), T.scoreAwardThreshold);
   }
   const live = sceneScores(film);
-  if (TUNING.post.vfxWeight[c.genre] >= 0.5) contest('Best Visual Effects', clamp(live.reduce((a, s) => a + s.vfx, 0) * 3), 60);
-  contest('Best Sound', clamp(live.reduce((a, s) => a + s.sfx, 0) * 3), 60);
+  if (TUNING.post.vfxWeight[c.genre] >= 0.5) contest('Best Visual Effects', clamp(live.reduce((a, s) => a + s.vfx, 0) * T.fxAwardPerPoint), T.fxAwardThreshold);
+  contest('Best Sound', clamp(live.reduce((a, s) => a + s.sfx, 0) * T.soundAwardPerPoint), T.soundAwardThreshold);
 
   return {
     buzz, publicRating, criticsRating, factors, boredom: Math.round(fillerShare * 100), overproduction: post.overproduction,

@@ -20,7 +20,7 @@ import { setById, DEFAULT_ACTION_FIT } from './data/sets';
 import { directorById } from './data/directors';
 import { affinityBonus, specialtyScale } from './director';
 import { withRng } from './profile';
-import { genreTarget, participants, sceneProfile, spent } from './script';
+import { budgetScale, genreTarget, participants, sceneProfile, spent } from './script';
 
 export type ShootResult = { ok: true; profile: Profile } | { ok: false; reason: string };
 const fail = (reason: string): ShootResult => ({ ok: false, reason });
@@ -66,7 +66,7 @@ export const crewWeekCost = (film: Film) => Math.round(Math.max(T().crewWeekMin,
 
 export function shootWeekCost(film: Film, scene: Scene, set: FilmSet): number {
   const stunts = scene.beats.filter((b) => actionById(b.actionId).stunt).length;
-  return crewWeekCost(film) + Math.round(set.dayCost * T().shootDaysPerWeek * budgetMult(film)) + Math.round(stunts * film.contract.budget * T().stuntShare);
+  return crewWeekCost(film) + Math.round(set.dayCost * T().shootDaysPerWeek * budgetMult(film) * budgetScale(film.contract.budget)) + Math.round(stunts * film.contract.budget * T().stuntShare);
 }
 
 // ---------------- Fits ----------------

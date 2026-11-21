@@ -54,7 +54,7 @@ export const loyaltyMult = (actor: Actor, directorId: string) =>
 
 export function isHit(film: Film): boolean {
   if (!film.grade || !film.results) return false;
-  return ORDER.indexOf(film.grade) <= ORDER.indexOf(Q().minGrade as Grade) && film.results.boxOffice >= effectiveBoxOfficeTarget(film);
+  return ORDER.indexOf(film.grade) <= ORDER.indexOf(Q().minGrade as Grade) && film.results.boxOffice >= effectiveBoxOfficeTarget(film) * Q().minBoxOfficeRatio;
 }
 
 const roundTo = (n: number, step: number) => Math.round(n / step) * step;

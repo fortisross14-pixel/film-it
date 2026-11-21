@@ -94,6 +94,15 @@ describe('grade', () => {
   });
 });
 
+describe('balance anchors', () => {
+  it("the requirements doc's example: a $400M hit with 45% critics and no nominations on an award brief lands at C", () => {
+    const p0 = premiereProfile().activeFilm!;
+    const f = { ...p0, contract: { ...p0.contract, archetype: 'award' as const, weights: { ...TUNING.weights.award }, hardReqs: [], bonusGoals: [], budget: 1e6, deadlineWeeks: 99, boxOfficeTarget: 150_000 } };
+    const g = gradeFilm(f, results({ boxOffice: 400_000, criticsRating: 45, publicRating: 75, nominations: [], wins: [] }));
+    expect(g.grade).toBe('C');
+  });
+});
+
 describe('premiere & delivery', () => {
   it('runs once, then delivers rewards and resets for the next contract', () => {
     let p = premiereProfile();

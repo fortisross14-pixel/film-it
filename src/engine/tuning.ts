@@ -4,6 +4,8 @@
 import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from './types';
 
 export const TUNING = {
+  /** Minimum final score for each letter grade. */
+  gradeThresholds: { A: 90, B: 75, C: 48, D: 34, F: 0 },
   saveSlots: 3,
   saveVersion: 5,
 
@@ -20,7 +22,7 @@ export const TUNING = {
     minDeadlineWeeks: 12,
     /** Box office target as a multiple of budget, per archetype. */
     boxOfficeMultiple: {
-      blockbuster: 3.0,
+      blockbuster: 2.5,
       award: 1.5,
       crowd: 2.5,
       indie: 2.0,
@@ -33,14 +35,14 @@ export const TUNING = {
       indie: 0.9,
       tightship: 0.8,
     } satisfies Record<Archetype, number>,
-    leadStarPowerMin: [40, 50, 60, 70, 80], // by budget tier
+    leadStarPowerMin: [35, 45, 55, 65, 72], // by budget tier
     rewardBase: { reputation: 40, credits: 60 },
   },
 
   /** Expectation profiles: weights for studio satisfaction. Each sums to 1. */
   weights: {
     blockbuster: { boxOffice: 0.5, public: 0.35, critics: 0.1, awards: 0.05 },
-    award: { boxOffice: 0.15, public: 0.05, critics: 0.35, awards: 0.45 },
+    award: { boxOffice: 0.3, public: 0.15, critics: 0.3, awards: 0.25 },
     crowd: { boxOffice: 0.35, public: 0.5, critics: 0.1, awards: 0.05 },
     indie: { boxOffice: 0.1, public: 0.1, critics: 0.45, awards: 0.35 },
     tightship: { boxOffice: 0.3, public: 0.3, critics: 0.2, awards: 0.2 },
@@ -127,7 +129,7 @@ export const TUNING = {
     /** Scene length as a share of runtime. Filler fills the rest. */
     durationShare: { short: 0.12, medium: 0.18, long: 0.25 },
     /** Beats per scene → depth score (index = beats; 4+ uses the last). 1 shallow, 2 ideal, 3 good, 4 too complex. */
-    depthByBeats: [0, 40, 100, 85, 45],
+    depthByBeats: [0, 30, 100, 85, 45],
     /** Passive beats (impact 0, e.g. "watches") count as this much of a beat for depth. */
     passiveBeatWeight: 0.5,
     roleLimits: { main: [1, 1], villain: [0, 1], coVillain: [0, 1], romanticInterest: [0, 1], comicRelief: [0, 1], supporting: [0, 2] },
@@ -152,7 +154,7 @@ export const TUNING = {
     mainPresenceShare: 0.6,
     purposePenalty: 10,
     /** Weights of the quality components. */
-    qualityWeights: { fit: 0.25, depth: 0.2, structure: 0.2, characters: 0.15, coherence: 0.1, pacing: 0.1 },
+    qualityWeights: { fit: 0.2, depth: 0.3, structure: 0.2, characters: 0.12, coherence: 0.08, pacing: 0.1 },
     /** Writing cost, $K: per scene, per beat, plus the action's own cost. Scaled by duration. */
     sceneBaseCost: 120,
     beatCost: 40,
@@ -177,9 +179,13 @@ export const TUNING = {
     },
     scoutGemWeight: 2.5,
     scoutFeeDiscount: 0.4,
+    /** Draw: a card is "affordable" when its pay ≤ budget × share for that billing. Others are drawn less often,
+     *  and every draw holds at least one affordable card. */
+    affordShare: { lead: 0.35, second: 0.2, support: 0.12, minor: 0.06 },
+    overBudgetDrawWeight: 0.25,
     /** Pay: baseFee = feeAt30 × (starPower/30)^feeExponent × billing mult, floor feeMin. */
     feeAt30: 150,
-    feeExponent: 4.2,
+    feeExponent: 3.6,
     feeMin: 25,
     billingFeeMult: { lead: 1, second: 0.7, support: 0.45, minor: 0.3 },
     /** Per-minute rate as a share of base fee. */
@@ -315,7 +321,7 @@ export const TUNING = {
     genreMarket: { action: 1.0, scifi: 0.95, fantasy: 0.9, comedy: 0.85, horror: 0.75, thriller: 0.8, romance: 0.65, drama: 0.55 },
     ratingMarket: { G: 0.9, PG: 1.0, 'PG-13': 1.05, R: 0.85 },
     /** Opening weekend = budget × openingShare × genre × rating × (buzzBase + buzz/100) × critics effect. */
-    openingShare: 0.7,
+    openingShare: 0.5,
     openingBuzzBase: 0.4,
     criticsEffectBase: 0.9,
     criticsEffectPer: 1 / 500,
@@ -329,20 +335,38 @@ export const TUNING = {
     sleeperBonus: 0.08,
     /** Box office score: 100 × (gross / target)^exp × atTarget/100, capped. */
     boxOfficeAtTarget: 80,
-    boxOfficeExp: 0.8,
+    boxOfficeExp: 0.6,
     /** Awards. */
     festivalBudgetMax: 12_000,
-    festivalNomCritics: 70,
-    festivalWinCritics: 82,
+    festivalNomCritics: 75,
+    festivalNomChance: 0.6,
+    bigFilmFestivalChance: 0.3,
+    festivalWinCritics: 88,
     bigFilmFestivalCritics: 85,
-    nominationBase: 0.35,
+    nominationBase: 0.15,
     nominationPerPoint: 1 / 15,
-    rivalRange: [72, 95] as [number, number],
+    rivalRange: [78, 98] as [number, number],
     winNoise: 8,
     /** Award points: nomination / win; festival counts the same. Expected points per archetype. */
     nominationPoints: 1,
     winPoints: 2.5,
-    expectedAwardPoints: { blockbuster: 1.5, award: 6, crowd: 1.5, indie: 3, tightship: 1.5 },
+    expectedAwardPoints: { blockbuster: 1, award: 3, crowd: 1, indie: 3, tightship: 1.5 },
+    /** Rating curve: rating = center + (raw - center) × spread + lift. Spreads good from bad. */
+    ratingCenter: 50,
+    ratingSpread: 1.2,
+    ratingLift: 14,
+    /** Award drivers. */
+    directorCutWeight: 0.7,
+    scriptAwardThreshold: 92,
+    directorAwardThreshold: 80,
+    scoreAwardThreshold: 80,
+    fxAwardThreshold: 85,
+    fxAwardPerPoint: 3,
+    soundAwardThreshold: 90,
+    soundAwardPerPoint: 2,
+    pictureAwardThreshold: 80,
+    leadAwardThreshold: 78,
+    supportAwardThreshold: 75,
   },
 
   rewards: {
@@ -408,8 +432,10 @@ export const TUNING = {
     budgetMult: 1.4,
     rewardMult: 1.3,
     /** Franchise effects at the premiere. */
-    buzzBonus: 12,
-    openingMult: 1.25,
+    buzzBonus: 8,
+    openingMult: 1.15,
+    /** Box office must beat the target by this much to earn a sequel. */
+    minBoxOfficeRatio: 1.2,
     criticsFatiguePer: 3,
     criticsFatigueMax: 9,
     returningLeadPoints: 4,

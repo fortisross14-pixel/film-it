@@ -5,8 +5,9 @@ import { createRng } from '../src/engine/rng';
 import { addBeat, addRole, addScene, finishScript, screenTime, type EditResult } from '../src/engine/script';
 import {
   actorFit, actorPay, baseFee, budgetLeft, castActor, castingBlockers, castingScore, drawCards, finishCasting,
-  redrawFee, releaseRole, roleSkillNeeds, type CastResult,
+  redrawFee, releaseRole, roleSkillNeeds, rolePay, type CastResult,
 } from '../src/engine/casting';
+import { TUNING } from '../src/engine/tuning';
 import { checkRequirements } from '../src/engine/script';
 
 const ok = (r: EditResult): Film => {
@@ -71,6 +72,17 @@ describe('pay', () => {
 });
 
 describe('draws', () => {
+  it('every draw holds at least one card a tiny film can afford', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const base = castingProfile(2500);
+      const p = okP(drawCards({ ...base, seed: seed * 101 }, 'role1'));
+      const f = p.activeFilm!;
+      const role = f.roles.find((r) => r.id === 'role1')!;
+      const cap = f.contract.budget * TUNING.casting.affordShare[role.billing];
+      expect(f.casting.role1.offered.some((a) => rolePay(f, role, a) <= cap)).toBe(true);
+    }
+  });
+
   it('first draw is free and shows 3 cards; redraws escalate and reject cards', () => {
     let p = castingProfile();
     expect(redrawFee(p.activeFilm!, 'role1')).toBe(0);

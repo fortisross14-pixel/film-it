@@ -226,15 +226,46 @@ sprites, prop sprites, UI ornaments (laurels, reels, film strip, tickets), award
   director who discovered them: 15% fee discount later. Actors carry a gender for portraits.
 - Rival films: each award season has named rival films by rival directors; each category lists
   the nominees and the winner.
-- Sequels and franchises: a hit (B or better, box office at or above target) puts a sequel brief
+- Sequels and franchises: a hit (B or better, box office at least 1.2× target) puts a sequel brief
   first on the next board — same studio, genre and topic, budget ×1.4, rewards ×1.3, bonus goal
   to bring back the original lead (who appears in the first lead draw). Sequels get fanbase buzz
-  and opening ×1.25, minus some critics fatigue.
+  (+8) and opening ×1.15, minus some critics fatigue.
 - Final-cut playback: "Watch the whole film" in Edit and in the filmography plays every kept
   scene in order with title and end cards.
 
-## After the milestones
+## Balance pass (done)
 
-Balancing pass on `tuning.ts`, UI polish, and the open questions from the
-requirements (timeline snapping, shoot order, actor pool carry-over, pack
-unlock rules, final title).
+Tuned with a simulation harness: `tests/sim/bots.ts` plays whole careers with three bots
+(careful, average, naive). Run it with `SIM=1 npx vitest run tests/balance.sim.test.ts --reporter=verbose`.
+It prints grades, ratings, box office against target, spend, awards, sequels and the score
+components by archetype (10 careers × 6 films per bot).
+
+| Bot | A | B | C | D | F | Audience p10–p90 | Critics p10–p90 |
+|---|---|---|---|---|---|---|---|
+| careful (before) | 79% | 4% | 9% | 2% | 7% | — | — |
+| careful | 38% | 30% | 28% | 2% | 2% | 6.8–8.8 | 69–86% |
+| average | 0% | 2% | 48% | 45% | 5% | 4.7–6.1 | 53–70% |
+| naive | 0% | 0% | 11% | 45% | 43% | 3.2–5.3 | 41–62% |
+
+The careful bot plays well; a strong human player should get more A grades. The requirements doc's
+example (a $400M hit with 45% critics and no nominations on an award brief) grades C; a test
+anchors this. Everything unlockable costs 7,310 credits: about 6 careers for a careful player.
+
+What changed (all in `tuning.ts`):
+- Grade bands moved to tuning: A 90 / B 75 / C 48 / D 34.
+- Ratings: a curve that spreads good films from bad ones (`ratingSpread`, `ratingLift`).
+- Box office score: `(gross / target)^0.6`. Blockbuster and crowd targets are 2.5× budget.
+- Awards: stronger rivals, a lower nomination base, and thresholds for every category in
+  tuning. Best Sound and Visual Effects now need real craft. Festivals need critics of 75 or
+  more and come with a 60% chance. Expected award points are set per archetype.
+- Award briefs weigh box office, audience, critics and awards more evenly.
+- Sequels need box office at least 1.2× target. Their fanbase is softer: buzz +8, opening ×1.15.
+- Set rental scales with the budget. Lead star requirements by tier are always reachable.
+- Casting draws know the budget: stars far beyond the film's means turn up a quarter as often,
+  and every draw holds at least one affordable card. Before this, small briefs were often only
+  playable over budget.
+
+## Still open
+
+UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor
+pool carry-over, pack unlock rules.

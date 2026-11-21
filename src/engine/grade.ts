@@ -46,7 +46,7 @@ export function applyDelivery(
   return { latePenalty, overBudgetPenalty, final };
 }
 
-export const GRADE_THRESHOLDS: [Grade, number][] = [['A', 90], ['B', 80], ['C', 70], ['D', 60], ['F', 0]];
+export const GRADE_THRESHOLDS: [Grade, number][] = (['A', 'B', 'C', 'D', 'F'] as Grade[]).map((g) => [g, TUNING.gradeThresholds[g]]);
 
 export function letterFor(score: number): Grade {
   return GRADE_THRESHOLDS.find(([, min]) => score >= min)![0];
