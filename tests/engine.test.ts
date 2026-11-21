@@ -1,0 +1,194 @@
+import { createRng } from '../src/engine/rng';
+import { generateBoard, generateContract } from '../src/engine/contracts';
+import { newProfile, refreshBoard, startFilm } from '../src/engine/profile';
+import { applyAutoUnlocks, buySet, buyTopicPack, reputationTier } from '../src/engine/progression';
+import { deleteSlot, listSlots, loadProfile, saveProfile, type KeyValueStore } from '../src/engine/save';
+import { TUNING } from '../src/engine/tuning';
+import { SCENE_TYPES } from '../src/engine/data/sceneTypes';
+import { SETS } from '../src/engine/data/sets';
+import { TOPICS, TOPIC_PACKS } from '../src/engine/data/topics';
+import { DIRECTORS } from '../src/engine/data/directors';
+import { describeHardReq, money } from '../src/engine/format';
+
+function memoryStore(): KeyValueStore {
+  const m = new Map<string, string>();
+  return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v), removeItem: (k) => void m.delete(k) };
+}
+
+describe('content', () => {
+  it('meets MVP content counts', () => {
+    expect(DIRECTORS.filter((d) => d.unlock.kind === 'start')).toHaveLength(2);
+    expect(TOPIC_PACKS.find((p) => p.id === 'starter')!.topicIds).toHaveLength(4);
+    expect(SETS.filter((s) => s.unlock.kind === 'start')).toHaveLength(8);
+    expect(SCENE_TYPES.filter((s) => !s.topicId).length).toBeGreaterThanOrEqual(12);
+  });
+
+  it('references only existing ids', () => {
+    const sceneIds = new Set(SCENE_TYPES.map((s) => s.id));
+    const setIds = new Set(SETS.map((s) => s.id));
+    const topicIds = new Set(TOPICS.map((t) => t.id));
+    for (const t of TOPICS) {
+      t.sceneTypes.forEach((id) => expect(sceneIds.has(id), id).toBe(true));
+      t.setIds.forEach((id) => expect(setIds.has(id), id).toBe(true));
+    }
+    for (const s of SETS) Object.keys(s.sceneFit).forEach((id) => expect(sceneIds.has(id), `${s.id}:${id}`).toBe(true));
+    for (const p of TOPIC_PACKS) p.topicIds.forEach((id) => expect(topicIds.has(id), id).toBe(true));
+    for (const st of SCENE_TYPES) if (st.topicId) expect(topicIds.has(st.topicId)).toBe(true);
+  });
+
+  it('expectation weights sum to 1', () => {
+    for (const w of Object.values(TUNING.weights)) {
+      expect(Object.values(w).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 5);
+    }
+  });
+});
+
+describe('rng', () => {
+  it('is reproducible', () => {
+    const a = createRng(42);
+    const b = createRng(42);
+    for (let i = 0; i < 10; i++) expect(a.next()).toBe(b.next());
+  });
+});
+
+describe('contracts', () => {
+  it('generates valid contracts', () => {
+    const rng = createRng(7);
+    for (let i = 0; i < 300; i++) {
+      const c = generateContract(rng, 1 + (i % 5));
+      expect(c.budget).toBeGreaterThan(0);
+      expect(c.deadlineWeeks).toBeGreaterThanOrEqual(TUNING.contracts.minDeadlineWeeks);
+      expect(c.difficulty).toBeGreaterThanOrEqual(1);
+      expect(c.difficulty).toBeLessThanOrEqual(5);
+      expect(c.hardReqs[0].kind).toBe('runtime');
+      expect(c.studio.tier).toBeLessThanOrEqual(1 + (i % 5));
+      expect(c.bonusGoals.length).toBeGreaterThan(0);
+      expect(Object.values(c.weights).reduce((a, b) => a + b, 0)).toBeCloseTo(1, 5);
+    }
+  });
+
+  it('respects forced archetype and genre and genre role rules', () => {
+    const c = generateContract(createRng(1), 1, { archetype: 'indie', genre: 'romance' });
+    expect(c.archetype).toBe('indie');
+    expect(c.genre).toBe('romance');
+    expect(c.hardReqs).toContainEqual({ kind: 'role', roleType: 'romanticInterest' });
+    expect(c.budget).toBeLessThanOrEqual(TUNING.contracts.budgetTiers[0] * 1.2);
+  });
+
+  it('fills the board', () => {
+    expect(generateBoard(createRng(3), { reputation: 0 })).toHaveLength(TUNING.contracts.boardSize);
+  });
+
+  it('formats requirements', () => {
+    expect(describeHardReq({ kind: 'leadStarPower', min: 60 })).toContain('60');
+    expect(money(25000)).toBe('$25M');
+    expect(money(750)).toBe('$750K');
+  });
+});
+
+describe('profile & film start', () => {
+  it('creates a starting profile', () => {
+    const p = newProfile('Test', 123);
+    expect(p.unlocks.directors).toEqual(['starterA', 'starterB']);
+    expect(p.unlocks.topics).toHaveLength(4);
+    expect(p.unlocks.sets).toHaveLength(8);
+    expect(p.actorPool).toHaveLength(TUNING.actors.poolSize);
+    expect(p.contractBoard).toHaveLength(TUNING.contracts.boardSize);
+    expect(new Set(p.actorPool.map((a) => a.id)).size).toBe(p.actorPool.length);
+  });
+
+  it('is deterministic per seed', () => {
+    const a = newProfile('A', 99);
+    const b = newProfile('A', 99);
+    expect(a.contractBoard).toEqual(b.contractBoard);
+    expect(a.actorPool).toEqual(b.actorPool);
+  });
+
+  it('starts a film from a contract', () => {
+    const p = newProfile('T', 5);
+    const c = p.contractBoard[0];
+    const r = startFilm(p, c.id, 'starterA');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.profile.activeFilm?.phase).toBe('script');
+    expect(r.profile.activeFilm?.runtime).toBe(c.runtime);
+    expect(r.profile.activeFilm?.scenes).toHaveLength(0);
+    expect(r.profile.contractBoard.find((x) => x.id === c.id)).toBeUndefined();
+    expect(startFilm(r.profile, r.profile.contractBoard[0].id, 'starterA').ok).toBe(false);
+  });
+
+  it('refuses locked directors', () => {
+    const p = newProfile('T', 5);
+    expect(startFilm(p, p.contractBoard[0].id, 'writer').ok).toBe(false);
+  });
+
+  it('refreshes the board', () => {
+    const p = newProfile('T', 5);
+    const q = refreshBoard(p);
+    expect(q.contractBoard).toHaveLength(TUNING.contracts.boardSize);
+    expect(q.contractBoard[0].id).not.toBe(p.contractBoard[0].id);
+  });
+});
+
+describe('progression', () => {
+  it('computes tiers', () => {
+    expect(reputationTier(0)).toBe(1);
+    expect(reputationTier(TUNING.reputationTiers[1])).toBe(2);
+    expect(reputationTier(99999)).toBe(TUNING.reputationTiers.length);
+  });
+
+  it('unlocks directors by reputation tier', () => {
+    const p = { ...newProfile('T', 1), reputation: TUNING.reputationTiers[1] };
+    const { profile, newDirectors } = applyAutoUnlocks(p);
+    expect(newDirectors).toEqual(expect.arrayContaining(['writer', 'scout']));
+    expect(newDirectors).not.toContain('cinematographer');
+    expect(profile.directors.writer.level).toBe(1);
+  });
+
+  it('unlocks genre masters by awards', () => {
+    const p = { ...newProfile('T', 1), genreAwardWins: { horror: 1 } };
+    expect(applyAutoUnlocks(p).newDirectors).toContain('masterHorror');
+  });
+
+  it('buys topic packs and their sets', () => {
+    const p = { ...newProfile('T', 1), credits: 1000 };
+    const r = buyTopicPack(p, 'future');
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.profile.unlocks.topics).toContain('spaceTravel');
+    expect(r.profile.unlocks.sets).toContain('spaceshipBridge');
+    expect(r.profile.credits).toBe(700);
+    expect(buyTopicPack(r.profile, 'future').ok).toBe(false);
+    expect(buyTopicPack({ ...p, credits: 0 }, 'epic').ok).toBe(false);
+  });
+
+  it('buys sets with credits and rep gate', () => {
+    const p = { ...newProfile('T', 1), credits: 1000 };
+    expect(buySet(p, 'rooftop').ok).toBe(true);
+    expect(buySet(p, 'forest').ok).toBe(false); // tier 2
+    expect(buySet(p, 'apartment').ok).toBe(false); // already owned
+  });
+});
+
+describe('save slots', () => {
+  it('saves, lists, loads and deletes', () => {
+    const store = memoryStore();
+    expect(listSlots(store).every((s) => s.empty)).toBe(true);
+    const p = newProfile('Slot', 2);
+    saveProfile(1, p, store);
+    expect(loadProfile(1, store)).toEqual(p);
+    const slots = listSlots(store);
+    expect(slots).toHaveLength(3);
+    expect(slots[1]).toMatchObject({ empty: false, name: 'Slot' });
+    deleteSlot(1, store);
+    expect(loadProfile(1, store)).toBeUndefined();
+    expect(() => saveProfile(3, p, store)).toThrow();
+  });
+
+  it('flags corrupt saves', () => {
+    const store = memoryStore();
+    store.setItem('directors-cut:slot:0', '{nope');
+    expect(listSlots(store)[0].corrupt).toBe(true);
+    expect(loadProfile(0, store)).toBeUndefined();
+  });
+});

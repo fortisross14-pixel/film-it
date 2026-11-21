@@ -1,0 +1,56 @@
+import { useState } from 'react';
+import { useGame, useProfile } from '../../store';
+import { SETS } from '../../../engine/data/sets';
+import { sceneTypeById } from '../../../engine/data/sceneTypes';
+import { buySet, reputationTier, setUnlockText } from '../../../engine/progression';
+import { money } from '../../../engine/format';
+
+export function SetCatalogueTab() {
+  const p = useProfile();
+  const { update } = useGame();
+  const [msg, setMsg] = useState<string | null>(null);
+  const tier = reputationTier(p.reputation);
+  return (
+    <div>
+      <h2>Set catalogue</h2>
+      <p className="muted">Premade sets. You choose them per scene while shooting.</p>
+      {msg && <p className="bad">{msg}</p>}
+      <div className="grid">
+        {SETS.map((s) => {
+          const unlocked = p.unlocks.sets.includes(s.id);
+          const best = Object.entries(s.sceneFit)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([id]) => sceneTypeById(id).name);
+          const buyable = !unlocked && s.unlock.kind === 'credits';
+          return (
+            <div key={s.id} className={`card ${unlocked ? '' : 'locked'}`}>
+              <div className="row between">
+                <h3>{s.name}</h3>
+                <span className="tag">{money(s.dayCost)}/day</span>
+              </div>
+              <p className="small muted">{s.tags.join(' · ')}</p>
+              <p className="small">Best for: {best.join(', ')}</p>
+              {!unlocked && <p className="small">🔒 {setUnlockText(s)}</p>}
+              {buyable && s.unlock.kind === 'credits' && (
+                <button
+                  className="primary"
+                  disabled={p.credits < s.unlock.cost || tier < s.unlock.repTier}
+                  onClick={() => {
+                    const r = buySet(p, s.id);
+                    if (r.ok) {
+                      update(() => r.profile);
+                      setMsg(null);
+                    } else setMsg(r.reason);
+                  }}
+                >
+                  Unlock
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
