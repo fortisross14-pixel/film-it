@@ -225,7 +225,7 @@ export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog
     satisfaction: rep.satisfaction, audience: f.results!.publicRating, critics: f.results!.criticsRating,
     boRatio: f.results!.boxOffice / f.contract.boxOfficeTarget, spentRatio: spent(f) / f.contract.budget, weeksLate: rep.weeksLate,
     noms: f.results!.nominations.length, wins: f.results!.wins.length, script: f.scriptQuality ?? 0, casting: f.castingScore ?? 0,
-    cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, money: rep.rewards.fee + rep.rewards.awardBonus,
+    cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, money: rep.rewards.total,
     level: f.contract.level, sequel: !!f.franchise, components: rep.components, missed: rep.missedReqs.length,
     factors: f.results!.factors, missedList: rep.missedReqs, awards: f.results!.nominations,
     costs: f.ledger.reduce<Record<string, number>>((m, e) => {

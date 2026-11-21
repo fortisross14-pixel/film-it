@@ -1,4 +1,5 @@
 import type { DirectorDef } from '../types';
+import type { Rng } from '../rng';
 
 // Director profiles: archetypes you play a career with, not people.
 // Two are free; the rest are bought with the money careers earn.
@@ -40,3 +41,10 @@ export const directorById = (id: string): DirectorDef => {
   if (!d) throw new Error(`Unknown director ${id}`);
   return d;
 };
+
+// Names for the directors you create (one per career; editable when you start it).
+const FIRST = ['Ana', 'Bruno', 'Carmen', 'Dmitri', 'Elif', 'Farah', 'Gustav', 'Hana', 'Iker', 'Juno', 'Kofi', 'Lucía', 'Mateo', 'Nadia',
+  'Oskar', 'Priya', 'Quinn', 'Rafa', 'Sana', 'Tomás', 'Uma', 'Viggo', 'Wren', 'Ximena', 'Yusuf', 'Zoe'];
+const LAST = ['Almeida', 'Brandt', 'Castell', 'Duarte', 'Eriksen', 'Falco', 'Grey', 'Haddad', 'Ito', 'Jensen', 'Kowalski', 'Lund', 'Moreno',
+  'Novak', 'Ortega', 'Park', 'Quist', 'Rossi', 'Silva', 'Tanaka', 'Urquhart', 'Vega', 'Wolfe', 'Yamada', 'Zhou'];
+export const randomDirectorName = (rng: Rng) => `${rng.pick(FIRST)} ${rng.pick(LAST)}`;

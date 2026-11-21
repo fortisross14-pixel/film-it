@@ -11,7 +11,7 @@ import { Difficulty, Sheet, Stat } from '../components/ui';
 import { directorById } from '../../engine/data/directors';
 import { genreCloseness } from '../../engine/data/genres';
 import { startFilm } from '../../engine/profile';
-import { parkCareer, retireCareer } from '../../engine/career';
+import { careerName, parkCareer, retireCareer } from '../../engine/career';
 import { money } from '../../engine/format';
 import { TUNING } from '../../engine/tuning';
 import type { Contract, DirectorDef } from '../../engine/types';
@@ -46,8 +46,8 @@ export function CareerScreen() {
     <Shell
       nav={nav} active={area}
       onNav={(id) => (id === 'studio' ? update(parkCareer) : setArea(id as Area))}
-      title={d.name}
-      sub={`Level ${c.level}/${L.maxLevel} · Film ${Math.min(L.maxFilms, c.films + 1)}/${L.maxFilms}`}
+      title={careerName(c)}
+      sub={`${d.name} · Level ${c.level}/${L.maxLevel} · Film ${Math.min(L.maxFilms, c.films + 1)}/${L.maxFilms}`}
       pills={<MoneyPill p={p} />}
     >
       {area === 'contracts' ? <ContractList d={d} /> : <CareerArea />}
@@ -141,7 +141,7 @@ function CareerArea() {
       </div>
       <FilmographyTab careerId={c.id} />
       <button className="danger" onClick={() => {
-        if (!confirm(`Retire ${directorById(c.directorId).name} now? The career ends and frees its slot. Everything earned stays.`)) return;
+        if (!confirm(`Retire ${careerName(c)} now? The career ends and frees its slot. Everything earned stays.`)) return;
         const r = retireCareer(p);
         if (r.ok) update(() => r.profile);
       }}>Retire early</button>

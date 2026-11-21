@@ -52,6 +52,24 @@ export function letterFor(score: number): Grade {
   return GRADE_THRESHOLDS.find(([, min]) => score >= min)![0];
 }
 
+// ---------------- Pay ----------------
+
+const r5 = (n: number) => Math.round(n / 5) * 5;
+
+/** What a film pays the studio: fee by grade, plus box office, ratings and awards bonuses. */
+export function filmPay(c: Contract, grade: Grade, results: Pick<FilmResults, 'boxOffice' | 'publicRating' | 'criticsRating' | 'nominations' | 'wins'>, target = c.boxOfficeTarget): GradeReport['rewards'] {
+  const R = TUNING.rewards;
+  if (grade === 'F') return { fee: 0, boxOfficeBonus: 0, ratingBonus: 0, awardBonus: 0, total: 0, pack: undefined };
+  const fee = r5(c.rewards.fee * R.gradeMult[grade]);
+  const beat = target > 0 ? Math.max(0, results.boxOffice / target - 1) : 0;
+  const boxOfficeBonus = r5(c.rewards.fee * Math.min(R.boxOfficeBonusCap, beat));
+  const rating = (results.publicRating + results.criticsRating) / 2;
+  const ratingBonus = r5((c.rewards.fee * Math.max(0, rating - R.ratingFloor)) / 100);
+  const wins = results.wins.length;
+  const awardBonus = r5(((results.nominations.length - wins) * R.nominationBonus + wins * (R.winBonus + R.nominationBonus)) * (1 + R.awardPerLevel * ((c.level ?? 1) - 1)));
+  return { fee, boxOfficeBonus, ratingBonus, awardBonus, total: fee + boxOfficeBonus + ratingBonus + awardBonus, pack: TUNING.packForGrade[grade] };
+}
+
 // ---------------- Full grade ----------------
 
 
@@ -109,13 +127,7 @@ export function gradeFilm(film: Film, results: FilmResults, _history: FilmRecord
   const letterBeforeCaps = letterFor(score);
   const grade = LETTERS[Math.min(LETTERS.length - 1, LETTERS.indexOf(letterBeforeCaps) + missedReqs.length)];
 
-  const R = TUNING.rewards;
-  const winsCount = results.wins.length;
-  const rewards = {
-    fee: Math.round((c.rewards.fee * R.gradeMult[grade]) / 5) * 5,
-    awardBonus: grade === 'F' ? 0 : (results.nominations.length - winsCount) * R.nominationBonus + winsCount * (R.winBonus + R.nominationBonus),
-    pack: TUNING.packForGrade[grade],
-  };
+  const rewards = filmPay(c, grade, results, effectiveBoxOfficeTarget(film));
 
   return {
     components, satisfaction: Math.round(sat), bonusPoints, bonusMet, weeksLate, overBudgetPct: Math.round(overBudgetPct * 10) / 10,

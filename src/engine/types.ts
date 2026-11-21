@@ -407,7 +407,7 @@ export interface GradeReport {
   missedReqs: string[];
   grade: Grade;
   /** Money for the studio ($K) and a talent pack for a good grade. */
-  rewards: { fee: number; awardBonus: number; pack?: TalentPackId };
+  rewards: { fee: number; boxOfficeBonus: number; ratingBonus: number; awardBonus: number; total: number; pack?: TalentPackId };
 }
 
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'F';
@@ -466,6 +466,9 @@ export interface FilmRecord {
  */
 export interface Career {
   id: string;
+  /** The director you created for this career ("Ana Ribeiro"). Older saves have none. */
+  name?: string;
+  /** The profile they play with ("The Heartbreaker"). */
   directorId: string;
   startedAt: number;
   endedAt?: number;

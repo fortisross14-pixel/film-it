@@ -8,6 +8,7 @@ import { TUNING } from './tuning';
 import { makeId } from './rng';
 import { withRng, refreshBoard } from './profile';
 import { grantTalentPack, unlockGenresForLevel } from './progression';
+import { directorById, randomDirectorName } from './data/directors';
 
 export type CareerResult = { ok: true; profile: Profile } | { ok: false; reason: string };
 const fail = (reason: string): CareerResult => ({ ok: false, reason });
@@ -39,15 +40,15 @@ export function enterCareer(p: Profile, careerId: string): CareerResult {
 }
 
 /** Start a new career (parking the loaded one). Up to TUNING.career.maxCareers run at once, one per director. */
-export function startCareer(p: Profile, directorId: string, now = Date.now()): CareerResult {
+export function startCareer(p: Profile, directorId: string, now = Date.now(), name?: string): CareerResult {
   if (!p.unlocks.directors.includes(directorId)) return fail('That profile is locked');
   const running = runningCareers(p);
   if (running.length >= C().maxCareers) return fail(`Up to ${C().maxCareers} careers at once: retire one first`);
   if (running.some((x) => x.career.directorId === directorId)) return fail('That director already has a career running');
   p = parkCareer(p);
-  const { profile, value: id } = withRng(p, (rng) => makeId('career', rng));
+  const { profile, value: [id, randomName] } = withRng(p, (rng) => [makeId('career', rng), randomDirectorName(rng)] as const);
   const career: Career = {
-    id, directorId, startedAt: now, status: 'active', level: 1, topLevel: 1, films: 0, earnings: 0,
+    id, name: name?.trim() || randomName, directorId, startedAt: now, status: 'active', level: 1, topLevel: 1, films: 0, earnings: 0,
     grades: [], nominations: 0, wins: 0, boxOffice: 0, packsEarned: 0,
   };
   const directors = { ...p.directors, [directorId]: { ...(p.directors[directorId] ?? { id: directorId, films: 0 }), id: directorId, level: 1 } };
@@ -127,3 +128,6 @@ export function legacyTitle(c: Career): string {
   if (top >= 4) return 'A respected director';
   return 'A working director';
 }
+
+/** The career's director: their name, or the profile and number for older saves. */
+export const careerName = (c: Career) => c.name ?? directorById(c.directorId).name;

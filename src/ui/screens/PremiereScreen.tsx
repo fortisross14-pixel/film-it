@@ -10,7 +10,7 @@ import { deliverFilm, runPremiere } from '../../engine/premiere';
 import { effectiveBoxOfficeTarget } from '../../engine/marketing';
 import { TUNING } from '../../engine/tuning';
 import type { Film, Grade, GradeComponent } from '../../engine/types';
-import { levelAfter } from '../../engine/career';
+import { careerName, levelAfter } from '../../engine/career';
 import { genreName } from '../../engine/data/genres';
 
 const STAGES = ['Red carpet', 'Audience', 'Critics', 'Box office', 'Awards', 'Studio verdict'];
@@ -179,7 +179,7 @@ export function PremiereScreen() {
                   if (!res.ok) return setMsg(res.reason);
                   const o = res.outcome;
                   if (o?.genresOpened.length) alert(`New genre${o.genresOpened.length > 1 ? 's' : ''} for every career: ${o.genresOpened.map(genreName).join(', ')}.`);
-                  if (o?.wrapped) alert(`${directorById(film.directorId).name} made ${TUNING.ladder.maxFilms} films: the career is complete and goes to the Hall of fame.`);
+                  if (o?.wrapped) alert(`${p.career ? careerName(p.career) : directorById(film.directorId).name} made ${TUNING.ladder.maxFilms} films: the career is complete and goes to the Hall of fame.`);
                   update(() => res.profile);
                 }}>
                   {film.grade === 'F' ? 'End the career ›' : 'Collect rewards ›'}
@@ -208,17 +208,27 @@ function VerdictRewards({ film }: { film: Film }) {
   const c = p.career;
   const pack = rep.rewards.pack;
   if (film.grade === 'F') {
-    return <p className="bad">An F: no fee, and the studios are done with {directorById(film.directorId).name}. This career ends here{c ? ` after ${c.films + 1} film${c.films ? 's' : ''}` : ''}.</p>;
+    return <p className="bad">An F: no fee, and the studios are done with {c ? careerName(c) : directorById(film.directorId).name}. This career ends here{c ? ` after ${c.films + 1} film${c.films ? 's' : ''}` : ''}.</p>;
   }
   const from = c?.level ?? 1;
   const to = levelAfter(from, film.grade!);
   const last = c && c.films + 1 >= TUNING.ladder.maxFilms;
   return (
+    <div className="stack">
+    <table className="table pay-table">
+      <tbody>
+        <tr><td>Fee for a {film.grade}</td><td>{money(rep.rewards.fee)}</td></tr>
+        {rep.rewards.boxOfficeBonus > 0 && <tr><td>Box office beat the target</td><td className="good">+{money(rep.rewards.boxOfficeBonus)}</td></tr>}
+        {rep.rewards.ratingBonus > 0 && <tr><td>Audience and critics</td><td className="good">+{money(rep.rewards.ratingBonus)}</td></tr>}
+        {rep.rewards.awardBonus > 0 && <tr><td>Awards</td><td className="good">+{money(rep.rewards.awardBonus)}</td></tr>}
+        <tr><td><strong>The studio earns</strong></td><td><strong>{money(rep.rewards.total)}</strong></td></tr>
+      </tbody>
+    </table>
     <div className="reward-row">
-      <span><strong>+{money(rep.rewards.fee + rep.rewards.awardBonus)}</strong>{rep.rewards.awardBonus > 0 && <span className="muted"> (incl. {money(rep.rewards.awardBonus)} award bonus)</span>}</span>
       {pack && <span>🎁 {TUNING.talentPacks[pack].name}</span>}
       {c && <span>{to > from ? `Level ${from} → ${to} ▲` : to < from ? `Level ${from} → ${to} ▼` : `Stays at level ${from}`}</span>}
       {last && <span>Film {TUNING.ladder.maxFilms} of {TUNING.ladder.maxFilms}: career complete</span>}
+    </div>
     </div>
   );
 }

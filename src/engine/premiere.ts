@@ -189,7 +189,7 @@ export function deliverFilm(p: Profile, now = Date.now()): PremiereResult {
   const film = p.activeFilm;
   if (!film?.results || !film.report) return fail('Premiere first');
   const r = film.report.rewards;
-  const earned = r.fee + r.awardBonus;
+  const earned = r.total;
   const base: Profile = {
     ...p,
     money: p.money + earned,

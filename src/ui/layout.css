@@ -272,3 +272,11 @@
 @keyframes reveal-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .pack-reveal .reveal-card { animation: none; } }
 .title-screen .erase { color: var(--chrome-muted); margin-top: 8px; }
+
+/* ---- Pay breakdown and director leaderboard ---- */
+.pay-table td:last-child { text-align: right; white-space: nowrap; }
+.leaderboard .rank { font-family: var(--display); font-size: 1.4rem; width: 2rem; text-align: center; color: var(--muted); flex: none; }
+.leaderboard .rank-1 { color: #c98f00; } .leaderboard .rank-2 { color: #8d8a9e; } .leaderboard .rank-3 { color: #a8673a; }
+.lb-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0; }
+.lb-stats > span { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); }
+.lb-stats > span.on { color: var(--text); font-weight: 800; }

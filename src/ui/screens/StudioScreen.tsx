@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useGame, useProfile } from '../store';
 import { Shell, type NavItem } from '../components/Shell';
-import { Box, Clapper, Coins, Home, People, Trophy } from '../components/Icons';
+import { Box, Clapper, Coins, Home, People, Popcorn, Ticket, Tomato, Trophy } from '../components/Icons';
 import { Sheet, Stat, Tabs } from '../components/ui';
 import { ActorCard, RARITY_LABEL } from '../components/ActorCard';
 import { DIRECTORS, directorById } from '../../engine/data/directors';
@@ -14,7 +14,9 @@ import { GENRES, genreName } from '../../engine/data/genres';
 import {
   bestLevel, buyDirector, buyTalentPack, collection, directorCost, genreUnlockLevel, openTalentPack, packDef, packForSale, type PackCard,
 } from '../../engine/progression';
-import { bestGrade, enterCareer, legacyTitle, runningCareers, startCareer } from '../../engine/career';
+import { careerName, enterCareer, legacyTitle, runningCareers, startCareer } from '../../engine/career';
+import { RANK_LABEL, rankDirectors, type RankKey } from '../../engine/rankings';
+import { audienceScore, criticsScore } from '../../engine/format';
 import { money } from '../../engine/format';
 import { TUNING } from '../../engine/tuning';
 import type { DirectorDef, Profile, Rarity, TalentPackId } from '../../engine/types';
@@ -76,7 +78,8 @@ function CareersArea({ onShop }: { onShop: () => void }) {
             if (r.ok) update(() => r.profile);
           }}>
             <span className="kicker">Level {c.level}/{L.maxLevel} · Film {Math.min(L.maxFilms, c.films + 1)}/{L.maxFilms}</span>
-            <strong className="slot-name">{directorById(c.directorId).name}</strong>
+            <strong className="slot-name">{careerName(c)}</strong>
+            <span className="small muted">{directorById(c.directorId).name}</span>
             <LevelBar level={c.level} />
             <span className="small">{activeFilm ? <>🎬 {activeFilm.title} · {PHASE_NAME[activeFilm.phase]}</> : 'Picking a contract'}</span>
             {c.grades.length > 0 && <span className="row small muted">Grades {c.grades.join(' ')}</span>}
@@ -143,20 +146,26 @@ function NewCareerSheet({ onClose, onShop }: { onClose: () => void; onShop: () =
   const owned = DIRECTORS.filter((d) => p.unlocks.directors.includes(d.id));
   const [pick, setPick] = useState<string | null>(owned.find((d) => !busy.has(d.id))?.id ?? null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [name, setName] = useState('');
   return (
     <Sheet
-      title="New career" kicker="Pick a director" onClose={onClose}
+      title="New career" kicker="Create a director" onClose={onClose}
       footer={
         <>
           <button onClick={onShop}>More directors</button>
           <button className="primary" disabled={!pick} onClick={() => {
-            const r = startCareer(p, pick!);
+            const r = startCareer(p, pick!, Date.now(), name);
             if (r.ok) update(() => r.profile);
             else setMsg(r.reason);
           }}>Start career ▶</button>
         </>
       }
     >
+      <label className="stack small">
+        Director's name
+        <input placeholder="Leave empty for a random name" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <div className="section-label">Profile</div>
       <div className="list">
         {owned.map((d) => (
           <button key={d.id} className={`list-row pick ${pick === d.id ? 'on' : ''}`} disabled={busy.has(d.id)} onClick={() => setPick(d.id)}>
@@ -324,29 +333,53 @@ function DirectorSheet({ d, p, onClose, onBuy }: { d: DirectorDef; p: Profile; o
 
 function HallArea() {
   const p = useProfile();
-  const [tab, setTab] = useState<'careers' | 'films' | 'trophies'>('careers');
+  const [tab, setTab] = useState<'directors' | 'films' | 'trophies'>('directors');
   return (
     <div className="stack">
       <h2>Hall of fame</h2>
-      <Tabs tabs={[{ id: 'careers', label: 'Careers', badge: p.careers.length || undefined }, { id: 'films', label: 'Films', badge: p.filmography.length || undefined }, { id: 'trophies', label: 'Trophies' }]} value={tab} onChange={setTab} />
+      <Tabs tabs={[{ id: 'directors', label: 'Directors' }, { id: 'films', label: 'Films', badge: p.filmography.length || undefined }, { id: 'trophies', label: 'Trophies' }]} value={tab} onChange={setTab} />
+      {tab === 'directors' && <Leaderboard />}
       {tab === 'films' && <FilmographyTab />}
       {tab === 'trophies' && <TrophyRoomTab />}
-      {tab === 'careers' && (p.careers.length === 0 ? <p className="muted empty">No finished careers yet.</p> : (
-        <div className="list">
-          {[...p.careers].reverse().map((x) => (
-            <div key={x.id} className="list-row static">
+    </div>
+  );
+}
+
+const RANK_KEYS: RankKey[] = ['critics', 'audience', 'awards', 'boxOffice', 'level'];
+
+/** Every director you created, ranked. */
+function Leaderboard() {
+  const p = useProfile();
+  const [key, setKey] = useState<RankKey>('critics');
+  const rows = rankDirectors(p, key);
+  if (!rows.length) return <p className="muted empty">Your directors show up here after their first film.</p>;
+  return (
+    <div className="stack">
+      <Tabs tabs={RANK_KEYS.map((k) => ({ id: k, label: RANK_LABEL[k] }))} value={key} onChange={setKey} label="Rank by" />
+      <div className="list leaderboard">
+        {rows.map((s, i) => {
+          const c = s.career;
+          const status = s.running ? 'Running' : c.status === 'fired' ? 'Fired' : c.status === 'wrapped' ? 'Complete' : 'Retired';
+          return (
+            <div key={c.id} className="list-row static">
+              <span className={`rank rank-${i + 1}`}>{i + 1}</span>
               <span className="list-main">
-                <span className="kicker">{legacyTitle(x)}</span>
-                <strong>{directorById(x.directorId).name}</strong>
-                <span className="small muted">Top level {x.topLevel ?? x.level} · {x.films} films · {x.grades.join(' ')} · {x.wins} 🏆 · earned {money(x.earnings)}</span>
+                <span className="kicker">{directorById(c.directorId).name} · {s.running ? `level ${c.level}` : legacyTitle(c)}</span>
+                <strong>{careerName(c)}</strong>
+                <span className="lb-stats small">
+                  <span className={key === 'critics' ? 'on' : ''}><Tomato size={14} /> {criticsScore(s.critics)}</span>
+                  <span className={key === 'audience' ? 'on' : ''}><Popcorn size={14} /> {audienceScore(s.audience)}</span>
+                  <span className={key === 'awards' ? 'on' : ''}><Trophy size={14} /> {s.wins} won · {s.nominations} nom.</span>
+                  <span className={key === 'boxOffice' ? 'on' : ''}><Ticket size={14} /> {money(s.boxOffice)}</span>
+                  <span className={key === 'level' ? 'on' : ''}>Top level {s.topLevel}</span>
+                </span>
+                <span className="small muted">{s.films} film{s.films === 1 ? '' : 's'}{c.grades.length ? ` · ${c.grades.join(' ')}` : ''} · earned {money(s.earnings)}{s.best ? ` · best: ${s.best.title}` : ''}</span>
               </span>
-              <span className={`tag ${x.status === 'fired' ? 'bad' : x.status === 'wrapped' ? 'good' : ''}`}>
-                {x.status === 'fired' ? 'Fired' : x.status === 'wrapped' ? 'Complete' : 'Retired'} · best {bestGrade(x) ?? '—'}
-              </span>
+              <span className={`tag ${c.status === 'fired' ? 'bad' : c.status === 'wrapped' ? 'good' : ''}`}>{status}</span>
             </div>
-          ))}
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }

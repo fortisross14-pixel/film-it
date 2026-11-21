@@ -322,6 +322,17 @@ Adapted from Built it!'s loop (start a career, climb, unlock, retry with more):
 First simulation run (6 films per career): the careful bot gets 28% A / 40% B and averages level 2.8;
 the naive bot is fired early. Balance is still deferred.
 
+## Pay and director rankings (done)
+
+- **What a film pays** (`grade.ts` `filmPay`): nothing for an F; otherwise the fee × grade, plus a box office
+  bonus (fee × how far the gross beats its target, capped at 1.5×), a ratings bonus (fee × points the average of
+  audience and critics is above 60, / 100) and an awards bonus (per nomination and win, more at higher levels).
+  The verdict shows the breakdown.
+- **Directors you create:** each career gets a director name (typed when starting it, random if left empty) on top
+  of its profile ("Greta Lumen · The Heartbreaker").
+- **Leaderboard** (`rankings.ts`, Hall of fame → Directors): every director with a film, running or finished, ranked by
+  average critics, average audience, awards (wins, then nominations), total box office or top level.
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

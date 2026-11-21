@@ -33,7 +33,7 @@ export function ContractDetails({ c }: { c: Contract }) {
       </div>
       <ContractFacts c={c} />
       <div className="reward-row">
-        <span><Coins size={18} /> Fee {money(c.rewards.fee)} at a C · ×{TUNING.rewards.gradeMult.A} at an A</span>
+        <span><Coins size={18} /> Fee {money(c.rewards.fee)} at a C, ×{TUNING.rewards.gradeMult.A} at an A, plus bonuses for box office, ratings and awards</span>
         <span><Box size={18} /> B: {TUNING.talentPacks.casting.name} · A: {TUNING.talentPacks.star.name}</span>
       </div>
       <p className="small muted">Level {c.level} brief. A +{TUNING.ladder.climb.A} levels · B +{TUNING.ladder.climb.B} · C stays · D {TUNING.ladder.climb.D} · F ends the career.</p>

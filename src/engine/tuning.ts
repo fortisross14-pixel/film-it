@@ -406,12 +406,19 @@ export const TUNING = {
     supportAwardThreshold: 75,
   },
 
+  /**
+   * What a film pays the studio ($K). Nothing for an F (the career is over). Otherwise:
+   * fee × grade, + box office bonus (fee × the share the gross beats its target by, capped),
+   * + ratings bonus (fee × the points the average of audience and critics is above ratingFloor / 100),
+   * + awards (per nomination and win, × (1 + awardPerLevel × (level − 1))).
+   */
   rewards: {
-    /** Fee multiplier by grade (F pays nothing: the career is over). */
     gradeMult: { A: 1.5, B: 1.2, C: 1, D: 0.6, F: 0 },
-    /** Award bonus money, $K. */
+    boxOfficeBonusCap: 1.5,
+    ratingFloor: 60,
     nominationBonus: 10,
     winBonus: 40,
+    awardPerLevel: 0.25,
     bonusGoalPoints: 1,
   },
   career: {

@@ -90,10 +90,13 @@ describe('grade', () => {
     const good = gradeFilm(f, results({ publicRating: 100, criticsRating: 100, boxOffice: 1e9, nominations: ['X'], wins: ['X'] }));
     const bad = gradeFilm(f, results({ publicRating: 0, criticsRating: 0, boxOffice: 0 }));
     expect(good.rewards.fee).toBeGreaterThan(bad.rewards.fee);
-    expect(good.rewards.awardBonus).toBe(TUNING.rewards.nominationBonus + TUNING.rewards.winBonus);
+    expect(good.rewards.awardBonus).toBeGreaterThanOrEqual(TUNING.rewards.nominationBonus + TUNING.rewards.winBonus);
+    expect(good.rewards.boxOfficeBonus).toBeGreaterThan(0);
+    expect(good.rewards.ratingBonus).toBeGreaterThan(0);
+    expect(good.rewards.total).toBe(good.rewards.fee + good.rewards.boxOfficeBonus + good.rewards.ratingBonus + good.rewards.awardBonus);
     expect(good.rewards.pack).toBe(TUNING.packForGrade[good.grade]);
     expect(bad.grade).toBe('F');
-    expect(bad.rewards).toEqual({ fee: 0, awardBonus: 0, pack: undefined });
+    expect(bad.rewards).toEqual({ fee: 0, boxOfficeBonus: 0, ratingBonus: 0, awardBonus: 0, total: 0, pack: undefined });
   });
 });
 
@@ -121,7 +124,8 @@ describe('premiere & delivery', () => {
     expect(q.activeFilm).toBeUndefined();
     expect(q.filmography).toHaveLength(1);
     expect(q.filmography[0]).toMatchObject({ completedAt: 123, careerId: p.career!.id, film: { phase: 'done', grade: f.grade } });
-    expect(q.money).toBe(money + f.report!.rewards.fee + f.report!.rewards.awardBonus);
+    expect(q.money).toBe(money + f.report!.rewards.total);
+    if (f.grade !== 'F') expect(q.career!.earnings).toBe(f.report!.rewards.total);
     if (f.grade !== 'F') {
       const level = Math.max(1, 1 + TUNING.ladder.climb[f.grade!]);
       expect(r.ok && r.outcome).toMatchObject({ levelFrom: 1, levelTo: level, fired: false });
