@@ -2,7 +2,7 @@
 // director's level grow within the career; credits go to the global bank. A career ends
 // when you retire it (bonus from reputation) or get fired (too many F grades in a row).
 
-import type { Career, Film, Grade, Profile } from './types';
+import type { Career, Film, Grade, ParkedCareer, Profile } from './types';
 import { TUNING } from './tuning';
 import { makeId } from './rng';
 import { withRng, refreshBoard } from './profile';
@@ -12,9 +12,38 @@ export type CareerResult = { ok: true; profile: Profile } | { ok: false; reason:
 const fail = (reason: string): CareerResult => ({ ok: false, reason });
 const C = () => TUNING.career;
 
+/** Every running career: the loaded one first, then the parked ones. */
+export function runningCareers(p: Profile): ParkedCareer[] {
+  const loaded = p.career ? [{ career: p.career, contractBoard: p.contractBoard, activeFilm: p.activeFilm }] : [];
+  return [...loaded, ...p.parked];
+}
+
+/** Put the loaded career on hold (back to the studio). */
+export function parkCareer(p: Profile): Profile {
+  if (!p.career) return p;
+  const slot: ParkedCareer = { career: p.career, contractBoard: p.contractBoard, activeFilm: p.activeFilm };
+  return { ...p, career: undefined, contractBoard: [], activeFilm: undefined, parked: [...p.parked, slot] };
+}
+
+/** Load a running career (parking whichever was loaded). */
+export function enterCareer(p: Profile, careerId: string): CareerResult {
+  if (p.career?.id === careerId) return { ok: true, profile: p };
+  const q = parkCareer(p);
+  const slot = q.parked.find((x) => x.career.id === careerId);
+  if (!slot) return fail('No such career');
+  return {
+    ok: true,
+    profile: { ...q, career: slot.career, contractBoard: slot.contractBoard, activeFilm: slot.activeFilm, parked: q.parked.filter((x) => x !== slot) },
+  };
+}
+
+/** Start a new career (parking the loaded one). Up to TUNING.career.maxCareers run at once, one per director. */
 export function startCareer(p: Profile, directorId: string, now = Date.now()): CareerResult {
-  if (p.career) return fail('Retire the current career first');
   if (!p.unlocks.directors.includes(directorId)) return fail('That profile is locked');
+  const running = runningCareers(p);
+  if (running.length >= C().maxCareers) return fail(`Up to ${C().maxCareers} careers at once: retire one first`);
+  if (running.some((x) => x.career.directorId === directorId)) return fail('That director already has a career running');
+  p = parkCareer(p);
   const { profile, value: id } = withRng(p, (rng) => makeId('career', rng));
   const career: Career = {
     id, directorId, startedAt: now, status: 'active', reputation: 0, level: 1, films: 0, earnings: 0, fStreak: 0,

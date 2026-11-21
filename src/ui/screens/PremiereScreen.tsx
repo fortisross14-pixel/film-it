@@ -182,7 +182,7 @@ export function PremiereScreen() {
                   if (res.fired) alert(`${directorById(film.directorId).name} was fired after too many flops. The career is over: start a new one from the Studio.`);
                   update(() => res.profile);
                 }}>
-                  Collect rewards → back to the studio
+                  Collect rewards ›
                 </button>
                 {msg && <p className="bad">{msg}</p>}
               </div>

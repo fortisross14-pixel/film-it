@@ -21,6 +21,7 @@ export function newProfile(name: string, seed = Date.now() >>> 0): Profile {
     seed,
     credits: TUNING.startingCredits,
     careers: [],
+    parked: [],
     unlocks: {
       directors: starterDirectors,
       topics: [...starterPack.topicIds],

@@ -246,6 +246,16 @@ describe('save slots (save-systems skill checks)', () => {
     expect(r.profile?.credits).toBe(a.credits);
   });
 
+  it('migrates a version-5 save (one career) to side-by-side careers', () => {
+    const store = memoryStore();
+    const { parked: _parked, ...old } = newProfile('M', 1);
+    store.setItem('directors-cut:slot:0', JSON.stringify({ ...old, version: 5 }));
+    const r = loadSlot(0, store);
+    expect(r.status).toBe('ok');
+    expect(r.profile!.parked).toEqual([]);
+    expect(r.profile!.version).toBe(TUNING.saveVersion);
+  });
+
   it('refuses newer saves and explains older ones', () => {
     const store = memoryStore();
     store.setItem('directors-cut:slot:0', JSON.stringify({ ...newProfile('N', 1), version: TUNING.saveVersion + 1 }));

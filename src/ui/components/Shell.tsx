@@ -1,33 +1,21 @@
-// App frame from the concept art: dark side nav with icons, dark top bar with the
-// director, credits and reputation, and a cream "paper" content area with film-strip edges.
+// App frame: side nav on wide screens, bottom tab bar on phones; a compact top bar with the
+// screen's title, a few stat pills and a ⚙ menu (settings, install, save & quit).
 import type { ReactNode } from 'react';
-import { useGame, useProfile } from '../store';
 import { SettingsButton } from '../prefs';
 import { art } from '../art';
-import { Clapper, Star, Ticket } from './Icons';
-import { directorById } from '../../engine/data/directors';
-import { nextTierAt, reputationTier } from '../../engine/progression';
-import { TUNING } from '../../engine/tuning';
 
 export interface NavItem { id: string; label: string; icon: ReactNode; done?: boolean; disabled?: boolean }
 
-export function Shell({ nav, active, onNav, extra, children }: {
-  nav: NavItem[]; active: string; onNav?: (id: string) => void; extra?: ReactNode; children: ReactNode;
+export function Shell({ nav, active, onNav, title, sub, pills, actions, children, progress }: {
+  nav: NavItem[]; active: string; onNav?: (id: string) => void;
+  /** The nav shows progress (film phases) rather than places: on phones it shrinks into the top bar. */
+  progress?: boolean;
+  title: ReactNode; sub?: ReactNode; pills?: ReactNode; actions?: ReactNode; children: ReactNode;
 }) {
-  const p = useProfile();
-  const { close } = useGame();
-  const c = p.career;
-  const rep = c?.reputation ?? 0;
-  const next = nextTierAt(rep);
-  const prevTier = TUNING.reputationTiers[reputationTier(rep) - 1] ?? 0;
-  const repPct = next ? ((rep - prevTier) / (next - prevTier)) * 100 : 100;
-  const lvlPct = c ? (c.level / TUNING.directors.maxLevel) * 100 : 0;
   return (
-    <div className="shell">
+    <div className={`shell ${progress ? 'nav-progress' : ''}`}>
       <aside className="sidenav" aria-label="Main menu">
-        <div className="brand">
-          <img src={art('logo')} alt="Film it!" className="brand-logo" />
-        </div>
+        <div className="brand"><img src={art('logo')} alt="Film it!" className="brand-logo" /></div>
         <nav>
           {nav.map((n) => (
             <button
@@ -38,35 +26,27 @@ export function Shell({ nav, active, onNav, extra, children }: {
               onClick={() => onNav?.(n.id)}
             >
               <span className="nav-icon">{n.icon}</span>
-              <span>{n.label}</span>
+              <span className="nav-label">{n.label}</span>
             </button>
           ))}
         </nav>
       </aside>
       <div className="shell-main">
         <header className="topbar">
-          <div className="hud-director">
-            <span className="avatar"><Clapper size={26} /></span>
-            <span>
-              <strong>{c ? directorById(c.directorId).name : p.name}</strong>
-              <span className="hud-sub">{c ? `Lv. ${c.level} · ${c.films} films` : 'No career running'}</span>
-              {c && <span className="hud-bar"><span style={{ width: `${lvlPct}%` }} /></span>}
-            </span>
-          </div>
-          <span className="hud-pill" title="The bank: credits earned across all careers"><Ticket size={22} /> {p.credits.toLocaleString()} Credits</span>
-          {c && !extra && (
-            <span className="hud-rep" title={next ? `Studio tier ${reputationTier(rep)} · next at ${next}` : 'Top studio tier'}>
-              <span className="rep-star"><Star size={18} /></span>
-              <span>
-                Reputation {rep} <span className="hud-sub">tier {reputationTier(rep)}</span>
-                <span className="hud-bar"><span style={{ width: `${repPct}%` }} /></span>
+          <div className="top-title">
+            <strong>{title}</strong>
+            {sub && <span className="hud-sub">{sub}</span>}
+            {progress && (
+              <span className="phase-dots" aria-hidden="true">
+                {nav.map((n) => <i key={n.id} className={active === n.id ? 'on' : n.done ? 'done' : ''} />)}
               </span>
-            </span>
-          )}
-          {extra}
-          <span className="spacer" />
-          <SettingsButton />
-          <button className="ghost" onClick={close}>Save &amp; quit</button>
+            )}
+          </div>
+          {pills && <div className="top-pills">{pills}</div>}
+          <div className="top-actions">
+            {actions}
+            <SettingsButton />
+          </div>
         </header>
         <main className="content paper">{children}</main>
       </div>

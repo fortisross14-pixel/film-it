@@ -1,3 +1,4 @@
+import { enterCareer, parkCareer, runningCareers } from '../src/engine/career';
 import { newProfile, startFilm } from '../src/engine/profile';
 import type { Film, Profile } from '../src/engine/types';
 import { bestGrade, recordFilm, retireCareer, retirementBonus, startCareer, type CareerResult } from '../src/engine/career';
@@ -24,7 +25,30 @@ describe('careers', () => {
     expect(p.career).toMatchObject({ directorId: 'starterA', reputation: 0, level: 1, status: 'active' });
     expect(p.contractBoard).toHaveLength(TUNING.contracts.boardSize);
     expect(p.contractBoard.every((c) => c.studio.tier === 1)).toBe(true);
-    expect(startCareer(p, 'starterB').ok).toBe(false); // one at a time
+    expect(startCareer(p, 'starterA').ok).toBe(false); // one career per director
+  });
+
+  it('runs up to 3 careers side by side, each with its own board and film', () => {
+    let p = { ...newProfile('T', 7), credits: 5000 };
+    p = okC(buyDirector(p, 'masterScifi'));
+    p = okC(startCareer(p, 'starterA', 1));
+    const a = p.career!.id;
+    const boardA = p.contractBoard.map((c) => c.id);
+    p = okC(startFilm(p, p.contractBoard[0].id) as never);
+    const filmA = p.activeFilm!.id;
+    p = okC(startCareer(p, 'starterB', 2));
+    expect(p.activeFilm).toBeUndefined();
+    expect(runningCareers(p)).toHaveLength(2);
+    p = okC(startCareer(p, 'masterScifi', 3));
+    expect(runningCareers(p)).toHaveLength(3);
+    expect(startCareer(parkCareer(p), 'starterA').ok).toBe(false); // full
+    p = okC(enterCareer(p, a));
+    expect(p.career!.id).toBe(a);
+    expect(p.activeFilm!.id).toBe(filmA);
+    expect(p.contractBoard.map((c) => c.id)).toEqual(boardA.slice(1));
+    p = parkCareer(p);
+    expect(p.career).toBeUndefined();
+    expect(p.parked).toHaveLength(3);
   });
 
   it('unlocks profiles with credits from the bank, then starts careers with them', () => {

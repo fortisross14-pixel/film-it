@@ -11,7 +11,9 @@ interface GameStore {
   update: (fn: (p: Profile) => Profile) => void;
 }
 
-const Ctx = createContext<GameStore | null>(null);
+/** Exported for optional use (e.g. the menu, which also renders on the title screen). */
+export const GameCtx = createContext<GameStore | null>(null);
+const Ctx = GameCtx;
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [slot, setSlot] = useState<number | null>(null);

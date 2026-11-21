@@ -2,74 +2,63 @@ import type { Contract } from '../../engine/types';
 import { ARCHETYPE_NAMES } from '../../engine/contracts';
 import { genreName } from '../../engine/data/genres';
 import { describeBonus, describeHardReq, money } from '../../engine/format';
+import { Calendar, Clapper, Coins, Ticket, Star } from './Icons';
+import { Difficulty } from './ui';
 
-const WEIGHT_LABELS = {
-  boxOffice: 'Box office',
-  public: 'Audience',
-  critics: 'Critics',
-  awards: 'Awards',
-} as const;
-
+const WEIGHT_LABELS = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' } as const;
 const strictLabel = (s: number) => (s > 1.2 ? 'strict' : s < 0.9 ? 'lenient' : 'normal');
 
-export function Stars({ n }: { n: number }) {
+export const contractGenre = (c: Contract) => `${genreName(c.genre)}${c.secondaryGenre ? ' / ' + genreName(c.secondaryGenre) : ''}`;
+
+/** Key numbers as chips (used in list rows and the detail sheet). */
+export function ContractFacts({ c }: { c: Contract }) {
   return (
-    <span className="stars" aria-label={`Difficulty ${n} of 5`}>
-      {'★'.repeat(n)}
-      <span className="dim">{'★'.repeat(5 - n)}</span>
+    <span className="facts">
+      <span className="fact-chip"><Coins size={16} /> {money(c.budget)}</span>
+      <span className="fact-chip"><Calendar size={16} /> {c.deadlineWeeks} wk</span>
+      <span className="fact-chip"><Clapper size={16} /> {c.runtime}′ · {c.rating}</span>
     </span>
   );
 }
 
-export function ContractCard({ c, selected, onSelect }: { c: Contract; selected?: boolean; onSelect?: () => void }) {
-  const weights = Object.entries(c.weights)
-    .filter(([, w]) => w > 0)
-    .sort((a, b) => b[1] - a[1]) as [keyof typeof WEIGHT_LABELS, number][];
+/** The full brief: what is graded, what must be in the film, bonuses, rewards. */
+export function ContractDetails({ c }: { c: Contract }) {
+  const weights = (Object.entries(c.weights) as [keyof typeof WEIGHT_LABELS, number][]).filter(([, w]) => w > 0).sort((a, b) => b[1] - a[1]);
   return (
-    <div className={`card contract ${selected ? 'selected' : ''}`} onClick={onSelect} role={onSelect ? 'button' : undefined}>
+    <div className="stack contract-details">
       <div className="row between">
         <span className="tag">{ARCHETYPE_NAMES[c.archetype]}</span>
-        <Stars n={c.difficulty} />
+        <Difficulty n={c.difficulty} />
       </div>
-      <h3>
-        {genreName(c.genre)}
-        {c.secondaryGenre && <span className="muted"> / {genreName(c.secondaryGenre)}</span>}
-      </h3>
-      <p className="muted">{c.studio.name} (tier {c.studio.tier})</p>
-      <p className="brief-line">
-        {c.runtime} min · {money(c.budget)} · {c.deadlineWeeks} weeks · {c.rating}
-      </p>
-      <div className="section-label">Must have</div>
-      <ul className="reqs">
-        {c.hardReqs.map((r, i) => (
-          <li key={i}>{describeHardReq(r)}</li>
-        ))}
-      </ul>
-      <div className="section-label">Bonus</div>
-      <ul className="reqs bonus">
-        {c.bonusGoals.map((b, i) => (
-          <li key={i}>
-            {describeBonus(b)} <span className="muted">+{b.points}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="section-label">Graded on</div>
-      <div className="weights">
-        {weights.map(([k, w]) => (
-          <div key={k} className="weight">
-            <span>{WEIGHT_LABELS[k]}</span>
-            <span className="bar"><span style={{ width: `${w * 100}%` }} /></span>
-            <span className="muted">{Math.round(w * 100)}%</span>
-          </div>
-        ))}
+      <ContractFacts c={c} />
+      <div className="reward-row">
+        <span><Ticket size={18} /> {c.rewards.credits} credits</span>
+        <span><Star size={18} /> {c.rewards.reputation} rep</span>
       </div>
-      <p className="small">
-        Late / over budget: <span className={c.delivery.late > 1.2 ? 'bad' : 'muted'}>{strictLabel(c.delivery.late)}</span>
-        {' / '}
-        <span className={c.delivery.overBudget > 1.2 ? 'bad' : 'muted'}>{strictLabel(c.delivery.overBudget)}</span>
-      </p>
-      <p className="muted small">Box office target {money(c.boxOfficeTarget)}</p>
-      <p className="reward">Reward: {c.rewards.reputation} rep · {c.rewards.credits} credits</p>
+      <section>
+        <div className="section-label">Graded on</div>
+        <div className="weights">
+          {weights.map(([k, w]) => (
+            <div key={k} className="weight">
+              <span>{WEIGHT_LABELS[k]}</span>
+              <span className="bar"><span style={{ width: `${w * 100}%` }} /></span>
+              <span className="muted">{Math.round(w * 100)}%</span>
+            </div>
+          ))}
+        </div>
+        <p className="small muted">Box office target {money(c.boxOfficeTarget)} · late {strictLabel(c.delivery.late)} · over budget {strictLabel(c.delivery.overBudget)}</p>
+      </section>
+      <section>
+        <div className="section-label">Must have</div>
+        <ul className="reqs">{c.hardReqs.map((r, i) => <li key={i}>{describeHardReq(r)}</li>)}</ul>
+      </section>
+      {c.bonusGoals.length > 0 && (
+        <section>
+          <div className="section-label">Bonus</div>
+          <ul className="reqs bonus">{c.bonusGoals.map((b, i) => <li key={i}>{describeBonus(b)} <span className="muted">+{b.points}</span></li>)}</ul>
+        </section>
+      )}
+      <p className="small muted">{c.studio.name} · {contractGenre(c)}</p>
     </div>
   );
 }

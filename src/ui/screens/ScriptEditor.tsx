@@ -7,7 +7,7 @@ import { AXES, TONES, toneById } from '../../engine/data/tones';
 import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
 import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
-import { Film as FilmIcon } from '../components/Icons';
+import { ActionBar, Sheet, Tabs, useToast } from '../components/ui';
 import { TUNING } from '../../engine/tuning';
 import {
   DURATIONS, ROLE_TYPES, addBeat, addRole, addScene, availableActions, canAddRole, checkRequirements, fillerShare,
@@ -29,116 +29,165 @@ function fixBeat(film: Film, beat: Beat): Beat {
   return beat;
 }
 
+type ScriptTab = 'story' | 'scenes' | 'check';
+
 export function ScriptEditor() {
   const p = useProfile();
   const { update } = useGame();
   const film = p.activeFilm!;
   const director = directorById(film.directorId);
   const level = p.directors[film.directorId]?.level ?? 1;
-  const [msg, setMsg] = useState<string | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const current = film.scenes.find((s) => s.id === selected) ?? film.scenes[0];
+  const [tab, setTab] = useState<ScriptTab>(film.roles.length ? 'scenes' : 'story');
+  const [open, setOpen] = useState<string | null>(null);
+  const toast = useToast();
 
   const apply: Apply = (r) => {
-    if (!r.ok) return setMsg(r.reason), false;
+    if (!r.ok) return toast.show(r.reason), false;
     update((q) => ({ ...q, activeFilm: r.film }));
-    setMsg(r.removedBeats ? `${r.removedBeats} action(s) removed: their topic is gone.` : null);
+    if (r.removedBeats) toast.show(`${r.removedBeats} action(s) removed: their topic is gone.`);
     return true;
   };
 
   const quality = useMemo(() => scriptQuality(film, director, level), [film, director, level]);
-  const cost = scriptCost(film, director, level);
   const reqs = checkRequirements(film);
   const blockers = scriptBlockers(film);
-  const target = genreTarget(film).target;
+  const met = reqs.filter((r) => r.status === 'met').length;
+  const scene = film.scenes.find((s) => s.id === open);
 
   return (
-    <div className="script-grid">
-      <div className="script-main">
-        <CharactersPanel film={film} onApply={apply} />
-        <RuntimeTopicBar film={film} onApply={apply} unlocked={p.unlocks.topics} />
-        <Timeline film={film} selected={current?.id ?? null} onSelect={setSelected} onApply={apply}
-          onAdd={film.scenes.length < TUNING.script.maxScenes && film.roles.length > 0 ? () => {
-            const r = addScene(film, { duration: 'medium', tone: 'calm' });
-            if (apply(r) && r.ok) setSelected(r.sceneId ?? null);
-          } : undefined} />
-        {film.roles.length === 0 && <p className="muted">Define your characters first, then add scenes to the strip.</p>}
-        {msg && <p className="bad">{msg}</p>}
-        {current && (
-          <SceneCard
-            key={current.id}
-            film={film}
-            scene={current}
-            index={film.scenes.indexOf(current)}
-            level={level}
-            selected
-            onFocus={() => {}}
-            onApply={apply}
-          />
-        )}
-      </div>
-
-      <aside className="script-side">
-        <div className="card">
-          <h3>Script profile</h3>
-          <p className="small muted">Marker = what {genreName(film.contract.genre)} audiences expect</p>
-          {AXES.map((ax) => (
-            <div key={ax.id} className="axis">
-              <div className="row between small">
-                <span className="muted">{ax.low}</span>
-                <strong>{ax.name}</strong>
-                <span className="muted">{ax.high}</span>
-              </div>
-              <span className="bar axis-bar">
-                <span style={{ width: `${quality.profile[ax.id]}%` }} />
-                <i className="target" style={{ left: `${target[ax.id]}%` }} />
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div className="card">
-          <div className="row between">
-            <h3>Script quality</h3>
-            <span className="big">{quality.total}</span>
+    <div className="stack phase-screen">
+      <Tabs
+        label="Script"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { id: 'story', label: 'Story', badge: film.roles.length || undefined },
+          { id: 'scenes', label: 'Scenes', badge: film.scenes.length || undefined },
+          { id: 'check', label: 'Check', badge: `${met}/${reqs.length}` },
+        ]}
+      />
+      {tab === 'story' && (
+        <>
+          <CharactersPanel film={film} onApply={apply} />
+          <RuntimeTopicBar film={film} onApply={apply} unlocked={p.unlocks.topics} />
+          {film.roles.length > 0 && <button className="wide" onClick={() => setTab('scenes')}>Next: write scenes ›</button>}
+        </>
+      )}
+      {tab === 'scenes' && (
+        film.roles.length === 0 ? (
+          <div className="card empty">
+            <p>Add your characters first.</p>
+            <button className="primary" onClick={() => setTab('story')}>Go to Story</button>
           </div>
-          {(['fit', 'depth', 'structure', 'characters', 'coherence', 'pacing'] as const).map((k) => (
-            <div key={k} className="weight">
-              <span>{k[0].toUpperCase() + k.slice(1)}</span>
-              <span className="bar"><span style={{ width: `${quality[k]}%` }} /></span>
-              <span className="muted">{quality[k]}</span>
-            </div>
-          ))}
-          {quality.directorBonus !== 0 && (
-            <p className="small">Director bonus: <span className={quality.directorBonus > 0 ? 'good' : 'bad'}>{quality.directorBonus > 0 ? '+' : ''}{quality.directorBonus}</span></p>
-          )}
-          <p className="small">Filler {Math.round(fillerShare(film) * 100)}% <span className="muted">(boredom)</span></p>
-          {quality.notes.length > 0 && (
-            <ul className="reqs small muted">{quality.notes.slice(0, 6).map((n) => <li key={n}>{n}</li>)}</ul>
-          )}
-        </div>
+        ) : (
+          <>
+            <Timeline film={film} selected={open} onSelect={setOpen} onApply={apply} />
+            <SceneList film={film} onOpen={setOpen} />
+            {film.scenes.length < TUNING.script.maxScenes && (
+              <button className="primary wide" onClick={() => {
+                const r = addScene(film, { duration: 'medium', tone: 'calm' });
+                if (apply(r) && r.ok) setOpen(r.sceneId ?? null);
+              }}>+ Add scene</button>
+            )}
+            <p className="small muted center">{film.scenes.length}/{TUNING.script.maxScenes} scenes · 4–5 is typical · drag frames to move them</p>
+          </>
+        )
+      )}
+      {tab === 'check' && <CheckPanel film={film} quality={quality} reqs={reqs} cost={scriptCost(film, director, level)} />}
 
-        <div className="card">
-          <h3>Budget</h3>
-          <p>Script cost <strong>{money(cost)}</strong> <span className="muted">of {money(film.contract.budget)}</span></p>
-          <span className="bar"><span style={{ width: `${Math.min(100, (cost / film.contract.budget) * 100)}%` }} /></span>
-        </div>
+      {scene && (
+        <SceneSheet
+          key={scene.id}
+          film={film}
+          scene={scene}
+          index={film.scenes.indexOf(scene)}
+          level={level}
+          onApply={apply}
+          onClose={() => setOpen(null)}
+        />
+      )}
+      {toast.node}
 
-        <Requirements reqs={reqs} />
-
+      <ActionBar>
+        <button className="bar-stat" onClick={() => setTab('check')}>
+          <span className="kicker">Quality</span><strong>{quality.total}</strong>
+        </button>
+        <button className="bar-stat" onClick={() => setTab('check')}>
+          <span className="kicker">Must-haves</span><strong className={met < reqs.length ? 'bad' : 'good'}>{met}/{reqs.length}</strong>
+        </button>
         <button
-          className="primary wide"
+          className="primary grow"
           disabled={blockers.length > 0}
+          title={blockers[0]}
           onClick={() => {
             const missing = reqs.filter((r) => r.status === 'missing').length;
-            if (missing && !confirm(`${missing} hard requirement(s) are missing. Lock the script anyway?`)) return;
+            if (missing && !confirm(`${missing} must-have(s) missing. Lock anyway?`)) return;
             apply(finishScript(film, director, level));
           }}
         >
-          Lock script → Casting
+          {blockers.length ? blockers[0] : 'Lock script ›'}
         </button>
-        {blockers.length > 0 && <p className="small bad">{blockers[0]}</p>}
-      </aside>
+      </ActionBar>
+    </div>
+  );
+}
+
+function CheckPanel({ film, quality, reqs, cost }: { film: Film; quality: ReturnType<typeof scriptQuality>; reqs: ReturnType<typeof checkRequirements>; cost: number }) {
+  const target = genreTarget(film).target;
+  return (
+    <>
+      <Requirements reqs={reqs} />
+      <div className="card">
+        <div className="row between">
+          <h3>Quality</h3>
+          <span className="big">{quality.total}</span>
+        </div>
+        {(['fit', 'depth', 'structure', 'characters', 'coherence', 'pacing'] as const).map((k) => (
+          <div key={k} className="weight">
+            <span>{k[0].toUpperCase() + k.slice(1)}</span>
+            <span className="bar"><span style={{ width: `${quality[k]}%` }} /></span>
+            <span className="muted">{quality[k]}</span>
+          </div>
+        ))}
+        {quality.directorBonus !== 0 && <p className="small">Director {quality.directorBonus > 0 ? '+' : ''}{quality.directorBonus}</p>}
+        {quality.notes.length > 0 && <ul className="reqs small muted">{quality.notes.slice(0, 4).map((n) => <li key={n}>{n}</li>)}</ul>}
+      </div>
+      <div className="card">
+        <h3>Feel <span className="muted small">· ▮ = what {genreName(film.contract.genre)} fans expect</span></h3>
+        {AXES.map((ax) => (
+          <div key={ax.id} className="axis">
+            <div className="row between small"><span className="muted">{ax.low}</span><strong>{ax.name}</strong><span className="muted">{ax.high}</span></div>
+            <span className="bar axis-bar"><span style={{ width: `${quality.profile[ax.id]}%` }} /><i className="target" style={{ left: `${target[ax.id]}%` }} /></span>
+          </div>
+        ))}
+        <p className="small muted">Filler {Math.round(fillerShare(film) * 100)}% · script cost {money(cost)}</p>
+      </div>
+    </>
+  );
+}
+
+function SceneList({ film, onOpen }: { film: Film; onOpen: (id: string) => void }) {
+  const slots = layout(film);
+  const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
+  return (
+    <div className="list">
+      {slots.map((sl, i) => {
+        const s = film.scenes.find((x) => x.id === sl.sceneId)!;
+        const clash = s.beats.some((b) => !actionById(b.actionId).tones.includes(s.tone));
+        return (
+          <button key={s.id} className={`list-row scene-row t-border-${s.tone}`} onClick={() => onOpen(s.id)}>
+            <span className="scene-num">{i + 1}</span>
+            <span className="list-main">
+              <strong>{s.beats.length ? s.beats.map((b) => describeBeat(roleName(b.roleId), b.actionId)).join(' · ') : 'Empty scene: add actions'}</strong>
+              <span className="small muted">
+                <span className={`tone-dot t-${s.tone}`} /> {toneById(s.tone).name} · {sl.minutes} min · Act {sl.act}
+                {clash && <span className="bad"> · tone clash</span>}
+              </span>
+            </span>
+            <span aria-hidden="true">›</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -166,6 +215,7 @@ function CharactersPanel({ film, onApply }: { film: Film; onApply: Apply }) {
   return (
     <div className="card">
       <h3>Characters</h3>
+      {film.roles.length === 0 && <p className="small muted">Who is in your film? Start with the hero.</p>}
       <div className="chars">
         {film.roles.map((r) => (
           <div key={r.id} className="char">
@@ -198,17 +248,16 @@ function RuntimeTopicBar({ film, unlocked, onApply }: { film: Film; unlocked: st
   const [rt, setRt] = useState(String(film.runtime));
   const commit = (v: number) => setRt(String(onApply(setRuntime(film, v)) ? v : film.runtime));
   return (
-    <div className="card row wrap">
+    <div className="card stack">
       <label className="row">
-        Runtime
+        <span className="field-label">Runtime</span>
         <button onClick={() => commit(film.runtime - 5)}>−5</button>
         <input className="num" value={rt} onChange={(e) => setRt(e.target.value)} onBlur={() => commit(Number(rt))} onKeyDown={(e) => e.key === 'Enter' && commit(Number(rt))} />
         <button onClick={() => commit(film.runtime + 5)}>+5</button>
-        <span className="muted small">target {film.contract.runtime} ±{film.contract.runtimeTolerance}</span>
+        <span className="muted small">brief {film.contract.runtime}±{film.contract.runtimeTolerance}</span>
       </label>
-      <span className="spacer" />
       <label className="row">
-        Topic
+        <span className="field-label">Topic</span>
         <select
           value={film.topicId ?? ''}
           onChange={(e) => {
@@ -228,8 +277,8 @@ function RuntimeTopicBar({ film, unlocked, onApply }: { film: Film; unlocked: st
 }
 
 /** The script as one long film strip: scenes are frames you drag along it; empty film is filler. */
-function Timeline({ film, selected, onSelect, onApply, onAdd }: {
-  film: Film; selected: string | null; onSelect: (id: string) => void; onApply: Apply; onAdd?: () => void;
+function Timeline({ film, selected, onSelect, onApply }: {
+  film: Film; selected: string | null; onSelect: (id: string) => void; onApply: Apply;
 }) {
   const slots = layout(film);
   const ref = useRef<HTMLDivElement>(null);
@@ -242,10 +291,6 @@ function Timeline({ film, selected, onSelect, onApply, onAdd }: {
   const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
   return (
     <div className="card strip-card">
-      <div className="row between">
-        <h3 className="panel-title small-title"><FilmIcon size={22} /> The script</h3>
-        <span className="muted small">Drag scenes along the film (or focus one and use ← →) · blank film is filler</span>
-      </div>
       <div className="strip-acts">
         <span style={{ width: '25%' }}>Act I</span>
         <span style={{ width: '50%' }}>Act II</span>
@@ -301,113 +346,92 @@ function Timeline({ film, selected, onSelect, onApply, onAdd }: {
       <div className="ticks">
         {Array.from({ length: Math.floor(film.runtime / 10) + 1 }, (_, i) => i * 10).map((m) => <span key={m} style={{ left: pct(m) }}>{m}</span>)}
       </div>
-      <div className="row">
-        {onAdd && <button className="primary" onClick={onAdd}>+ Add scene</button>}
-        <span className="small muted">{film.scenes.length}/{TUNING.script.maxScenes} scenes · usually 4–5 · lock with at least {TUNING.script.minScenes}</span>
-        {selected && film.scenes.length > 1 && (
-          <>
-            <span className="spacer" />
-            <button onClick={() => onApply(moveScene(film, selected, -1))}>◀ Swap earlier</button>
-            <button onClick={() => onApply(moveScene(film, selected, 1))}>Swap later ▶</button>
-          </>
-        )}
-      </div>
     </div>
   );
 }
 
-function SceneCard({
-  film, scene, index, level, selected, onFocus, onApply,
-}: { film: Film; scene: Scene; index: number; level: number; selected: boolean; onFocus: () => void; onApply: Apply }) {
+function SceneSheet({
+  film, scene, index, level, onApply, onClose,
+}: { film: Film; scene: Scene; index: number; level: number; onApply: Apply; onClose: () => void }) {
   const actions = availableActions(film);
-  const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '—';
   const inBeats = new Set(participants({ ...scene, others: [] }));
   const n = scene.beats.length;
   const act = layout(film).find((l) => l.sceneId === scene.id)?.act;
   const director = directorById(film.directorId);
-
   const setBeat = (i: number, patch: Partial<Beat>) => onApply(updateBeat(film, scene.id, i, fixBeat(film, { ...scene.beats[i], ...patch })));
+  const others = film.roles.filter((r) => !inBeats.has(r.id));
 
   return (
-    <div className={`card scene-card t-border-${scene.tone} ${selected ? 'selected' : ''}`} onFocusCapture={onFocus} onClick={onFocus}>
-      <div className="row between">
-        <h3>Scene {index + 1} <span className="muted small">Act {act} · {sceneMinutes(scene.duration, film.runtime)} min</span></h3>
-        <div className="row">
-          <button className="icon" aria-label="Move earlier" disabled={index === 0} onClick={() => onApply(moveScene(film, scene.id, -1))}>◀</button>
-          <button className="icon" aria-label="Move later" disabled={index === film.scenes.length - 1} onClick={() => onApply(moveScene(film, scene.id, 1))}>▶</button>
-          <button className="danger icon" aria-label="Delete scene" onClick={() => onApply(removeScene(film, scene.id))}>✕</button>
-        </div>
-      </div>
-
-      <div className="row wrap">
-        <span className="field-label">Duration</span>
+    <Sheet
+      title={`Scene ${index + 1}`}
+      kicker={`Act ${act} · ${sceneMinutes(scene.duration, film.runtime)} min · ${money(sceneCost(scene, director, level, film.contract.budget))}`}
+      onClose={onClose}
+      footer={<>
+        <button className="danger icon" aria-label="Delete scene" onClick={() => { onApply(removeScene(film, scene.id)); onClose(); }}>🗑</button>
+        <button className="icon" aria-label="Move earlier" disabled={index === 0} onClick={() => onApply(moveScene(film, scene.id, -1))}>◀</button>
+        <button className="icon" aria-label="Move later" disabled={index === film.scenes.length - 1} onClick={() => onApply(moveScene(film, scene.id, 1))}>▶</button>
+        <button className="primary grow" onClick={onClose}>Done</button>
+      </>}
+    >
+      <div className="section-label">Length</div>
+      <div className="seg">
         {DURATIONS.map((d) => (
-          <button key={d} className={scene.duration === d ? 'primary' : ''} onClick={() => onApply(updateScene(film, scene.id, { duration: d }))}>{d}</button>
+          <button key={d} className={scene.duration === d ? 'on' : ''} onClick={() => onApply(updateScene(film, scene.id, { duration: d }))}>{d}</button>
         ))}
       </div>
-      <div className="row wrap">
-        <span className="field-label">Tone</span>
+      <div className="section-label">Tone</div>
+      <div className="chip-grid">
         {TONES.map((t) => (
           <button key={t.id} className={`tone-btn t-${t.id} ${scene.tone === t.id ? 'on' : ''}`} onClick={() => onApply(updateScene(film, scene.id, { tone: t.id }))}>{t.name}</button>
         ))}
       </div>
 
-      <div className="section-label">Actions · {n} {DEPTH_LABEL[Math.min(n, 4)]}</div>
+      <div className="section-label">Actions · {DEPTH_LABEL[Math.min(n, 4)]} <span className="muted">(2 is ideal)</span></div>
       {scene.beats.map((b, i) => {
         const a = actionById(b.actionId);
+        const clash = !a.tones.includes(scene.tone);
         return (
-          <div key={i} className={`beat ${a.tones.includes(scene.tone) ? '' : 'clash'}`}>
+          <div key={i} className={`beat2 ${clash ? 'clash' : ''}`}>
             <select value={b.roleId} onChange={(e) => setBeat(i, { roleId: e.target.value })} aria-label="Who">
               {film.roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
-            <span className="muted small">does</span>
-            <select value={b.actionId} onChange={(e) => setBeat(i, { actionId: e.target.value })} aria-label="Action">
+            <select value={b.actionId} onChange={(e) => setBeat(i, { actionId: e.target.value })} aria-label="Does">
               {actions.map((x) => <option key={x.id} value={x.id}>{x.verb}{x.climax ? ' ★' : ''}</option>)}
             </select>
             {a.target !== 'none' && (
-              <>
-                <span className="muted small">{a.prep || 'Target'}</span>
-                <select value={b.targetId ?? ''} onChange={(e) => setBeat(i, { targetId: e.target.value || undefined })} aria-label="Target">
-                  {a.target === 'optional' && <option value="">(optional)</option>}
-                  {film.roles.filter((r) => r.id !== b.roleId).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </>
+              <select value={b.targetId ?? ''} onChange={(e) => setBeat(i, { targetId: e.target.value || undefined })} aria-label={a.prep || 'Target'}>
+                {a.target === 'optional' && <option value="">{a.prep || 'with'} nobody</option>}
+                {film.roles.filter((r) => r.id !== b.roleId).map((r) => <option key={r.id} value={r.id}>{a.prep ? `${a.prep} ` : ''}{r.name}</option>)}
+              </select>
             )}
-            <button className="danger icon" aria-label="Remove action" onClick={() => onApply(removeBeat(film, scene.id, i))}>✕</button>
-            {!a.tones.includes(scene.tone) && <span className="small bad clash-note">Doesn't suit a {toneById(scene.tone).name.toLowerCase()} scene</span>}
+            <button className="icon ghost-btn" aria-label="Remove action" onClick={() => onApply(removeBeat(film, scene.id, i))}>✕</button>
+            {clash && <span className="small bad">Clashes with a {toneById(scene.tone).name.toLowerCase()} tone</span>}
           </div>
         );
       })}
       {n < 4 && (
-        <button
-          onClick={() => {
-            const roleId = film.roles.find((r) => r.type === 'main')?.id ?? film.roles[0].id;
-            onApply(addBeat(film, scene.id, fixBeat(film, { roleId, actionId: 'plans' })));
-          }}
-        >
-          + Action
-        </button>
+        <button className="wide" onClick={() => {
+          const roleId = film.roles.find((r) => r.type === 'main')?.id ?? film.roles[0].id;
+          onApply(addBeat(film, scene.id, fixBeat(film, { roleId, actionId: 'plans' })));
+        }}>+ Action</button>
       )}
 
-      <div className="section-label">Others involved</div>
-      <div className="row wrap">
-        {film.roles.filter((r) => !inBeats.has(r.id)).map((r) => (
-          <label key={r.id} className={`choice inline ${scene.others.includes(r.id) ? 'selected' : ''}`}>
-            <input
-              type="checkbox"
-              checked={scene.others.includes(r.id)}
-              onChange={(e) => onApply(updateScene(film, scene.id, { others: e.target.checked ? [...scene.others, r.id] : scene.others.filter((x) => x !== r.id) }))}
-            />
-            {r.name}
-          </label>
-        ))}
-        {film.roles.every((r) => inBeats.has(r.id)) && <span className="muted small">Everyone already has an action</span>}
-      </div>
-      <p className="small muted">
-        Cost {money(sceneCost(scene, director, level, film.contract.budget))}
-        {scene.beats.some((b) => actionById(b.actionId).stunt) && ' · stunts'}
-        {scene.beats.length > 0 && ` · ${scene.beats.map((b) => describeBeat(roleName(b.roleId), b.actionId, b.targetId ? roleName(b.targetId) : undefined)).join(', then ')}`}
-      </p>
-    </div>
+      {others.length > 0 && (
+        <>
+          <div className="section-label">Also in the scene</div>
+          <div className="chip-grid">
+            {others.map((r) => {
+              const on = scene.others.includes(r.id);
+              return (
+                <button key={r.id} className={`chip-btn ${on ? 'on' : ''}`} aria-pressed={on}
+                  onClick={() => onApply(updateScene(film, scene.id, { others: on ? scene.others.filter((x) => x !== r.id) : [...scene.others, r.id] }))}>
+                  {on ? '✓ ' : ''}{r.name}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Sheet>
   );
 }

@@ -10,8 +10,10 @@ const TRAIT_TEXT = {
   oneTake: 'One-take: fewer retakes',
 } as const;
 
+const RARITY_LABEL = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' } as const;
+
 export function ActorCard({
-  actor, needs, fit, pay, onCast, compact, budgetLeft, directorId,
+  actor, needs, fit, pay, onCast, compact, budgetLeft, budgetAfter, directorId,
 }: {
   actor: Actor;
   /** Skill shares this role needs; the top ones are highlighted. */
@@ -22,19 +24,22 @@ export function ActorCard({
   compact?: boolean;
   /** When set, pay above this is flagged. */
   budgetLeft?: number;
+  /** Budget left if this actor is hired (shown before hiring). */
+  budgetAfter?: number;
   /** Shows the loyalty badge when this director discovered the actor. */
   directorId?: string;
 }) {
-  const tooExpensive = pay !== undefined && budgetLeft !== undefined && pay > budgetLeft;
+  const tooExpensive = (pay !== undefined && budgetLeft !== undefined && pay > budgetLeft) || (budgetAfter !== undefined && budgetAfter < 0);
   const top = needs ? SKILLS.filter((s) => needs[s] >= 0.2) : [];
   return (
     <div className={`card actor-card r-${actor.rarity} ${compact ? 'compact' : ''}`}>
+      <span className={`rarity-ribbon r-${actor.rarity}`}>{RARITY_LABEL[actor.rarity]}</span>
       <div className="row">
         <Face actor={actor} size={compact ? 44 : 72} />
         <div>
           <div className="actor-name">{actor.name}</div>
-          <div className="small muted">{actor.rarity} · {actor.age}</div>
           <div className="small">★ {actor.starPower} star · 🎭 {actor.acting} acting</div>
+          <div className="small muted">{actor.age}{actor.traits.length > 0 && <> · {actor.traits.join(', ')}</>}</div>
         </div>
       </div>
       {!compact && (
@@ -55,15 +60,17 @@ export function ActorCard({
             </p>
           )}
           {directorId && actor.discoveredBy?.includes(directorId) && <span className="chip win">Remembers you · fee −15%</span>}
-          {actor.traits.length > 0 && (
-            <div className="row wrap">{actor.traits.map((t) => <span key={t} className="tag" title={TRAIT_TEXT[t]}>{t}</span>)}</div>
-          )}
+          {actor.traits.length > 0 && <p className="small muted trait-line">{actor.traits.map((t) => TRAIT_TEXT[t]).join(' · ')}</p>}
         </>
       )}
       {(fit !== undefined || pay !== undefined) && (
-        <div className="row between small">
-          {fit !== undefined && <span>Fit <strong className={fit >= 70 ? 'good' : fit < 45 ? 'bad' : ''}>{fit}</strong></span>}
-          {pay !== undefined && <span>Pay <strong className={tooExpensive ? 'bad' : ''}>{money(pay)}</strong>{tooExpensive && <span className="bad"> over budget</span>}</span>}
+        <div className="money-line">
+          {fit !== undefined && <span className="fit-pill">Fit <strong className={fit >= 70 ? 'good' : fit < 45 ? 'bad' : ''}>{fit}</strong></span>}
+          {pay !== undefined && <span>Pay <strong>{money(pay)}</strong></span>}
+          {budgetAfter !== undefined && (
+            <span className={`after ${tooExpensive ? 'bad' : ''}`}>Budget after <strong>{money(budgetAfter)}</strong></span>
+          )}
+          {tooExpensive && budgetAfter === undefined && <span className="bad">over budget</span>}
         </div>
       )}
       {onCast && <button className="primary" onClick={onCast}>Cast</button>}

@@ -273,6 +273,25 @@ and the column by strongest skill, which sets the expression (calm when no skill
 Parody stars get their look-alike. Within a pool no two actors share a face. Older saves without
 stored portraits get the best match on the fly.
 
+## Navigation revamp (done)
+
+Audit of every screen against the owner's feedback, and what changed:
+
+| Problem | Change |
+|---|---|
+| Studio, unlocks and careers were mixed in one menu | **Studio** (credits, Unlocks shop, Hall of fame) holds up to **3 careers side by side** (`career.ts`: `runningCareers`, `parkCareer`, `enterCareer`; save v6). Each career has its own board and film; all share the unlocks. |
+| Inside a career there was too much | **Career** screen: just Contracts (plus this career's films and Retire). The Studio button parks the career. |
+| Contract board was list + detail + sidebar at once | A list. Tap a contract to open a detail sheet with **Back / Accept**. |
+| The "★★" on contracts read like a rating | A labelled **difficulty meter** (Easy … Brutal) with pips. |
+| Script was one very long page | Tabs: **Story** (characters, runtime, topic), **Scenes** (strip + list; each scene opens in its own sheet), **Check** (must-haves, quality, feel). A pinned bar shows quality, must-haves and Lock. |
+| Casting: rarity borders didn't show; no money impact | Fixed CSS so the rarity borders show, and added a rarity ribbon. Every card shows **Budget after** hiring. Roles are a list; each opens a sheet with its cards (swipe carousel on phones). |
+| Shooting: everything at once, endless scrolling | A weekly loop. **This week** shows status (week, budget, takes kept, fatigue, bond) and 4 activities: Shoot, Rehearse, Club night, Day off. Shoot is 2 steps (scene → set & focus with the forecast → Record); the take choice opens on its own. Tabs for Scenes, Cast and Log. |
+| Edit: one long page | Tabs: Scenes (each opens a sheet), Music & FX, Poster, Marketing. Pinned bar: cut quality, budget after, finish week, Premiere. |
+| Not built for phones | Bottom tab bar, compact top bar, full-screen sheets, pinned action bar, toasts instead of paragraphs. During production the phases show as dots in the top bar. |
+| No install | PWA: manifest, icons, service worker (offline play), **Install app** button on the title screen and in the ⚙ menu (iOS gets Add to Home Screen steps), and persistent storage is requested for saves. |
+
+Phone screenshots: `docs/screens/m-*.png`.
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

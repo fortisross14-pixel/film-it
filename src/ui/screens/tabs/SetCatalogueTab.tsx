@@ -14,8 +14,6 @@ export function SetCatalogueTab() {
   const [msg, setMsg] = useState<string | null>(null);
   return (
     <div>
-      <h2>Set catalogue</h2>
-      <p className="muted">Premade sets. You choose them per scene while shooting.</p>
       {msg && <p className="bad">{msg}</p>}
       <div className="grid">
         {SETS.map((s) => {
@@ -32,11 +30,8 @@ export function SetCatalogueTab() {
                 <h3>{s.name}</h3>
                 <span className="tag">{money(s.dayCost)}/day</span>
               </div>
-              <IsoSet set={s} extras={Math.min(s.extrasCapacity, 60)} />
-              <p className="small muted">
-                {s.footprint.w}×{s.footprint.d} {s.style} · up to {s.extrasCapacity} extras · {s.tags.filter((t) => t !== 'interior' && t !== 'exterior').join(' · ')}
-              </p>
-              <p className="small">Best for {best.join(' and ')} scenes{special.length > 0 && <> · {special.join(', ')}</>}</p>
+              <IsoSet set={s} extras={Math.min(s.extrasCapacity, 30)} height={130} />
+              <p className="small">Best: {best.join(', ')}{special.length > 0 && <> · {special.join(', ')}</>}</p>
               {!unlocked && <p className="small">🔒 {setUnlockText(s)}</p>}
               {buyable && s.unlock.kind === 'credits' && (
                 <button
@@ -50,7 +45,7 @@ export function SetCatalogueTab() {
                     } else setMsg(r.reason);
                   }}
                 >
-                  Unlock
+                  Unlock · {s.unlock.cost} credits
                 </button>
               )}
             </div>

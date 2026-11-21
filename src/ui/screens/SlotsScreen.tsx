@@ -3,6 +3,7 @@ import { deleteSlot, listSlots, loadProfile } from '../../engine/save';
 import { newProfile } from '../../engine/profile';
 import { useGame } from '../store';
 import { SettingsButton } from '../prefs';
+import { InstallButton } from '../pwa';
 import { art } from '../art';
 
 export function SlotsScreen() {
@@ -20,7 +21,10 @@ export function SlotsScreen() {
       <h1 className="title-logo"><img src={art('logo')} alt="Film it!" /></h1>
       <img className="title-hero" src={art('home-hero')} alt="" />
       <p className="title-sub">Choose a save slot</p>
-      <SettingsButton />
+      <div className="row">
+        <InstallButton />
+        <SettingsButton />
+      </div>
       <div className="slots">
         {slots.map((s) => (
           <div key={s.slot} className="card slot">

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
-import { Calendar, stageCast } from './ShootingScreen';
+import { sceneName, stageCast } from './ShootingScreen';
+import { ActionBar, Sheet, Tabs, useToast } from '../components/ui';
 import { MarketingCard, PosterStudio } from '../components/PosterStudio';
 import { IsoSet } from '../components/IsoSet';
 import { setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
-import { actionById } from '../../engine/data/actions';
 import { describeBeat, money } from '../../engine/format';
 import { TUNING } from '../../engine/tuning';
 import { spent } from '../../engine/script';
@@ -24,145 +24,159 @@ const MUSIC_TEXT: Record<MusicTier, string> = {
 };
 const BEAT_MS = 1400;
 
+type PostTab = 'scenes' | 'sound' | 'poster' | 'marketing';
+
 export function PostScreen() {
   const p = useProfile();
   const { update } = useGame();
   const film = p.activeFilm!;
   const level = p.directors[film.directorId]?.level ?? 1;
-  const [msg, setMsg] = useState<string | null>(null);
-  const [playing, setPlaying] = useState<string | null>(null);
+  const [tab, setTab] = useState<PostTab>('scenes');
+  const [open, setOpen] = useState<string | null>(null);
   const [watchAll, setWatchAll] = useState(false);
-  const [view, setView] = useState<'cut' | 'poster'>('cut');
+  const toast = useToast();
   const summary = postSummary(film, level);
   const budgetLeft = film.contract.budget - spent(film);
-  const [autoBudget, setAutoBudget] = useState(Math.max(0, Math.round(budgetLeft * 0.3)));
   const scoreOf = (id: string) => summary.scores.find((s) => s.sceneId === id);
-
   const apply = (r: PostResult) => {
-    if (!r.ok) return setMsg(r.reason), false;
+    if (!r.ok) return toast.show(r.reason), false;
     update((q) => ({ ...q, activeFilm: r.film }));
-    setMsg(null);
     return true;
   };
   const finishWeek = weeksUsed(film) + summary.weeks;
   const lateBy = finishWeek - film.contract.deadlineWeeks;
+  const after = budgetLeft - summary.cost;
+  const scene = film.scenes.find((s) => s.id === open);
 
   return (
-    <div className="shoot">
-      <Calendar film={film} />
-      {msg && <p className="bad">{msg}</p>}
-      {watchAll && <FilmPlayer film={film} onClose={() => setWatchAll(false)} />}
-      {playing && <Playback key={playing} film={film} scene={film.scenes.find((s) => s.id === playing)!} score={scoreOf(playing)} onClose={() => setPlaying(null)} />}
-      <div className="script-grid">
-        <div className="script-main">
-          <div className="seg-tabs" role="tablist">
-            <button role="tab" aria-selected={view === 'cut'} className={view === 'cut' ? 'primary' : ''} onClick={() => setView('cut')}>🎞 Final cut</button>
-            <button onClick={() => setWatchAll(true)}>▶ Watch the whole film</button>
-            <button role="tab" aria-selected={view === 'poster'} className={view === 'poster' ? 'primary' : ''} onClick={() => setView('poster')}>🖼 Poster & marketing</button>
-          </div>
-          {view === 'poster' && <PosterStudio film={film} history={p.filmography} onApply={apply} />}
-          {view === 'cut' && film.scenes.map((s, i) => (
-            <SceneEdit
-              key={s.id}
-              film={film}
-              scene={s}
-              index={i}
-              score={scoreOf(s.id)}
-              onPlay={() => setPlaying(s.id)}
-              onApply={apply}
-            />
-          ))}
-        </div>
+    <div className="stack phase-screen">
+      <Tabs label="Edit" value={tab} onChange={setTab} tabs={[
+        { id: 'scenes', label: 'Scenes' },
+        { id: 'sound', label: 'Music & FX' },
+        { id: 'poster', label: 'Poster' },
+        { id: 'marketing', label: 'Marketing' },
+      ]} />
 
-        <aside className="script-side">
-          <MarketingCard film={film} onApply={apply} />
+      {tab === 'scenes' && (
+        <>
+          <button className="wide" onClick={() => setWatchAll(true)}>▶ Watch the whole film</button>
+          <div className="list">
+            {film.scenes.map((s, i) => (
+              <button key={s.id} className={`list-row scene-row t-border-${s.tone} ${s.cut ? 'is-cut' : ''}`} onClick={() => setOpen(s.id)}>
+                <span className="scene-num">{i + 1}</span>
+                <span className="list-main">
+                  <strong>{sceneName(film, s)}</strong>
+                  <span className="small muted">{s.cut ? 'Cut' : `${chosenTake(s)?.version ?? '—'} cut · VFX ${s.vfx} · SFX ${s.sfx}`}</span>
+                </span>
+                {!s.cut && <span className="score-badge">{scoreOf(s.id)?.total ?? '—'}</span>}
+              </button>
+            ))}
+          </div>
+          <div className="card small">
+            Best scene {summary.best} · worst <span className={summary.worst < 50 ? 'bad' : ''}>{summary.worst}</span> · filler {summary.fillerMinutes} min
+            {summary.overproduction > 0 && <p className="bad">Too much CGI for this genre (−{summary.overproduction} critics)</p>}
+            <p className="muted">Critics love great peaks; audiences punish weak scenes.</p>
+          </div>
+        </>
+      )}
+
+      {tab === 'sound' && (
+        <>
           <div className="card">
             <h3>Music</h3>
-            {MUSIC_TIERS.map((m) => {
-              const cost = postSummary({ ...film, music: m }, level).musicCost;
-              return (
-                <label key={m} className={`choice ${film.music === m ? 'selected' : ''}`}>
-                  <input type="radio" name="music" checked={film.music === m} onChange={() => apply(setMusic(film, m))} />
-                  <strong>{MUSIC_TEXT[m]}</strong>
-                  <div className="small muted">{money(cost)} · {TUNING.post.music[m].days} post days</div>
-                </label>
-              );
-            })}
-          </div>
-
-          <div className="card">
-            <h3>Auto-polish</h3>
-            <p className="small muted">Replaces music and VFX/SFX with the best value for this budget.</p>
-            <input type="range" min={0} max={Math.max(0, budgetLeft)} step={50} value={Math.min(autoBudget, Math.max(0, budgetLeft))} onChange={(e) => setAutoBudget(Number(e.target.value))} className="wide" />
-            <button className="wide" disabled={autoBudget <= 0} onClick={() => apply({ ok: true, film: autoPolish(film, autoBudget, level) })}>Auto-polish with {money(autoBudget)}</button>
-          </div>
-
-          <div className="card">
-            <div className="row between">
-              <h3>Final cut</h3>
-              <span className="big">{summary.cutQuality}</span>
+            <div className="list">
+              {MUSIC_TIERS.map((m) => {
+                const cost = postSummary({ ...film, music: m }, level).musicCost;
+                return (
+                  <button key={m} className={`list-row pick ${film.music === m ? 'on' : ''}`} onClick={() => apply(setMusic(film, m))}>
+                    <span className="list-main"><strong>{MUSIC_TEXT[m]}</strong><span className="small muted">{money(cost)} · {TUNING.post.music[m].days} days</span></span>
+                    {film.music === m && <span className="check">✓</span>}
+                  </button>
+                );
+              })}
             </div>
-            <p className="small">Best scene {summary.best} · worst scene <span className={summary.worst < 50 ? 'bad' : ''}>{summary.worst}</span> · filler {summary.fillerMinutes} min</p>
-            <p className="small muted">Critics love peak scenes; the public punishes bad ones.</p>
-            {summary.overproduction > 0 && <p className="small bad">Overproduction: too much CGI for this genre (−{summary.overproduction} critics)</p>}
-            <div className="section-label">Post costs</div>
-            <p className="small">Music {money(summary.musicCost)} · VFX/SFX {money(summary.polishCost)} · crew {money(summary.crewCost)}</p>
-            <p>Total <strong>{money(summary.cost)}</strong> · {summary.days} days → {summary.weeks} week{summary.weeks > 1 ? 's' : ''}</p>
-            <p className="small">
-              Budget after post <strong className={budgetLeft - summary.cost < 0 ? 'bad' : ''}>{money(budgetLeft - summary.cost)}</strong>
-              {' · '}finishes week {finishWeek} of {film.contract.deadlineWeeks}
-              {lateBy > 0 && <span className="bad"> ({lateBy} late)</span>}
-            </p>
           </div>
+          <AutoPolish film={film} budgetLeft={budgetLeft} level={level} onApply={apply} />
+          <div className="card small">
+            Music {money(summary.musicCost)} · VFX/SFX {money(summary.polishCost)} · crew {money(summary.crewCost)} = <strong>{money(summary.cost)}</strong> · {summary.weeks} wk
+          </div>
+        </>
+      )}
 
-          <button
-            className="primary wide"
-            onClick={() => {
-              if (!confirm('Lock the final cut and go to the premiere?')) return;
-              apply(finishPost(film, level));
-            }}
-          >
-            Lock final cut → Premiere
-          </button>
-        </aside>
-      </div>
+      {tab === 'poster' && <PosterStudio film={film} history={p.filmography} onApply={apply} />}
+      {tab === 'marketing' && <MarketingCard film={film} onApply={apply} />}
+
+      {scene && (
+        <Sheet wide title={`Scene ${film.scenes.indexOf(scene) + 1}`} kicker={sceneName(film, scene)} onClose={() => setOpen(null)}
+          footer={<button className="primary grow" onClick={() => setOpen(null)}>Done</button>}>
+          <SceneEdit film={film} scene={scene} index={film.scenes.indexOf(scene)} score={scoreOf(scene.id)} onApply={apply} />
+        </Sheet>
+      )}
+      {watchAll && (
+        <Sheet wide title={film.title} kicker="Final cut" onClose={() => setWatchAll(false)}>
+          <FilmPlayer film={film} onClose={() => setWatchAll(false)} />
+        </Sheet>
+      )}
+      {toast.node}
+
+      <ActionBar>
+        <span className="bar-stat"><span className="kicker">Final cut</span><strong>{summary.cutQuality}</strong></span>
+        <span className="bar-stat"><span className="kicker">Budget after</span><strong className={after < 0 ? 'bad' : ''}>{money(after)}</strong></span>
+        <span className="bar-stat"><span className="kicker">Done week</span><strong className={lateBy > 0 ? 'bad' : ''}>{finishWeek}/{film.contract.deadlineWeeks}</strong></span>
+        <button className="primary grow" onClick={() => confirm('Lock the final cut and go to the premiere?') && apply(finishPost(film, level))}>Premiere ›</button>
+      </ActionBar>
+    </div>
+  );
+}
+
+function AutoPolish({ film, budgetLeft, level, onApply }: { film: Film; budgetLeft: number; level: number; onApply: (r: PostResult) => boolean }) {
+  const [amount, setAmount] = useState(Math.max(0, Math.round(budgetLeft * 0.3)));
+  const max = Math.max(0, budgetLeft);
+  return (
+    <div className="card">
+      <h3>Auto-polish</h3>
+      <p className="small muted">Picks music and VFX/SFX for the best value.</p>
+      <input type="range" min={0} max={max} step={50} value={Math.min(amount, max)} onChange={(e) => setAmount(Number(e.target.value))} className="wide" aria-label="Auto-polish budget" />
+      <button className="wide" disabled={amount <= 0} onClick={() => onApply({ ok: true, film: autoPolish(film, amount, level) })}>Spend up to {money(amount)}</button>
     </div>
   );
 }
 
 function SceneEdit({
-  film, scene, index, score, onPlay, onApply,
-}: { film: Film; scene: Scene; index: number; score?: SceneScore; onPlay: () => void; onApply: (r: PostResult) => boolean }) {
+  film, scene, index, score, onApply,
+}: { film: Film; scene: Scene; index: number; score?: SceneScore; onApply: (r: PostResult) => boolean }) {
   const take = chosenTake(scene);
+  const [playing, setPlaying] = useState(false);
   const tierRow = (kind: PolishKind) => (
-    <div className="row wrap">
-      <span className="field-label">{kind.toUpperCase()}</span>
-      {POLISH_TIERS.map((t: PolishTier) => (
-        <button key={t} disabled={scene.cut} className={scene[kind] === t ? 'primary' : ''} onClick={() => onApply(setPolish(film, scene.id, kind, t))}>{t}</button>
-      ))}
-    </div>
+    <>
+      <div className="section-label">{kind === 'vfx' ? 'Visual effects' : 'Sound effects'}</div>
+      <div className="seg">
+        {POLISH_TIERS.map((t: PolishTier) => (
+          <button key={t} disabled={scene.cut} className={scene[kind] === t ? 'on' : ''} onClick={() => onApply(setPolish(film, scene.id, kind, t))}>{t}</button>
+        ))}
+      </div>
+    </>
   );
   return (
-    <div className={`card scene-card t-border-${scene.tone} ${scene.cut ? 'cut' : ''}`}>
+    <div className={`stack ${scene.cut ? 'cut' : ''}`} data-scene={index}>
       <div className="row between wrap">
-        <h3>
-          Scene {index + 1} <span className="muted small">{toneById(scene.tone).name}{isEmotional(scene) ? ' · emotional' : ''} · {scene.beats.map((b) => actionById(b.actionId).verb).join(', ')}</span>
-        </h3>
+        <span className="small muted"><span className={`tone-dot t-${scene.tone}`} /> {toneById(scene.tone).name}{isEmotional(scene) ? ' · emotional' : ''}</span>
         <div className="row">
-          {!scene.cut && <button onClick={onPlay}>▶ Watch</button>}
+          {!scene.cut && <button onClick={() => setPlaying(true)}>▶ Watch</button>}
           <button className={scene.cut ? '' : 'danger'} onClick={() => onApply(setCut(film, scene.id, !scene.cut))}>{scene.cut ? 'Restore' : 'Cut scene'}</button>
         </div>
       </div>
+      {playing && <Playback film={film} scene={scene} score={score} onClose={() => setPlaying(false)} />}
       {scene.cut ? (
         <p className="muted small">Cut: its minutes are filler now.</p>
       ) : (
         <>
-          <label className="row wrap">
-            <span className="field-label">Take</span>
+          <label className="stack">
+            <span className="section-label">Take</span>
             <select value={scene.chosenTakeId} onChange={(e) => onApply(chooseTake(film, scene.id, e.target.value))}>
               {[...scene.takes].sort((a, b) => b.score - a.score).map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.score} · {t.version} cut · week {t.week} · {setById(t.setId).name} (P{t.meters.pace} C{t.meters.chemistry} D{t.meters.dialogue})
+                  {t.score} · {t.version} cut · {setById(t.setId).name}
                 </option>
               ))}
             </select>

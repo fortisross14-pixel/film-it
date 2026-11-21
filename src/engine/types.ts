@@ -471,6 +471,13 @@ export interface Career {
   boxOffice: number;
 }
 
+/** A career on hold: everything that belongs to it while another career (or the studio) is open. */
+export interface ParkedCareer {
+  career: Career;
+  contractBoard: Contract[];
+  activeFilm?: Film;
+}
+
 export interface Profile {
   version: number;
   name: string;
@@ -478,8 +485,10 @@ export interface Profile {
   seed: number; // advances as content is generated
   /** The bank: credits earned across all careers. Buys profiles, topic packs and sets. */
   credits: number;
-  /** The career in progress, if any. */
+  /** The career being played (loaded), if any. */
   career?: Career;
+  /** Other careers on hold, each with its own board and film in production (up to 3 careers in all). */
+  parked: ParkedCareer[];
   /** Finished careers. */
   careers: Career[];
   unlocks: {

@@ -2,7 +2,10 @@
 // game-ui-ux: text scalable to 200%; game-feel: reduce-motion option. The OS
 // "reduce motion" setting is respected by default.
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
+import { Sheet } from './components/ui';
+import { InstallButton } from './pwa';
+import { GameCtx } from './store';
 
 export interface Prefs {
   textScale: number; // 1, 1.25, 1.5, 2
@@ -33,6 +36,7 @@ export const reducedMotion = () => document.documentElement.dataset.motion === '
 export function SettingsButton() {
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState<Prefs>(read);
+  const game = useContext(GameCtx);
   useEffect(() => {
     applyPrefs(prefs);
     try {
@@ -42,30 +46,32 @@ export function SettingsButton() {
     }
   }, [prefs]);
   return (
-    <span className="settings">
-      <button aria-expanded={open} aria-label="Settings" onClick={() => setOpen(!open)}>⚙ Settings</button>
+    <>
+      <button className="icon ghost-btn settings-btn" aria-label="Menu and settings" onClick={() => setOpen(true)}>⚙</button>
       {open && (
-        <div className="card settings-panel" role="dialog" aria-label="Settings">
-          <div className="section-label">Text size</div>
-          <div className="row wrap">
-            {[1, 1.25, 1.5, 2].map((s) => (
-              <button key={s} className={prefs.textScale === s ? 'primary' : ''} onClick={() => setPrefs({ ...prefs, textScale: s })}>
-                {Math.round(s * 100)}%
-              </button>
-            ))}
+        <Sheet title="Menu" onClose={() => setOpen(false)}>
+          <div className="stack">
+            <InstallButton className="wide" />
+            {game?.profile && <button className="wide" onClick={() => { setOpen(false); game.close(); }}>Save &amp; quit to title</button>}
+            <div className="section-label">Text size</div>
+            <div className="seg">
+              {[1, 1.25, 1.5, 2].map((s) => (
+                <button key={s} className={prefs.textScale === s ? 'on' : ''} onClick={() => setPrefs({ ...prefs, textScale: s })}>{Math.round(s * 100)}%</button>
+              ))}
+            </div>
+            <div className="section-label">Motion</div>
+            <div className="seg">
+              {(['system', 'full', 'reduce'] as const).map((m) => (
+                <button key={m} className={prefs.motion === m ? 'on' : ''} onClick={() => setPrefs({ ...prefs, motion: m })}>
+                  {m === 'system' ? 'Device' : m === 'full' ? 'Full' : 'Reduced'}
+                </button>
+              ))}
+            </div>
+            <p className="small muted">Your game saves automatically after every action.</p>
           </div>
-          <div className="section-label">Motion</div>
-          <div className="row wrap">
-            {(['system', 'full', 'reduce'] as const).map((m) => (
-              <button key={m} className={prefs.motion === m ? 'primary' : ''} onClick={() => setPrefs({ ...prefs, motion: m })}>
-                {m === 'system' ? 'Follow device' : m === 'full' ? 'Full' : 'Reduce'}
-              </button>
-            ))}
-          </div>
-          <button onClick={() => setOpen(false)}>Close</button>
-        </div>
+        </Sheet>
       )}
-    </span>
+    </>
   );
 }
 

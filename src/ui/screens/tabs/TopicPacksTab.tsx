@@ -12,8 +12,6 @@ export function TopicPacksTab() {
   const [msg, setMsg] = useState<string | null>(null);
   return (
     <div>
-      <h2>Topic packs</h2>
-      <p className="muted">Topics unlock for every director. Each topic adds actions and sets.</p>
       {msg && <p className="bad">{msg}</p>}
       <div className="grid">
         {TOPIC_PACKS.map((pack) => {
@@ -53,7 +51,7 @@ export function TopicPacksTab() {
                     } else setMsg(r.reason);
                   }}
                 >
-                  Buy
+                  Buy · {pack.cost} credits
                 </button>
               )}
             </div>

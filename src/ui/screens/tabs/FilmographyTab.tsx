@@ -1,77 +1,69 @@
-import { Fragment, useState } from 'react';
+import { useState } from 'react';
 import { useProfile } from '../../store';
+import type { Film } from '../../../engine/types';
 import { genreName } from '../../../engine/data/genres';
 import { directorById } from '../../../engine/data/directors';
 import { toneById } from '../../../engine/data/tones';
-import { setById } from '../../../engine/data/sets';
 import { actionById } from '../../../engine/data/actions';
 import { audienceScore, criticsScore, money } from '../../../engine/format';
 import { Popcorn, Tomato } from '../../components/Icons';
 import { sceneScores } from '../../../engine/post';
 import { FilmPlayer } from '../PostScreen';
+import { FilmPoster } from '../../components/Poster';
+import { Sheet, Stat } from '../../components/ui';
 
-export function FilmographyTab() {
+/** Films as a tap-to-open list. `careerId` narrows it to one career. */
+export function FilmographyTab({ careerId }: { careerId?: string }) {
   const p = useProfile();
-  const [open, setOpen] = useState<string | null>(null);
-  const [watching, setWatching] = useState<string | null>(null);
+  const [open, setOpen] = useState<Film | null>(null);
+  const films = [...p.filmography].reverse().filter((r) => !careerId || r.careerId === careerId).map((r) => r.film);
+  if (films.length === 0) return <p className="muted empty">No films yet.</p>;
   return (
-    <div>
-      <h2>Filmography</h2>
-      {p.filmography.length === 0 ? (
-        <p className="muted">No films yet. Start a career and accept a contract to make your first one.</p>
-      ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Title</th><th>Profile</th><th>Genre</th><th>Grade</th><th>Box office</th><th><Popcorn size={18} title="Audience" /> Audience</th><th><Tomato size={18} title="Critics" /> Critics</th><th>Awards</th><th />
-            </tr>
-          </thead>
-          <tbody>
-            {[...p.filmography].reverse().map(({ film }) => (
-              <Fragment key={film.id}>
-                <tr>
-                  <td>{film.title}</td>
-                  <td>{directorById(film.directorId).name}</td>
-                  <td>{genreName(film.contract.genre)}</td>
-                  <td><strong className={`grade-${film.grade}`}>{film.grade ?? '—'}</strong></td>
-                  <td>{film.results ? money(film.results.boxOffice) : '—'}</td>
-                  <td>{film.results ? `${audienceScore(film.results.publicRating)}/10` : '—'}</td>
-                  <td>{film.results ? criticsScore(film.results.criticsRating) : '—'}</td>
-                  <td>{film.results ? `${film.results.wins.length} 🏆 / ${film.results.nominations.length}` : '—'}</td>
-                  <td><button onClick={() => setOpen(open === film.id ? null : film.id)}>{open === film.id ? 'Hide' : 'Final cut'}</button></td>
-                </tr>
-                {open === film.id && (
-                  <tr>
-                    <td colSpan={9}>
-                      <div className="cut-detail">
-                        {watching === film.id ? <FilmPlayer film={film} onClose={() => setWatching(null)} /> : <button onClick={() => setWatching(film.id)}>▶ Watch the final cut</button>}
-                        <p className="small muted">
-                          {film.contract.studio.name} · {film.runtime} min · script {film.scriptQuality} · casting {film.castingScore} · music {film.music}
-                          {film.report && <> · score {film.report.score}{film.report.missedReqs.length > 0 && ` · missed: ${film.report.missedReqs.join(', ')}`}</>}
-                        </p>
-                        <p className="small">Cast: {film.roles.map((r) => `${r.actor?.name ?? '?'} as ${r.name}`).join(' · ')}</p>
-                        <ol className="reqs small">
-                          {film.scenes.map((s) => {
-                            const sc = sceneScores(film).find((x) => x.sceneId === s.id);
-                            return (
-                              <li key={s.id} className={s.cut ? 'muted' : ''}>
-                                {toneById(s.tone).name} · {s.beats.map((b) => actionById(b.actionId).verb).join(', ')}
-                                {s.cut ? ' · cut' : ` · final ${sc?.total ?? '—'}`}
-                                <span className="muted"> · {s.takes.length} takes ({s.takes.map((t) => `${t.score}${t.id === s.chosenTakeId ? '✓' : ''}`).join(', ')})
-                                  {s.setId && ` · ${setById(s.setId).name}`}</span>
-                              </li>
-                            );
-                          })}
-                        </ol>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
+    <>
+      <div className="list">
+        {films.map((film) => (
+          <button key={film.id} className="list-row" onClick={() => setOpen(film)}>
+            <FilmPoster film={film} width={46} />
+            <span className="list-main">
+              <strong>{film.title}</strong>
+              <span className="small muted">{genreName(film.contract.genre)} · {directorById(film.directorId).name}</span>
+            </span>
+            <span className={`grade-badge grade-${film.grade}`}>{film.grade ?? '—'}</span>
+          </button>
+        ))}
+      </div>
+      {open && <FilmSheet film={open} onClose={() => setOpen(null)} />}
+    </>
+  );
+}
+
+function FilmSheet({ film, onClose }: { film: Film; onClose: () => void }) {
+  const [watching, setWatching] = useState(false);
+  const r = film.results;
+  const scores = sceneScores(film);
+  return (
+    <Sheet title={film.title} kicker={`${genreName(film.contract.genre)} · ${film.runtime} min`} onClose={onClose}>
+      {watching ? <FilmPlayer film={film} onClose={() => setWatching(false)} /> : <button className="primary wide" onClick={() => setWatching(true)}>▶ Watch the final cut</button>}
+      {r && (
+        <div className="stat-row">
+          <Stat label="Grade" value={film.grade ?? '—'} />
+          <Stat label={<><Popcorn size={16} /> Audience</>} value={`${audienceScore(r.publicRating)}/10`} />
+          <Stat label={<><Tomato size={16} /> Critics</>} value={criticsScore(r.criticsRating)} />
+          <Stat label="Box office" value={money(r.boxOffice)} />
+          <Stat label="Awards" value={`${r.wins.length} / ${r.nominations.length}`} />
+        </div>
       )}
-    </div>
+      <div className="section-label">Cast</div>
+      <p className="small">{film.roles.map((x) => `${x.actor?.name ?? '?'} as ${x.name}`).join(' · ')}</p>
+      <div className="section-label">Scenes</div>
+      <ol className="reqs small">
+        {film.scenes.map((s) => (
+          <li key={s.id} className={s.cut ? 'muted' : ''}>
+            {toneById(s.tone).name} · {s.beats.map((b) => actionById(b.actionId).verb).join(', ')} · {s.cut ? 'cut' : scores.find((x) => x.sceneId === s.id)?.total ?? '—'}
+          </li>
+        ))}
+      </ol>
+      {film.report && film.report.missedReqs.length > 0 && <p className="small bad">Missed: {film.report.missedReqs.join(', ')}</p>}
+    </Sheet>
   );
 }

@@ -1,12 +1,14 @@
+import { useState } from 'react';
 import { useGame, useProfile } from '../store';
 import { Shell, type NavItem } from '../components/Shell';
-import { Calendar as CalIcon, Clapper, Coins, Film, Masks, People, Trophy } from '../components/Icons';
+import { Clapper, Coins, Film, Home, Masks, People, Trophy } from '../components/Icons';
+import { Sheet } from '../components/ui';
+import { ContractDetails } from '../components/ContractCard';
 import { money } from '../../engine/format';
 import { spent } from '../../engine/script';
 import { weeksUsed } from '../../engine/shooting';
-import { ContractCard } from '../components/ContractCard';
-import { directorById } from '../../engine/data/directors';
 import { abandonFilm } from '../../engine/profile';
+import { parkCareer } from '../../engine/career';
 import type { FilmPhase } from '../../engine/types';
 import { ScriptEditor } from './ScriptEditor';
 import { CastingScreen } from './CastingScreen';
@@ -26,57 +28,36 @@ export function ProductionScreen() {
   const p = useProfile();
   const { update } = useGame();
   const film = p.activeFilm!;
+  const [brief, setBrief] = useState(false);
   const phaseIdx = PHASES.findIndex((x) => x.id === film.phase);
   const nav: NavItem[] = PHASES.map((ph, i) => ({ id: ph.id, label: ph.label, icon: ph.icon, done: i < phaseIdx }));
-  const extra = (
-    <>
-      <span className="hud-pill"><CalIcon size={18} /> Week {String(weeksUsed(film)).padStart(2, '0')} / {film.contract.deadlineWeeks}</span>
-      <span className="hud-pill"><Coins size={18} /> Budget {money(film.contract.budget - spent(film))}</span>
-      <span className="title-plate">{film.title}</span>
-    </>
-  );
+  const left = film.contract.budget - spent(film);
   return (
-    <Shell nav={nav} active={film.phase} extra={extra}>
-        <div className="row between">
-          <div>
-            <h2>“{film.title}”</h2>
-            <p className="muted">Directed by {directorById(film.directorId).name}</p>
-          </div>
-          {!film.results && (
-          <button
-            className="danger"
-            onClick={() => {
-              if (confirm('Abandon this film? The contract is lost.')) update(abandonFilm);
-            }}
-          >
-            Abandon film
-          </button>
-          )}
-        </div>
-        {film.phase === 'script' ? (
-          <ScriptEditor />
-        ) : film.phase === 'casting' ? (
-          <CastingScreen />
-        ) : film.phase === 'shooting' ? (
-          <ShootingScreen />
-        ) : film.phase === 'post' ? (
-          <PostScreen />
-        ) : film.phase === 'premiere' ? (
-          <PremiereScreen />
-        ) : (
-        <div className="production-body">
-          <div className="card placeholder">
-            <h3>{PHASES[phaseIdx]?.label} phase</h3>
-            <p className="muted">
-              Script {film.scriptQuality} · Casting {film.castingScore ?? '—'}. The {PHASES[phaseIdx]?.label.toLowerCase()} phase arrives in the next milestone.
-            </p>
-          </div>
-          <div className="brief-side">
-            <div className="section-label">The brief</div>
-            <ContractCard c={film.contract} />
-          </div>
-        </div>
-        )}
+    <Shell
+      nav={nav} active={film.phase} progress
+      title={film.title}
+      sub={`${PHASES[phaseIdx]?.label ?? ''} · week ${weeksUsed(film)}/${film.contract.deadlineWeeks}`}
+      pills={<span className={`hud-pill ${left < 0 ? 'bad' : ''}`} title="Budget left"><Coins size={18} /> {money(left)}</span>}
+      actions={<>
+        <button className="ghost-btn" onClick={() => setBrief(true)}>Brief</button>
+        {p.career && !film.results && <button className="icon ghost-btn" aria-label="Back to the studio (the film waits)" title="Studio" onClick={() => update(parkCareer)}><Home size={20} /></button>}
+      </>}
+    >
+      {film.phase === 'script' && <ScriptEditor />}
+      {film.phase === 'casting' && <CastingScreen />}
+      {film.phase === 'shooting' && <ShootingScreen />}
+      {film.phase === 'post' && <PostScreen />}
+      {film.phase === 'premiere' && <PremiereScreen />}
+      {brief && (
+        <Sheet title={film.title} kicker="The brief" onClose={() => setBrief(false)}
+          footer={!film.results && (
+            <button className="danger" onClick={() => {
+              if (confirm('Abandon this film? The contract is lost.')) { setBrief(false); update(abandonFilm); }
+            }}>Abandon film</button>
+          )}>
+          <ContractDetails c={film.contract} />
+        </Sheet>
+      )}
     </Shell>
   );
 }

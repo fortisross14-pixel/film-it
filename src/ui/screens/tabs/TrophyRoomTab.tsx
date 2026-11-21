@@ -1,6 +1,5 @@
 import { useProfile } from '../../store';
 import { art } from '../../art';
-import { Laurels } from '../../components/Icons';
 
 export function TrophyRoomTab() {
   const p = useProfile();
@@ -11,7 +10,6 @@ export function TrophyRoomTab() {
   const wins = entries.filter((e) => e.won).length;
   return (
     <div>
-      <h2 className="panel-title"><Laurels size={70}><span className="kicker">Trophies</span></Laurels> Trophy room</h2>
       <p className="muted">{wins} won · {entries.length - wins} nominations</p>
       {entries.length === 0 ? (
         <p className="muted">No festival awards or nominations yet. Great films get noticed.</p>

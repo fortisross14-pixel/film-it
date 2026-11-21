@@ -35,7 +35,10 @@ function defaultStore(): KeyValueStore | undefined {
  * migrated and are reported as such.
  */
 type RawSave = Record<string, unknown> & { version: number };
-const MIGRATIONS: Record<number, (d: RawSave) => RawSave> = {};
+const MIGRATIONS: Record<number, (d: RawSave) => RawSave> = {
+  // 6: careers can run side by side; the others are parked.
+  5: (d) => ({ ...d, parked: [] }),
+};
 const FIRST_MIGRATABLE = 5;
 
 export type LoadStatus = 'ok' | 'empty' | 'corrupt' | 'older' | 'newer' | 'fromBackup';
@@ -69,7 +72,8 @@ export function validateProfile(d: unknown): Profile | undefined {
   };
   if (!unlocks.directors.length) return undefined;
   if (p.career && !has(DIRECTORS)(p.career.directorId)) return undefined;
-  return { ...p, unlocks };
+  const parked = (Array.isArray(p.parked) ? p.parked : []).filter((x) => x?.career && has(DIRECTORS)(x.career.directorId) && Array.isArray(x.contractBoard));
+  return { ...p, unlocks, parked };
 }
 
 function parse(raw: string | null): LoadResult {

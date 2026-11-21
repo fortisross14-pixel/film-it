@@ -152,7 +152,7 @@ export function cast(p: Profile, bot: Bot): Profile {
   return ok(finishCasting(p), 'sign').profile;
 }
 
-function shoot(p: Profile, bot: Bot): Profile {
+export function shoot(p: Profile, bot: Bot): Profile {
   if (bot === 'careful') p = ok(doWeek(p, { kind: 'club' }), 'club').profile;
   const sets = SETS.filter((s) => p.unlocks.sets.includes(s.id));
   for (const s of p.activeFilm!.scenes) {
@@ -171,7 +171,7 @@ function shoot(p: Profile, bot: Bot): Profile {
   return ok(wrapShooting(p), 'wrap').profile;
 }
 
-function post(p: Profile, bot: Bot): Profile {
+export function post(p: Profile, bot: Bot): Profile {
   let f = p.activeFilm!;
   const level = p.directors[f.directorId]?.level ?? 1;
   if (bot === 'average') f = ok(setMusic(f, 'library'), 'music').film;

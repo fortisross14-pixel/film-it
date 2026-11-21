@@ -9,7 +9,7 @@ export const TUNING = {
   /** Minimum final score for each letter grade. */
   gradeThresholds: { A: 90, B: 75, C: 48, D: 34, F: 0 },
   saveSlots: 3,
-  saveVersion: 5,
+  saveVersion: 6,
 
   contracts: {
     boardSize: 4,
@@ -384,6 +384,8 @@ export const TUNING = {
     retireCreditsPerRep: 0.25,
     /** Fired after this many F grades in a row (no retirement bonus). */
     firedAfterFs: 2,
+    /** Careers that can run side by side. */
+    maxCareers: 3,
   },
   poster: {
     /** Regenerating the background costs budget × share × 2^n. */

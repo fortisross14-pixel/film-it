@@ -5,7 +5,8 @@ import { Face } from '../components/Face';
 import { reducedMotion } from '../prefs';
 import { art } from '../art';
 import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../components/IsoSet';
-import { Bolt, Clapper, Heart, People, Speech } from '../components/Icons';
+import { Bolt, Heart, Speech } from '../components/Icons';
+import { ActionBar, Sheet, Stat, Tabs, useToast } from '../components/ui';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
 import { actionById } from '../../engine/data/actions';
@@ -36,149 +37,264 @@ export function stageCast(film: Film, s: Scene): StageActor[] {
   });
 }
 
+type ShootTab = 'week' | 'scenes' | 'cast' | 'log';
+type Flow = null | { kind: 'shoot'; sceneId?: string } | { kind: 'practice' } | { kind: 'club' } | { kind: 'relax' };
+
+/** Shooting is a week-by-week loop: see where you stand, pick this week's activity, play it. */
 export function ShootingScreen() {
   const p = useProfile();
   const { update } = useGame();
   const film = p.activeFilm!;
   const st = film.shooting!;
-  const level = p.directors[film.directorId]?.level ?? 1;
-  const [sceneId, setSceneId] = useState(st.pending?.sceneId ?? film.scenes.find((s) => !s.chosenTakeId)?.id ?? film.scenes[0].id);
-  const scene = film.scenes.find((s) => s.id === sceneId)!;
-  const unlockedSets = SETS.filter((s) => p.unlocks.sets.includes(s.id));
-  const sortedSets = useMemo(() => [...unlockedSets].sort((a, b) => setFit(b, scene) - setFit(a, scene)), [scene, unlockedSets]);
-  const [setId, setSetId] = useState(scene.setId ?? sortedSets[0].id);
-  const [focus, setFocus] = useState<Meter>('pace');
-  const [msg, setMsg] = useState<string | null>(null);
-  useEffect(() => setSetId(scene.setId ?? sortedSets[0].id), [sceneId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [tab, setTab] = useState<ShootTab>('week');
+  const [flow, setFlow] = useState<Flow>(null);
+  const toast = useToast();
+  const blockers = shootingBlockers(film);
+  const kept = film.scenes.filter((s) => s.chosenTakeId).length;
 
-  const set = setById(setId);
-  const prediction = predictMeters(film, scene, set, focus, level);
   const apply = (r: ShootResult) => {
-    if (!r.ok) return setMsg(r.reason), false;
+    if (!r.ok) return toast.show(r.reason), false;
     update(() => r.profile);
-    setMsg(null);
+    const log = r.profile.activeFilm?.shooting?.log;
+    const last = log?.[log.length - 1];
+    if (last && last !== st.log[st.log.length - 1] && !r.profile.activeFilm?.shooting?.pending) toast.show(`Week ${last.week}: ${last.text}`);
     return true;
   };
-  const blockers = shootingBlockers(film);
-  const pending = st.pending;
 
   return (
-    <div className="shoot">
-      <Calendar film={film} />
-      {msg && <p className="bad">{msg}</p>}
-      <div className="shoot-grid">
-        <aside className="card on-set">
-          <span className="kicker">On set</span>
-          <h2 className="scene-heading">Scene {String(film.scenes.indexOf(scene) + 1).padStart(2, '0')}</h2>
-          <p className="small muted">{sceneName(film, scene)} · {set.name}</p>
-          <div className="scene-thumbs">
+    <div className="stack phase-screen">
+      <Tabs label="Shooting" value={tab} onChange={setTab} tabs={[
+        { id: 'week', label: 'This week' },
+        { id: 'scenes', label: 'Scenes', badge: `${kept}/${film.scenes.length}` },
+        { id: 'cast', label: 'Cast' },
+        { id: 'log', label: 'Log' },
+      ]} />
+
+      {tab === 'week' && (
+        <>
+          <WeekStatus film={film} />
+          <h3 className="center">What do you do this week?</h3>
+          <div className="activity-grid">
+            <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot' })}>
+              <span className="a-icon">🎬</span><strong>Shoot a scene</strong>
+              <span className="small">Record a take</span>
+            </button>
+            <button className="activity a-practice" onClick={() => setFlow({ kind: 'practice' })}>
+              <span className="a-icon">📖</span><strong>Rehearse</strong>
+              <span className="small">Sharper pace and lines</span>
+            </button>
+            <button className="activity a-club" onClick={() => setFlow({ kind: 'club' })}>
+              <span className="a-icon">🍸</span><strong>Club night</strong>
+              <span className="small">Cast bonds</span>
+            </button>
+            <button className="activity a-relax" onClick={() => setFlow({ kind: 'relax' })}>
+              <span className="a-icon">🌴</span><strong>Day off</strong>
+              <span className="small">Rest the cast</span>
+            </button>
+          </div>
+          <p className="small muted center">Every week costs {money(crewWeekCost(film))} in crew.</p>
+        </>
+      )}
+      {tab === 'scenes' && <ScenesStatus film={film} onShoot={(id) => setFlow({ kind: 'shoot', sceneId: id })} />}
+      {tab === 'cast' && <CastStatus film={film} />}
+      {tab === 'log' && (
+        <div className="card">
+          {st.log.length === 0 ? <p className="muted">Nothing yet.</p> : [...st.log].reverse().map((l, i) => <p key={i} className="small"><span className="muted">W{l.week}</span> {l.text}</p>)}
+        </div>
+      )}
+
+      {flow?.kind === 'shoot' && !st.pending && <ShootFlow initialScene={flow.sceneId} onApply={apply} onClose={() => setFlow(null)} />}
+      {flow?.kind === 'practice' && (
+        <Sheet title="Rehearse" kicker={`1 week · ${money(crewWeekCost(film))}`} onClose={() => setFlow(null)}>
+          <p className="small muted">The cast drills one scene: better pace and dialogue when you shoot it. Tiring.</p>
+          <div className="list">
             {film.scenes.map((s, i) => {
-              const take = chosenTake(s);
-              const thumbSet = setById(s.setId ?? (s.id === sceneId ? setId : [...unlockedSets].sort((a, b) => setFit(b, s) - setFit(a, s))[0].id));
+              const pr = st.practice[s.id];
               return (
-                <button key={s.id} className={`scene-thumb ${s.id === sceneId ? 'selected' : ''}`} disabled={!!pending} onClick={() => setSceneId(s.id)}>
-                  <IsoSet set={thumbSet} height={64} />
-                  <span className="thumb-text">
-                    <strong>▶ Scene {String(i + 1).padStart(2, '0')}</strong>
-                    <span className="small">{sceneName(film, s)}</span>
-                    <span className="small muted">{take ? `Take ${take.score} · ${take.version} cut` : (st.shoots[s.id] ?? 0) > 0 ? 'Shot, no take kept' : 'Not shot'}</span>
-                  </span>
+                <button key={s.id} className="list-row" onClick={() => apply(doWeek(p, { kind: 'practice', sceneId: s.id })) && setFlow(null)}>
+                  <span className="scene-num">{i + 1}</span>
+                  <span className="list-main"><strong>{sceneName(film, s)}</strong><span className="small muted">{pr ? `Rehearsed: pace ${pr.pace} · lines ${pr.dialogue}` : 'Not rehearsed'}</span></span>
+                  <span aria-hidden="true">›</span>
                 </button>
               );
             })}
           </div>
-        </aside>
-
-        <section className="stage-wrap">
-          {pending ? (
-            <ShootStage key={pending.versions[0].id} p={p} pending={pending} onPick={(id) => apply(chooseVersion(p, id))} onRetry={() => apply(tryAgain(p))} />
-          ) : (
-            <div className="studio-stage" style={{ backgroundImage: `url(${art('stage-bg')})` }}>
-              <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={400} studio lights={false} actors={stageCast(film, scene)} />
-              <div className="stage-caption">{scene.beats.map((b) => {
-                const name = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
-                return describeBeat(name(b.roleId), b.actionId, b.targetId ? name(b.targetId) : undefined);
-              }).join(' · then ')}</div>
-            </div>
-          )}
-        </section>
-
-        <aside className="card focus-panel">
-          <h3 className="panel-title small-title"><Clapper size={22} /> Directing focus</h3>
-          {METERS.map((m) => (
-            <button key={m} className={`focus-row ${focus === m ? 'on' : ''}`} aria-pressed={focus === m} disabled={!!pending} onClick={() => setFocus(m)}>
-              <span className={`m-icon m-${m}`}>{METER_ICON[m]}</span>
-              <span className="focus-label">{METER_LABEL[m]}{focus === m && <span className="chip">Focus</span>}</span>
-              <span className="focus-value">{prediction.meters[m]}</span>
-              <span className={`bar m-${m}`}><span style={{ width: `${prediction.meters[m]}%` }} /></span>
-            </button>
-          ))}
-          <p className="small muted">Expected with this cast, set and focus.</p>
-          <div className="row wrap factor-chips">
-            {prediction.factors.map((f) => <span key={f.label} className="tag">{f.label} {f.value}</span>)}
+        </Sheet>
+      )}
+      {(flow?.kind === 'club' || flow?.kind === 'relax') && (
+        <Sheet
+          title={flow.kind === 'club' ? 'Club night' : 'Day off'}
+          kicker={`1 week · ${money(crewWeekCost(film))}`}
+          onClose={() => setFlow(null)}
+          footer={<>
+            <button onClick={() => setFlow(null)}>Back</button>
+            <button className="primary" onClick={() => apply(doWeek(p, { kind: flow.kind })) && setFlow(null)}>Spend the week</button>
+          </>}
+        >
+          {flow.kind === 'club'
+            ? <p>The cast goes out together. <strong>Bond rises</strong> (more chemistry on set), and they get <strong>a little tired</strong>.</p>
+            : <p>Everyone rests. <strong>Fatigue drops</strong> and the next shoot gets a fresh boost, but <strong>rehearsed lines fade</strong> a little.</p>}
+          <div className="stat-row">
+            <Stat label="Bond" value={st.bond} />
+            <Stat label="Avg. fatigue" value={`${avgFatigue(film)}%`} tone={avgFatigue(film) > 50 ? 'bad' : undefined} />
           </div>
-          <button className="record" disabled={!!pending} onClick={() => apply(doWeek(p, { kind: 'shoot', sceneId, setId, focus }))}>
-            <span className="rec-dot" /> Record take
-            <span className="rec-cost">1 week · {money(shootWeekCost(film, scene, set))}</span>
-          </button>
-          <button disabled={!!pending} onClick={() => apply(doWeek(p, { kind: 'practice', sceneId }))}>
-            Practice this scene · 1 week ({money(crewWeekCost(film))})
-          </button>
-        </aside>
-      </div>
+        </Sheet>
+      )}
+      {st.pending && (
+        <Sheet wide title={`Scene ${film.scenes.findIndex((s) => s.id === st.pending!.sceneId) + 1}`} kicker="On set">
+          <ShootStage key={st.pending.versions[0].id} p={p} pending={st.pending} onPick={(id) => apply(chooseVersion(p, id))} onRetry={() => apply(tryAgain(p))} />
+        </Sheet>
+      )}
+      {toast.node}
 
-      <div className="card bottom-bar">
-        <div className="cast-strip">
-          <h3 className="panel-title small-title"><People size={22} /> Cast</h3>
-          <div className="cast-cards">
-            {film.roles.map((r) => (
-              <div key={r.id} className={`cast-card ${participants(scene).includes(r.id) ? 'in-scene' : ''}`}>
-                {r.actor && <Face actor={r.actor} size={58} />}
-                <strong>{r.actor?.name.split(' ').map((w, i) => (i ? w : w[0] + '.')).join(' ')}</strong>
-                <span className="small muted">{r.name}</span>
-                <span className="bar fatigue" title={`${st.fatigue[r.id] ?? 0}% tired`}><span style={{ width: `${st.fatigue[r.id] ?? 0}%` }} /></span>
-              </div>
-            ))}
-          </div>
-          <div className="weight"><span>Bond</span><span className="bar m-chemistry"><span style={{ width: `${st.bond}%` }} /></span><span className="muted">{st.bond}</span></div>
-          <Chemistry film={film} />
-        </div>
-        <div className="set-strip">
-          <h3 className="panel-title small-title">▲ Select a set</h3>
-          <div className="set-picks">
-            {sortedSets.map((s) => (
-              <button key={s.id} className={`set-pick ${s.id === setId ? 'selected' : ''}`} disabled={!!pending} onClick={() => setSetId(s.id)} aria-pressed={s.id === setId}>
-                <IsoSet set={s} height={76} />
-                <strong>{s.name}</strong>
-                <span className="small muted">fit {setFit(s, scene)} · {money(s.dayCost)}/day</span>
-                {s.id === setId && <span className="check">✓</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+      <ActionBar>
+        <span className="bar-stat"><span className="kicker">Takes kept</span><strong>{kept}/{film.scenes.length}</strong></span>
+        <button className="primary grow" disabled={blockers.length > 0} onClick={() => confirm('Wrap shooting? The filler is shot in one week, then you move to the edit.') && apply(wrapShooting(p))}>
+          {blockers.length ? blockers[0] : 'Wrap shooting ›'}
+        </button>
+      </ActionBar>
+    </div>
+  );
+}
 
-      <div className="shoot-footer">
-        <div className="card">
-          <h3>Cast activities</h3>
-          <div className="row">
-            <button disabled={!!pending} onClick={() => apply(doWeek(p, { kind: 'club' }))}>🍸 Club meetup · 1 week <span className="muted small">+chemistry</span></button>
-            <button disabled={!!pending} onClick={() => apply(doWeek(p, { kind: 'relax' }))}>🌴 Relax · 1 week <span className="muted small">−fatigue, lines fade</span></button>
-          </div>
-          <p className="small muted">Each week costs {money(crewWeekCost(film))} in crew.</p>
-        </div>
-        <div className="card">
-          <button className="primary wide" disabled={blockers.length > 0} onClick={() => apply(wrapShooting(p))}>Wrap shooting → Edit</button>
-          <p className="small muted">Wrapping shoots the filler in one block (1 week).</p>
-          {blockers.length > 0 && <p className="small bad">{blockers[0]}</p>}
-          {weeksLeft(film) < 0 && <p className="small bad">You are past the deadline: every extra week costs grade points.</p>}
-        </div>
-        <div className="card log">
-          <h3>Log</h3>
-          {[...st.log].reverse().slice(0, 6).map((l, i) => <p key={i} className="small"><span className="muted">W{l.week}</span> {l.text}</p>)}
-        </div>
+const avgFatigue = (film: Film) => {
+  const v = Object.values(film.shooting!.fatigue);
+  return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0;
+};
+
+function WeekStatus({ film }: { film: Film }) {
+  const st = film.shooting!;
+  const kept = film.scenes.filter((s) => s.chosenTakeId).length;
+  const fat = avgFatigue(film);
+  return (
+    <div className="card week-status">
+      <Calendar film={film} />
+      <div className="stat-row">
+        <Stat label="Takes kept" value={`${kept}/${film.scenes.length}`} tone={kept === film.scenes.length ? 'good' : undefined} />
+        <Stat label="Cast fatigue" value={`${fat}%`} tone={fat > 50 ? 'bad' : undefined} />
+        <Stat label="Bond" value={st.bond} />
+        {st.fresh > 0 && <Stat label="Rested" value="✓" tone="good" />}
       </div>
     </div>
+  );
+}
+
+function ScenesStatus({ film, onShoot }: { film: Film; onShoot: (id: string) => void }) {
+  const st = film.shooting!;
+  return (
+    <div className="list">
+      {film.scenes.map((s, i) => {
+        const take = chosenTake(s);
+        return (
+          <button key={s.id} className={`list-row scene-row t-border-${s.tone}`} onClick={() => onShoot(s.id)}>
+            <span className="scene-num">{i + 1}</span>
+            <span className="list-main">
+              <strong>{sceneName(film, s)}</strong>
+              <span className="small muted">{take ? `Kept: ${take.version} cut` : (st.shoots[s.id] ?? 0) > 0 ? 'Shot, no take kept' : 'Not shot'}{s.setId && ` · ${setById(s.setId).name}`}</span>
+            </span>
+            {take ? <span className="score-badge">{take.score}</span> : <span className="chip-cta">Shoot ›</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CastStatus({ film }: { film: Film }) {
+  const st = film.shooting!;
+  return (
+    <>
+      <div className="list">
+        {film.roles.map((r) => (
+          <div key={r.id} className="list-row static">
+            {r.actor && <Face actor={r.actor} size={44} />}
+            <span className="list-main">
+              <strong>{r.actor?.name}</strong>
+              <span className="small muted">{r.name}</span>
+            </span>
+            <span className="list-side fatigue-side">
+              <span className="small muted">Fatigue {st.fatigue[r.id] ?? 0}%</span>
+              <span className="bar fatigue"><span style={{ width: `${st.fatigue[r.id] ?? 0}%` }} /></span>
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="card">
+        <div className="weight"><span>Bond</span><span className="bar m-chemistry"><span style={{ width: `${st.bond}%` }} /></span><span className="muted">{st.bond}</span></div>
+        <Chemistry film={film} />
+      </div>
+    </>
+  );
+}
+
+/** Shoot: pick a scene, then set + focus (with the forecast), then record. */
+function ShootFlow({ initialScene, onApply, onClose }: { initialScene?: string; onApply: (r: ShootResult) => boolean; onClose: () => void }) {
+  const p = useProfile();
+  const film = p.activeFilm!;
+  const level = p.directors[film.directorId]?.level ?? 1;
+  const [sceneId, setSceneId] = useState<string | undefined>(initialScene);
+  const scene = film.scenes.find((s) => s.id === sceneId);
+  const unlockedSets = SETS.filter((s) => p.unlocks.sets.includes(s.id));
+  const sortedSets = useMemo(() => (scene ? [...unlockedSets].sort((a, b) => setFit(b, scene) - setFit(a, scene)) : unlockedSets), [scene, unlockedSets]);
+  const [setId, setSetId] = useState<string | undefined>(scene?.setId);
+  const [focus, setFocus] = useState<Meter>('pace');
+  useEffect(() => setSetId(scene?.setId ?? sortedSets[0]?.id), [sceneId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!scene) {
+    return (
+      <Sheet title="Shoot a scene" kicker="Step 1 of 2 · pick a scene" onClose={onClose}>
+        <ScenesStatus film={film} onShoot={setSceneId} />
+      </Sheet>
+    );
+  }
+  const set = setById(setId ?? sortedSets[0].id);
+  const prediction = predictMeters(film, scene, set, focus, level);
+  return (
+    <Sheet
+      wide
+      title={`Scene ${film.scenes.indexOf(scene) + 1}`}
+      kicker="Step 2 of 2 · set & focus"
+      onClose={initialScene ? onClose : () => setSceneId(undefined)}
+      footer={<>
+        <button onClick={initialScene ? onClose : () => setSceneId(undefined)}>Back</button>
+        <button className="record grow" onClick={() => onApply(doWeek(p, { kind: 'shoot', sceneId: scene.id, setId: set.id, focus })) && onClose()}>
+          <span className="rec-dot" /> Record · {money(shootWeekCost(film, scene, set))}
+        </button>
+      </>}
+    >
+      <div className="studio-stage compact" style={{ backgroundImage: `url(${art('stage-bg')})` }}>
+        <IsoSet set={set} extras={Math.min(set.extrasCapacity, 10)} height={210} studio lights={false} actors={stageCast(film, scene)} />
+        <div className="stage-caption">{scene.beats.map((b) => {
+          const name = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
+          return describeBeat(name(b.roleId), b.actionId, b.targetId ? name(b.targetId) : undefined);
+        }).join(' · then ')}</div>
+      </div>
+      <div className="section-label">Set</div>
+      <div className="set-picks scroll-x">
+        {sortedSets.map((s) => (
+          <button key={s.id} className={`set-pick ${s.id === set.id ? 'selected' : ''}`} onClick={() => setSetId(s.id)} aria-pressed={s.id === set.id}>
+            <IsoSet set={s} height={60} />
+            <strong className="small">{s.name}</strong>
+            <span className={`small ${setFit(s, scene) >= 70 ? 'good' : 'muted'}`}>fit {setFit(s, scene)}</span>
+          </button>
+        ))}
+      </div>
+      <div className="section-label">Direct for · expected result</div>
+      <div className="focus-list">
+        {METERS.map((m) => (
+          <button key={m} className={`focus-row ${focus === m ? 'on' : ''}`} aria-pressed={focus === m} onClick={() => setFocus(m)}>
+            <span className={`m-icon m-${m}`}>{METER_ICON[m]}</span>
+            <span className="focus-label">{METER_LABEL[m]}</span>
+            <span className={`bar m-${m}`}><span style={{ width: `${prediction.meters[m]}%` }} /></span>
+            <span className="focus-value">{prediction.meters[m]}</span>
+          </button>
+        ))}
+      </div>
+      <details className="fold">
+        <summary className="small">Why these numbers?</summary>
+        <div className="row wrap factor-chips">{prediction.factors.map((f) => <span key={f.label} className="tag">{f.label} {f.value}</span>)}</div>
+      </details>
+    </Sheet>
   );
 }
 
@@ -186,11 +302,11 @@ export function Calendar({ film }: { film: Film }) {
   const used = weeksUsed(film);
   const total = Math.max(film.contract.deadlineWeeks, used);
   return (
-    <div className="card calendar">
+    <div className="calendar">
       <div className="row between wrap">
         <strong>Week {used} of {film.contract.deadlineWeeks}</strong>
-        <span className="small">{weeksLeft(film) >= 0 ? `${weeksLeft(film)} weeks left for shooting and editing` : <span className="bad">{-weeksLeft(film)} weeks late</span>}</span>
-        <span className="small">Budget left <strong className={budgetLeftShooting(film) < 0 ? 'bad' : ''}>{money(budgetLeftShooting(film))}</strong></span>
+        <span className="small">{weeksLeft(film) >= 0 ? `${weeksLeft(film)} left (shoot + edit)` : <span className="bad">{-weeksLeft(film)} weeks late</span>}</span>
+        <span className="small">Budget <strong className={budgetLeftShooting(film) < 0 ? 'bad' : ''}>{money(budgetLeftShooting(film))}</strong></span>
       </div>
       <div className="weeks">
         {Array.from({ length: total }, (_, i) => (
@@ -251,7 +367,7 @@ function ShootStage({ p, pending, onPick, onRetry }: { p: Profile; pending: Pend
         <span className="kicker light">Scene {film.scenes.indexOf(scene) + 1} · {set.name} · focus {METER_LABEL[pending.focus]}</span>
         {!done && <button className="ghost-dark" onClick={() => setTime(1)}>Skip ▶▶</button>}
       </div>
-      <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={400} studio lights={false} actors={cast} acting={acting} bubbles={live} />
+      <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={300} studio lights={false} actors={cast} acting={acting} bubbles={live} />
       <div className="live-meters">
         {METERS.map((m) => (
           <div key={m} className="weight live">
