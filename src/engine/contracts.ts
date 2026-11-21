@@ -1,8 +1,8 @@
 // Contract (studio brief) generation.
-// Contracts are generated from genre × runtime × budget tier × archetype and
-// scale with the player's reputation tier.
+// Contracts are generated from genre × runtime × budget tier × archetype. The career level
+// (1–10) picks the studio tier and the budget tier: higher up, bigger studios and budgets.
 
-import type { Archetype, BonusGoal, Contract, GenreId, HardRequirement } from './types';
+import type { Archetype, BonusGoal, Contract, GenreId, Grade, HardRequirement } from './types';
 import type { Rng } from './rng';
 import { makeId } from './rng';
 import { TUNING } from './tuning';
@@ -11,7 +11,6 @@ import { actionById, GENRE_SIGNATURE_ACTIONS } from './data/actions';
 import { GENRE_TONE } from './data/tones';
 import { STUDIOS } from './data/studios';
 import { TOPICS } from './data/topics';
-import { reputationTier } from './progression';
 import { workingTitle } from './titles';
 
 export const ARCHETYPE_NAMES: Record<Archetype, string> = {
@@ -22,15 +21,23 @@ export const ARCHETYPE_NAMES: Record<Archetype, string> = {
   tightship: 'Tight ship',
 };
 
-function pickBudgetTier(rng: Rng, archetype: Archetype, maxTier: number): number {
+function pickBudgetTier(rng: Rng, archetype: Archetype, levelTier: number): number {
   switch (archetype) {
     case 'indie':
-      return 0;
+      return Math.max(0, levelTier - 2);
     case 'blockbuster':
-      return Math.max(0, maxTier - rng.int(0, 1));
+      return levelTier;
     default:
-      return rng.int(0, maxTier);
+      return Math.max(0, levelTier - rng.int(0, 1));
   }
+}
+
+const clampLevel = (level: number) => Math.max(1, Math.min(TUNING.ladder.maxLevel, Math.round(level)));
+
+/** Director's fee at a C for a brief of this level and difficulty, $K. */
+export function feeFor(level: number, difficulty: number): number {
+  const T = TUNING.contracts;
+  return Math.round(((T.feeBase + T.feePerLevel * level) * (1 + T.feePerDifficulty * (difficulty - 1))) / 5) * 5;
 }
 
 function pickRuntime(rng: Rng, archetype: Archetype): number {
@@ -46,20 +53,24 @@ export interface GenerateOptions {
   /** Force fields (useful for tests and scripted tutorials). */
   archetype?: Archetype;
   genre?: GenreId;
+  /** Genres the board may offer (default: all). */
+  genres?: GenreId[];
 }
 
-export function generateContract(rng: Rng, repTier: number, opts: GenerateOptions = {}): Contract {
+export function generateContract(rng: Rng, levelArg: number, opts: GenerateOptions = {}): Contract {
   const T = TUNING.contracts;
+  const level = clampLevel(levelArg);
+  const studioTier = TUNING.ladder.studioTier[level - 1];
 
-  const studios = STUDIOS.filter((s) => s.tier <= repTier);
-  const studio = rng.pick(studios.length ? studios : STUDIOS.filter((s) => s.tier === 1));
+  const studios = STUDIOS.filter((s) => s.tier === studioTier);
+  const studio = rng.pick(studios.length ? studios : STUDIOS.filter((s) => s.tier <= studioTier));
   const archetype = opts.archetype ?? rng.pick(TUNING.generatorArchetypes);
-  const genre = opts.genre ?? rng.pick(GENRE_IDS);
-  const secondaryCandidates = GENRE_IDS.filter((g) => g !== genre && genreCloseness(genre, g) > 0);
-  const secondaryGenre = rng.chance(0.3) ? rng.pick(secondaryCandidates) : undefined;
+  const open = opts.genres?.length ? GENRE_IDS.filter((g) => opts.genres!.includes(g)) : GENRE_IDS;
+  const genre = opts.genre ?? rng.pick(open);
+  const secondaryCandidates = open.filter((g) => g !== genre && genreCloseness(genre, g) > 0);
+  const secondaryGenre = secondaryCandidates.length && rng.chance(0.3) ? rng.pick(secondaryCandidates) : undefined;
 
-  const maxBudgetTier = T.studioMaxBudgetTier[studio.tier - 1];
-  const budgetTier = pickBudgetTier(rng, archetype, maxBudgetTier);
+  const budgetTier = pickBudgetTier(rng, archetype, TUNING.ladder.budgetTier[level - 1]);
   const budget = roundTo(T.budgetTiers[budgetTier] * (0.8 + rng.next() * 0.4), 500);
 
   const runtime = pickRuntime(rng, archetype);
@@ -107,11 +118,7 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
   if (tightness < 0.95) difficulty += 0.8;
   difficulty = Math.max(1, Math.min(5, Math.round(difficulty)));
 
-  const mult = (1 + (difficulty - 1) * 0.5) * (1 + (studio.tier - 1) * 0.3);
-  const rewards = {
-    reputation: Math.round(T.rewardBase.reputation * mult),
-    credits: Math.round(T.rewardBase.credits * mult),
-  };
+  const rewards = { fee: feeFor(level, difficulty) };
 
   return {
     id: makeId('con', rng),
@@ -132,21 +139,38 @@ export function generateContract(rng: Rng, repTier: number, opts: GenerateOption
     boxOfficeTarget,
     marketing: roundTo(budget * TUNING.marketing.shareOfBudget, 100),
     difficulty,
+    level,
     rewards,
   };
 }
 
-/** Fill the contract board for a profile. Returns a new board. */
-export function generateBoard(rng: Rng, profile: { reputation: number }): Contract[] {
-  const tier = reputationTier(profile.reputation);
+export interface BoardOptions {
+  level: number;
+  lastGrade?: Grade;
+  genres?: GenreId[];
+}
+
+/**
+ * The board for a career: two briefs at your level, then a safe one a level down — or a
+ * stretch a level up after an A — and a locked teaser of what climbing opens up.
+ */
+export function generateBoard(rng: Rng, o: BoardOptions): Contract[] {
+  const L = TUNING.ladder;
+  const level = clampLevel(o.level);
   const board: Contract[] = [];
   const usedGenres = new Set<GenreId>();
-  for (let i = 0; i < TUNING.contracts.boardSize; i++) {
+  const add = (lvl: number, tag: Contract['tag'], locked = false) => {
     // Prefer variety in genre across the board.
-    let c = generateContract(rng, tier);
-    for (let tries = 0; tries < 5 && usedGenres.has(c.genre); tries++) c = generateContract(rng, tier);
+    let c = generateContract(rng, lvl, { genres: o.genres });
+    for (let tries = 0; tries < 5 && usedGenres.has(c.genre); tries++) c = generateContract(rng, lvl, { genres: o.genres });
     usedGenres.add(c.genre);
-    board.push(c);
-  }
+    board.push(locked ? { ...c, tag, locked } : { ...c, tag });
+  };
+  add(level, 'match');
+  add(level, 'match');
+  if (o.lastGrade === 'A' && level < L.maxLevel) add(level + 1, 'stretch');
+  else if (level > 1) add(level - 1, 'safe');
+  else add(level, 'match');
+  if (level + L.teaserAhead <= L.maxLevel) add(level + L.teaserAhead, 'teaser', true);
   return board;
 }

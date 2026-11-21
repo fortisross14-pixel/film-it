@@ -9,7 +9,9 @@ import { audienceScore, criticsScore, money } from '../../engine/format';
 import { deliverFilm, runPremiere } from '../../engine/premiere';
 import { effectiveBoxOfficeTarget } from '../../engine/marketing';
 import { TUNING } from '../../engine/tuning';
-import type { Grade, GradeComponent } from '../../engine/types';
+import type { Film, Grade, GradeComponent } from '../../engine/types';
+import { levelAfter } from '../../engine/career';
+import { genreName } from '../../engine/data/genres';
 
 const STAGES = ['Red carpet', 'Audience', 'Critics', 'Box office', 'Awards', 'Studio verdict'];
 const COMPONENT_LABEL: Record<GradeComponent, string> = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' };
@@ -171,18 +173,16 @@ export function PremiereScreen() {
                     </div>
                   </>
                 )}
-                <p>
-                  Rewards: <strong>+{rep.rewards.reputation + rep.rewards.awardRep}</strong> reputation · <strong>+{rep.rewards.credits + rep.rewards.unspentCredits}</strong> credits
-                  {rep.rewards.unspentCredits > 0 && <span className="muted"> ({rep.rewards.unspentCredits} from unspent budget)</span>}
-                </p>
-                {p.career && film.grade === 'F' && p.career.fStreak + 1 >= TUNING.career.firedAfterFs && <p className="bad">Another F: the studios will fire you.</p>}
+                <VerdictRewards film={film} />
                 <button className="primary" onClick={() => {
                   const res = deliverFilm(p);
                   if (!res.ok) return setMsg(res.reason);
-                  if (res.fired) alert(`${directorById(film.directorId).name} was fired after too many flops. The career is over: start a new one from the Studio.`);
+                  const o = res.outcome;
+                  if (o?.genresOpened.length) alert(`New genre${o.genresOpened.length > 1 ? 's' : ''} for every career: ${o.genresOpened.map(genreName).join(', ')}.`);
+                  if (o?.wrapped) alert(`${directorById(film.directorId).name} made ${TUNING.ladder.maxFilms} films: the career is complete and goes to the Hall of fame.`);
                   update(() => res.profile);
                 }}>
-                  Collect rewards ›
+                  {film.grade === 'F' ? 'End the career ›' : 'Collect rewards ›'}
                 </button>
                 {msg && <p className="bad">{msg}</p>}
               </div>
@@ -197,6 +197,28 @@ export function PremiereScreen() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/** What this grade brings: money, a talent pack, a step on the ladder (or the end of the career). */
+function VerdictRewards({ film }: { film: Film }) {
+  const p = useProfile();
+  const rep = film.report!;
+  const c = p.career;
+  const pack = rep.rewards.pack;
+  if (film.grade === 'F') {
+    return <p className="bad">An F: no fee, and the studios are done with {directorById(film.directorId).name}. This career ends here{c ? ` after ${c.films + 1} film${c.films ? 's' : ''}` : ''}.</p>;
+  }
+  const from = c?.level ?? 1;
+  const to = levelAfter(from, film.grade!);
+  const last = c && c.films + 1 >= TUNING.ladder.maxFilms;
+  return (
+    <div className="reward-row">
+      <span><strong>+{money(rep.rewards.fee + rep.rewards.awardBonus)}</strong>{rep.rewards.awardBonus > 0 && <span className="muted"> (incl. {money(rep.rewards.awardBonus)} award bonus)</span>}</span>
+      {pack && <span>🎁 {TUNING.talentPacks[pack].name}</span>}
+      {c && <span>{to > from ? `Level ${from} → ${to} ▲` : to < from ? `Level ${from} → ${to} ▼` : `Stays at level ${from}`}</span>}
+      {last && <span>Film {TUNING.ladder.maxFilms} of {TUNING.ladder.maxFilms}: career complete</span>}
     </div>
   );
 }

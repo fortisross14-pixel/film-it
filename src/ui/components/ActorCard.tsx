@@ -10,7 +10,7 @@ const TRAIT_TEXT = {
   oneTake: 'One-take: fewer retakes',
 } as const;
 
-const RARITY_LABEL = { common: 'Common', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' } as const;
+export const RARITY_LABEL = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' } as const;
 
 export function ActorCard({
   actor, needs, fit, pay, onCast, compact, budgetLeft, budgetAfter, directorId,

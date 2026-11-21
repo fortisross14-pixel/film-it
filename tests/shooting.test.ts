@@ -16,6 +16,7 @@ const okP = (r: CastResult | ShootResult): Profile => { if (!r.ok) throw new Err
 /** Thriller with 3 scenes, cast and signed. Scene 1 thrill chase, 2 romantic, 3 thrill showdown. */
 function shootingProfile(genre: 'thriller' | 'romance' = 'thriller'): Profile {
   const p = newProfile('T', 33);
+  p.unlocks.sets.push('cityStreet');
   const c = { ...generateContract(createRng(2), 1, { archetype: 'crowd', genre }), budget: 25000, rating: 'PG-13' as const, secondaryGenre: undefined };
   p.contractBoard = [c];
   const r = startFilm(p, c.id, 'starterB');

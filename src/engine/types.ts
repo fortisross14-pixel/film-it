@@ -57,7 +57,11 @@ export type SceneDuration = 'short' | 'medium' | 'long';
 export type Skill = 'action' | 'comedy' | 'drama' | 'romance' | 'menace';
 export type SkillMap = Record<Skill, number>;
 
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+/** Named (famous) actors are always epic or legendary; everyone else is common, uncommon or rare. */
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+
+/** Talent packs add new actors to your roster. */
+export type TalentPackId = 'casting' | 'star';
 
 export type AgeBracket = 'young' | 'adult' | 'veteran';
 
@@ -110,7 +114,7 @@ export interface TopicPack {
   id: string;
   name: string;
   topicIds: string[];
-  cost: number; // credits
+  cost: number; // $K of studio money
 }
 
 /** How a set looks as a low-poly isometric diorama. */
@@ -133,7 +137,7 @@ export interface FilmSet {
   actionFit?: Record<string, number>;
   dayCost: number; // $K per shooting day
   /** How the set is unlocked. */
-  unlock: { kind: 'start' } | { kind: 'topic'; topicId: string } | { kind: 'credits'; cost: number };
+  unlock: { kind: 'start' } | { kind: 'topic'; topicId: string } | { kind: 'buy'; cost: number };
 }
 
 export interface DirectorDef {
@@ -145,7 +149,7 @@ export interface DirectorDef {
   masterGenre?: GenreId;
   unlock:
     | { kind: 'start' }
-    | { kind: 'credits'; cost: number };
+    | { kind: 'buy'; cost: number };
   blurb: string;
 }
 
@@ -214,7 +218,14 @@ export interface Contract {
   /** Set when this brief is a sequel to one of your hits. */
   sequelOf?: { filmId: string; franchise: string; number: number; topicId?: string; leadActorId?: string };
   difficulty: number; // 1–5 stars
-  rewards: { reputation: number; credits: number };
+  /** Career level this brief belongs to (1–10). Bigger studios and budgets higher up. */
+  level: number;
+  /** Where it sits on the board: at your level, a safe step down, a stretch up, or a locked teaser. */
+  tag?: 'match' | 'safe' | 'stretch' | 'teaser';
+  /** Teasers show what a good grade opens up; they can't be accepted. */
+  locked?: boolean;
+  /** Director's fee at a C, $K. Scaled by the grade. */
+  rewards: { fee: number };
 }
 
 // ---------- Film in production ----------
@@ -395,7 +406,8 @@ export interface GradeReport {
   letterBeforeCaps: Grade;
   missedReqs: string[];
   grade: Grade;
-  rewards: { reputation: number; credits: number; unspentCredits: number; awardRep: number };
+  /** Money for the studio ($K) and a talent pack for a good grade. */
+  rewards: { fee: number; awardBonus: number; pack?: TalentPackId };
 }
 
 export type Grade = 'A' | 'B' | 'C' | 'D' | 'F';
@@ -449,26 +461,29 @@ export interface FilmRecord {
 }
 
 /**
- * A career: one run with a director profile. Reputation (which opens higher-tier studios)
- * and the director's level grow within the career; credits earned go to the global bank.
+ * A career: one run with a director profile, up to 10 films. The level (1–10) climbs with good
+ * grades and sets which studios and budgets the board offers. One F ends the career.
  */
 export interface Career {
   id: string;
   directorId: string;
   startedAt: number;
   endedAt?: number;
-  status: 'active' | 'retired' | 'fired';
-  reputation: number;
+  /** wrapped = all 10 films made; fired = an F; retired = stopped early. */
+  status: 'active' | 'wrapped' | 'retired' | 'fired';
   level: number;
+  /** Highest level reached. */
+  topLevel: number;
   films: number;
-  /** Credits this career has paid into the bank. */
+  /** Money this career has earned for the studio, $K. */
   earnings: number;
-  /** Consecutive F grades (fired at the limit). */
-  fStreak: number;
   grades: Grade[];
+  lastGrade?: Grade;
   nominations: number;
   wins: number;
   boxOffice: number;
+  /** Talent packs this career has earned. */
+  packsEarned: number;
 }
 
 /** A career on hold: everything that belongs to it while another career (or the studio) is open. */
@@ -483,8 +498,8 @@ export interface Profile {
   name: string;
   createdAt: number;
   seed: number; // advances as content is generated
-  /** The bank: credits earned across all careers. Buys profiles, topic packs and sets. */
-  credits: number;
+  /** Studio money, $K: every career's fees go here; it buys directors, sets, topics and talent packs. */
+  money: number;
   /** The career being played (loaded), if any. */
   career?: Career;
   /** Other careers on hold, each with its own board and film in production (up to 3 careers in all). */
@@ -496,9 +511,14 @@ export interface Profile {
     topics: string[];
     packs: string[];
     sets: string[];
+    /** Genres the boards offer. More open as careers climb. */
+    genres: GenreId[];
   };
+  /** Unopened talent packs. */
+  talentPacks: Record<TalentPackId, number>;
   /** Lifetime stats per director profile. */
   directors: Record<string, DirectorState>;
+  /** Your roster: every actor you can cast. Starts with commons and uncommons; talent packs add more. */
   actorPool: Actor[];
   contractBoard: Contract[];
   activeFilm?: Film;

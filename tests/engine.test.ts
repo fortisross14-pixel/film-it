@@ -1,9 +1,10 @@
 import { createRng } from '../src/engine/rng';
 import { generateBoard, generateContract } from '../src/engine/contracts';
 import { newProfile, refreshBoard, startFilm } from '../src/engine/profile';
-import { buyDirector, buySet, buyTopicPack, reputationTier, unlockProgress } from '../src/engine/progression';
+import { bestLevel, buyDirector, buySet, buyTalentPack, buyTopicPack, collection, grantTalentPack, openTalentPack, packForSale, unlockGenresForLevel, unlockProgress } from '../src/engine/progression';
+import { FAMOUS, famousRarity, generateStar } from '../src/engine/data/actors';
 import { startCareer } from '../src/engine/career';
-import { deleteSlot, listSlots, loadProfile, loadSlot, saveProfile, type KeyValueStore } from '../src/engine/save';
+import { SAVE_KEY, eraseSave, load, loadProfile, saveProfile, type KeyValueStore } from '../src/engine/save';
 import { TUNING } from '../src/engine/tuning';
 import { ACTIONS, BASE_ACTIONS, GENRE_SIGNATURE_ACTIONS } from '../src/engine/data/actions';
 import { GENRE_PROFILE } from '../src/engine/data/tones';
@@ -22,7 +23,7 @@ describe('content', () => {
   it('meets MVP content counts', () => {
     expect(DIRECTORS.filter((d) => d.unlock.kind === 'start')).toHaveLength(2);
     expect(TOPIC_PACKS.find((p) => p.id === 'starter')!.topicIds).toHaveLength(4);
-    expect(SETS.filter((s) => s.unlock.kind === 'start')).toHaveLength(8);
+    expect(SETS.filter((s) => s.unlock.kind === 'start')).toHaveLength(3);
     expect(BASE_ACTIONS.length).toBeGreaterThanOrEqual(20);
     expect(Object.keys(GENRE_PROFILE)).toHaveLength(8);
   });
@@ -94,7 +95,23 @@ describe('contracts', () => {
   });
 
   it('fills the board', () => {
-    expect(generateBoard(createRng(3), { reputation: 0 })).toHaveLength(TUNING.contracts.boardSize);
+    expect(generateBoard(createRng(3), { level: 1 })).toHaveLength(4);
+    expect(generateBoard(createRng(3), { level: 10 })).toHaveLength(3); // no teaser above the top
+  });
+
+  it('scales studios, budgets and fees with the level, in the open genres only', () => {
+    for (let level = 1; level <= 10; level++) {
+      const board = generateBoard(createRng(level), { level, genres: ['drama', 'comedy'] });
+      for (const c of board.filter((x) => !x.locked && x.tag === 'match')) {
+        expect(c.level).toBe(level);
+        expect(c.studio.tier).toBe(TUNING.ladder.studioTier[level - 1]);
+        expect(c.budget).toBeLessThanOrEqual(TUNING.contracts.budgetTiers[TUNING.ladder.budgetTier[level - 1]] * 1.2);
+        expect(['drama', 'comedy']).toContain(c.genre);
+      }
+    }
+    const lo = generateContract(createRng(1), 1, { archetype: 'crowd' });
+    const hi = generateContract(createRng(1), 10, { archetype: 'crowd' });
+    expect(hi.rewards.fee).toBeGreaterThan(lo.rewards.fee);
   });
 
   it('formats requirements', () => {
@@ -119,8 +136,13 @@ describe('profile & film start', () => {
     const p = newProfile('Test', 123);
     expect(p.unlocks.directors).toEqual(['starterA', 'starterB']);
     expect(p.unlocks.topics).toHaveLength(4);
-    expect(p.unlocks.sets).toHaveLength(8);
-    expect(p.actorPool).toHaveLength(TUNING.actors.poolSize);
+    expect(p.unlocks.sets).toEqual(['apartment', 'park', 'warehouse']);
+    expect(p.unlocks.genres).toEqual(TUNING.genres.start);
+    expect(p.money).toBe(TUNING.startingMoney);
+    expect(p.talentPacks).toEqual({ casting: 0, star: 0 });
+    // Commons and uncommons only, no named stars.
+    expect(p.actorPool).toHaveLength(26);
+    expect(p.actorPool.every((a) => (a.rarity === 'common' || a.rarity === 'uncommon') && !a.famous)).toBe(true);
     expect(p.career).toBeUndefined();
     expect(p.contractBoard).toHaveLength(0);
     expect(new Set(p.actorPool.map((a) => a.id)).size).toBe(p.actorPool.length);
@@ -155,47 +177,106 @@ describe('profile & film start', () => {
   it('refreshes the board', () => {
     const p = careerProfile();
     const q = refreshBoard(p);
-    expect(q.contractBoard).toHaveLength(TUNING.contracts.boardSize);
+    expect(q.contractBoard).toHaveLength(4);
     expect(q.contractBoard[0].id).not.toBe(p.contractBoard[0].id);
   });
 });
 
 describe('progression', () => {
-  it('computes tiers', () => {
-    expect(reputationTier(0)).toBe(1);
-    expect(reputationTier(TUNING.reputationTiers[1])).toBe(2);
-    expect(reputationTier(99999)).toBe(TUNING.reputationTiers.length);
-  });
-
-  it('buys director profiles with credits', () => {
-    const p = { ...newProfile('T', 1), credits: 1000 };
+  it('buys director profiles with studio money', () => {
+    const p = { ...newProfile('T', 1), money: 1000 };
     const r = buyDirector(p, 'masterScifi');
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.profile.unlocks.directors).toContain('masterScifi');
-    expect(r.profile.credits).toBe(400);
+    expect(r.profile.money).toBe(400);
     expect(buyDirector(r.profile, 'masterScifi').ok).toBe(false);
-    expect(buyDirector({ ...p, credits: 10 }, 'budgetMaster').ok).toBe(false);
+    expect(buyDirector({ ...p, money: 10 }, 'budgetMaster')).toMatchObject({ ok: false, reason: expect.stringMatching(/more/) });
   });
 
   it('buys topic packs and their sets', () => {
-    const p = { ...newProfile('T', 1), credits: 1000 };
+    const p = { ...newProfile('T', 1), money: 1000 };
     const r = buyTopicPack(p, 'future');
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.profile.unlocks.topics).toContain('spaceTravel');
     expect(r.profile.unlocks.sets).toContain('spaceshipBridge');
-    expect(r.profile.credits).toBe(700);
+    expect(r.profile.money).toBe(700);
     expect(buyTopicPack(r.profile, 'future').ok).toBe(false);
-    expect(buyTopicPack({ ...p, credits: 0 }, 'epic').ok).toBe(false);
+    expect(buyTopicPack({ ...p, money: 0 }, 'epic').ok).toBe(false);
   });
 
-  it('buys sets with credits only', () => {
-    const p = { ...newProfile('T', 1), credits: 1000 };
-    expect(buySet(p, 'rooftop').ok).toBe(true);
+  it('buys sets', () => {
+    const p = { ...newProfile('T', 1), money: 1000 };
+    expect(buySet(p, 'cityStreet').ok).toBe(true);
     expect(buySet(p, 'forest').ok).toBe(true);
     expect(buySet(p, 'apartment').ok).toBe(false); // already owned
-    expect(buySet({ ...p, credits: 0 }, 'forest').ok).toBe(false);
+    expect(buySet(p, 'colosseum').ok).toBe(false); // comes with its topic pack
+    expect(buySet({ ...p, money: 0 }, 'forest').ok).toBe(false);
+  });
+
+  it('opens genres for good as careers climb', () => {
+    const p = newProfile('T', 1);
+    expect(unlockGenresForLevel(p, 2).opened).toEqual([]);
+    const r = unlockGenresForLevel(p, 5);
+    expect(r.opened.sort()).toEqual(['horror', 'scifi']);
+    expect(unlockGenresForLevel(r.profile, 5).opened).toEqual([]);
+  });
+
+  it('named stars are always epic or legendary', () => {
+    expect(FAMOUS.every((f) => ['epic', 'legendary'].includes(famousRarity(f.name)!))).toBe(true);
+    expect(FAMOUS.filter((f) => famousRarity(f.name) === 'legendary')).toHaveLength(TUNING.actors.legendaryFamous);
+  });
+
+  it('sells and opens talent packs', () => {
+    let p = { ...newProfile('T', 1), money: 1000 };
+    expect(packForSale(p, 'casting')).toBe(true);
+    expect(packForSale(p, 'star')).toBe(false); // needs a career at level 5
+    expect(buyTalentPack(p, 'star').ok).toBe(false);
+    const r = buyTalentPack(p, 'casting');
+    if (!r.ok) throw new Error(r.reason);
+    p = r.profile;
+    expect(p.money).toBe(1000 - TUNING.talentPacks.casting.price);
+    expect(p.talentPacks.casting).toBe(1);
+    const o = openTalentPack(p, 'casting');
+    if (!o.ok) throw new Error(o.reason);
+    expect(o.cards).toHaveLength(3);
+    expect(o.cards.every((c) => ['rare', 'epic', 'legendary'].includes(c.actor.rarity))).toBe(true);
+    expect(o.cards.every((c) => !!c.actor.famous === (c.actor.rarity !== 'rare'))).toBe(true);
+    expect(o.profile.actorPool).toHaveLength(p.actorPool.length + o.cards.filter((c) => !c.duplicate).length);
+    expect(o.profile.talentPacks.casting).toBe(0);
+    expect(openTalentPack(o.profile, 'casting').ok).toBe(false);
+    expect(new Set(o.profile.actorPool.map((a) => a.portrait)).size).toBe(o.profile.actorPool.length);
+  });
+
+  it('a star pack always holds an epic or better; duplicates boost the star you have', () => {
+    let p = newProfile('T', 3);
+    for (let i = 0; i < 40; i++) p = grantTalentPack(p, 'star');
+    for (let i = 0; i < 40; i++) {
+      const o = openTalentPack(p, 'star');
+      if (!o.ok) throw new Error(o.reason);
+      expect(o.cards.some((c) => c.actor.rarity === 'epic' || c.actor.rarity === 'legendary')).toBe(true);
+      p = o.profile;
+    }
+    expect(collection(p).stars[0]).toBeGreaterThan(20);
+    expect(new Set(p.actorPool.map((a) => a.name)).size).toBe(p.actorPool.length);
+    // With every star collected, epic and legendary cards are duplicates that boost yours.
+    const rng = createRng(5);
+    let full = grantTalentPack({ ...p, actorPool: FAMOUS.map((f) => generateStar(rng, f)) }, 'star');
+    const o = openTalentPack(full, 'star');
+    if (!o.ok) throw new Error(o.reason);
+    const dup = o.cards.find((c) => c.duplicate)!;
+    const before = full.actorPool.find((a) => a.name === dup.actor.name)!;
+    expect(dup.actor.starPower).toBe(Math.min(100, before.starPower + TUNING.actors.duplicateStar));
+    expect(o.profile.actorPool.filter((a) => a.famous)).toHaveLength(FAMOUS.length);
+    full = o.profile;
+    expect(collection(full).stars).toEqual([FAMOUS.length, FAMOUS.length]);
+  });
+
+  it('tracks the best level across careers', () => {
+    const p = careerProfile();
+    expect(bestLevel(p)).toBe(1);
+    expect(bestLevel({ ...p, careers: [{ ...p.career!, topLevel: 6 }] })).toBe(6);
   });
 
   it('tracks unlock-everything progress', () => {
@@ -206,19 +287,15 @@ describe('progression', () => {
   });
 });
 
-describe('save slots (save-systems skill checks)', () => {
-  it('saves, lists, loads and deletes', () => {
+describe('the save (save-systems skill checks)', () => {
+  it('saves, loads and erases', () => {
     const store = memoryStore();
-    expect(listSlots(store).every((s) => s.empty)).toBe(true);
-    const p = newProfile('Slot', 2);
-    expect(saveProfile(1, p, store)).toEqual({ ok: true });
-    expect(loadProfile(1, store)).toEqual(p);
-    const slots = listSlots(store);
-    expect(slots).toHaveLength(3);
-    expect(slots[1]).toMatchObject({ empty: false, status: 'ok', name: 'Slot' });
-    deleteSlot(1, store);
-    expect(loadProfile(1, store)).toBeUndefined();
-    expect(() => saveProfile(3, p, store)).toThrow();
+    expect(load(store).status).toBe('empty');
+    const p = newProfile('Me', 2);
+    expect(saveProfile(p, store)).toEqual({ ok: true });
+    expect(loadProfile(store)).toEqual(p);
+    eraseSave(store);
+    expect(load(store).status).toBe('empty');
   });
 
   it('round-trips a career mid-production', () => {
@@ -227,58 +304,78 @@ describe('save slots (save-systems skill checks)', () => {
     if (!r.ok) throw new Error(r.reason);
     const s = startFilm(r.profile, r.profile.contractBoard[0].id);
     if (!s.ok) throw new Error(s.reason);
-    saveProfile(0, s.profile, store);
-    expect(loadProfile(0, store)).toEqual(s.profile);
+    saveProfile(s.profile, store);
+    expect(loadProfile(store)).toEqual(s.profile);
   });
 
   it('flags corrupt saves and falls back to the backup', () => {
     const store = memoryStore();
-    store.setItem('directors-cut:slot:0', '{nope');
-    expect(listSlots(store)[0]).toMatchObject({ status: 'corrupt', corrupt: true });
-    expect(loadProfile(0, store)).toBeUndefined();
+    store.setItem(SAVE_KEY, '{nope');
+    expect(load(store).status).toBe('corrupt');
     // Two good saves: the first becomes the backup; truncating the primary loads the backup.
-    const a = newProfile('A', 1), b = { ...a, credits: 999 };
-    saveProfile(0, a, store);
-    saveProfile(0, b, store);
-    store.setItem('directors-cut:slot:0', '{"version": 5, "na');
-    const r = loadSlot(0, store);
+    const a = newProfile('A', 1), b = { ...a, money: 999 };
+    saveProfile(a, store);
+    saveProfile(b, store);
+    store.setItem(SAVE_KEY, '{"version": 7, "na');
+    const r = load(store);
     expect(r.status).toBe('fromBackup');
-    expect(r.profile?.credits).toBe(a.credits);
+    expect(r.profile?.money).toBe(a.money);
   });
 
-  it('migrates a version-5 save (one career) to side-by-side careers', () => {
+  it('carries over the old 3-slot saves: the one with most films, converted to the ladder', () => {
     const store = memoryStore();
-    const { parked: _parked, ...old } = newProfile('M', 1);
-    store.setItem('directors-cut:slot:0', JSON.stringify({ ...old, version: 5 }));
-    const r = loadSlot(0, store);
-    expect(r.status).toBe('ok');
-    expect(r.profile!.parked).toEqual([]);
-    expect(r.profile!.version).toBe(TUNING.saveVersion);
+    const started = startCareer(newProfile('Old', 1), 'starterA', 1);
+    if (!started.ok) throw new Error(started.reason);
+    const { money: _m, talentPacks: _t, ...cur } = started.profile;
+    const oldCareer = { ...cur.career!, reputation: 300, level: 6, fStreak: 0 };
+    delete (oldCareer as Record<string, unknown>).topLevel;
+    const old = {
+      ...cur, version: 6, credits: 420, career: oldCareer,
+      unlocks: { directors: cur.unlocks.directors, topics: cur.unlocks.topics, packs: cur.unlocks.packs, sets: [...cur.unlocks.sets, 'office', 'diner'] },
+      actorPool: [...cur.actorPool, { ...cur.actorPool[0], id: 'x', name: 'Meryl Streak', rarity: 'rare' }],
+      filmography: [{}, {}],
+    };
+    store.setItem('directors-cut:slot:0', JSON.stringify({ ...old, filmography: [] }));
+    store.setItem('directors-cut:slot:2', JSON.stringify(old));
+    const r = load(store);
+    expect(r.status).toBe('migrated');
+    const p = r.profile!;
+    expect(p.version).toBe(TUNING.saveVersion);
+    expect(p.money).toBe(420);
+    expect((p as unknown as Record<string, unknown>).credits).toBeUndefined();
+    expect(p.career).toMatchObject({ level: 6, topLevel: 6 });
+    expect((p.career as unknown as Record<string, unknown>).reputation).toBeUndefined();
+    expect(p.unlocks.sets).toContain('office');
+    expect(p.unlocks.genres).toEqual(expect.arrayContaining(['horror', 'scifi']));
+    expect(p.unlocks.genres).not.toContain('fantasy');
+    expect(p.contractBoard.every((c) => c.level >= 5 && c.rewards.fee > 0)).toBe(true);
+    expect(p.actorPool.find((a) => a.name === 'Meryl Streak')!.rarity).toBe(famousRarity('Meryl Streak'));
+    // Once saved under the new key, the old slots are no longer read.
+    saveProfile({ ...p, money: 1 }, store);
+    expect(load(store)).toMatchObject({ status: 'ok', profile: { money: 1 } });
   });
 
   it('refuses newer saves and explains older ones', () => {
     const store = memoryStore();
-    store.setItem('directors-cut:slot:0', JSON.stringify({ ...newProfile('N', 1), version: TUNING.saveVersion + 1 }));
-    store.setItem('directors-cut:slot:1', JSON.stringify({ version: 2, name: 'old' }));
-    expect(loadSlot(0, store)).toMatchObject({ status: 'newer' });
-    expect(loadSlot(1, store)).toMatchObject({ status: 'older' });
-    expect(listSlots(store)[1].message).toMatch(/early test build/);
+    store.setItem(SAVE_KEY, JSON.stringify({ ...newProfile('N', 1), version: TUNING.saveVersion + 1 }));
+    expect(load(store)).toMatchObject({ status: 'newer' });
+    store.setItem(SAVE_KEY, JSON.stringify({ version: 2, name: 'old' }));
+    expect(load(store)).toMatchObject({ status: 'older', message: expect.stringMatching(/early test build/) });
   });
 
   it('validates on load and drops ids that no longer exist', () => {
     const store = memoryStore();
     const p = newProfile('V', 1);
-    store.setItem('directors-cut:slot:0', JSON.stringify({ ...p, unlocks: { ...p.unlocks, sets: [...p.unlocks.sets, 'deletedSet'] } }));
-    expect(loadProfile(0, store)!.unlocks.sets).not.toContain('deletedSet');
-    store.setItem('directors-cut:slot:1', JSON.stringify({ ...p, credits: 'lots' }));
-    expect(loadSlot(1, store).status).toBe('corrupt');
+    store.setItem(SAVE_KEY, JSON.stringify({ ...p, unlocks: { ...p.unlocks, sets: [...p.unlocks.sets, 'deletedSet'] } }));
+    expect(loadProfile(store)!.unlocks.sets).not.toContain('deletedSet');
+    store.setItem(SAVE_KEY, JSON.stringify({ ...p, money: 'lots' }));
+    expect(load(store).status).toBe('corrupt');
   });
 
   it('reports a full storage instead of throwing', () => {
     const full: KeyValueStore = { getItem: () => null, setItem: () => { throw Object.assign(new Error('exceeded'), { name: 'QuotaExceededError' }); }, removeItem: () => {} };
-    const r = saveProfile(0, newProfile('F', 1), full);
+    const r = saveProfile(newProfile('F', 1), full);
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.reason).toMatch(/full/);
   });
-
 });

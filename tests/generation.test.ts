@@ -5,7 +5,8 @@ import { newProfile } from '../src/engine/profile';
 import { TUNING } from '../src/engine/tuning';
 import { ACTIONS } from '../src/engine/data/actions';
 import { ratingIndex } from '../src/engine/data/genres';
-import { isHiddenGem } from '../src/engine/data/actors';
+import { FAMOUS, generateStar, isHiddenGem } from '../src/engine/data/actors';
+import { assignPortraits } from '../src/engine/portraits';
 import { castActor, drawCards, releaseRole } from '../src/engine/casting';
 import type { Contract, Film, Profile } from '../src/engine/types';
 import { castProfile } from './helpers';
@@ -104,10 +105,15 @@ describe('card-game: casting zones and odds', () => {
   });
 
   it('draw odds follow the rarity weights for the billing tier', () => {
-    const counts = { lead: { common: 0, rare: 0, epic: 0, legendary: 0 }, minor: { common: 0, rare: 0, epic: 0, legendary: 0 } };
+    const zero = () => ({ common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0 });
+    const counts = { lead: zero(), minor: zero() };
+    // A roster with named stars in it (as after a few talent packs).
+    const base = castProfile('thriller', 10_000_000);
+    const starRng = createRng(77);
+    const roster = assignPortraits([...base.actorPool, ...FAMOUS.slice(0, 8).map((f) => generateStar(starRng, f)), ...FAMOUS.slice(18, 26).map((f) => generateStar(starRng, f))]);
     for (let seed = 0; seed < 300; seed++) {
       for (const [type, bucket] of [['main', 'lead'], ['supporting', 'minor']] as const) {
-        let p = castProfile('thriller', 10_000_000);
+        let p = { ...base, actorPool: roster };
         p = { ...p, seed, activeFilm: { ...p.activeFilm!, phase: 'casting', casting: {}, rejected: [], roles: p.activeFilm!.roles.map((r) => ({ ...r, actor: undefined })) } };
         if (type === 'supporting') p = { ...p, activeFilm: ok(addRole(p.activeFilm!, 'supporting')) };
         const role = p.activeFilm!.roles.find((r) => r.type === type)!;

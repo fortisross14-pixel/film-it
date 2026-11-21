@@ -5,6 +5,7 @@ import { setById } from '../../../engine/data/sets';
 import { actionById } from '../../../engine/data/actions';
 import { buyTopicPack } from '../../../engine/progression';
 import { packArt } from '../../art';
+import { money } from '../../../engine/format';
 
 export function TopicPacksTab() {
   const p = useProfile();
@@ -21,7 +22,7 @@ export function TopicPacksTab() {
               {packArt(pack.id) && <img src={packArt(pack.id)} alt="" className="pack-tile-img" />}
               <div className="row between">
                 <h3>{pack.name}</h3>
-                {owned ? <span className="tag">Owned</span> : <span className="tag">{pack.cost} credits</span>}
+                {owned ? <span className="tag">Owned</span> : <span className="tag">{money(pack.cost)}</span>}
               </div>
               <ul className="reqs">
                 {pack.topicIds.map((id) => {
@@ -42,7 +43,7 @@ export function TopicPacksTab() {
               {!owned && (
                 <button
                   className="primary"
-                  disabled={p.credits < pack.cost}
+                  disabled={p.money < pack.cost}
                   onClick={() => {
                     const r = buyTopicPack(p, pack.id);
                     if (r.ok) {
@@ -51,7 +52,7 @@ export function TopicPacksTab() {
                     } else setMsg(r.reason);
                   }}
                 >
-                  Buy · {pack.cost} credits
+                  Buy · {money(pack.cost)}
                 </button>
               )}
             </div>

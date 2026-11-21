@@ -18,7 +18,7 @@ function report(logs: FilmLog[], label: string) {
   console.log(`box office / target p10/p50/p90 ${q('boRatio', 0.1).toFixed(2)}/${q('boRatio', 0.5).toFixed(2)}/${q('boRatio', 0.9).toFixed(2)}`);
   console.log(`spent / budget p10/p50/p90 ${q('spentRatio', 0.1).toFixed(2)}/${q('spentRatio', 0.5).toFixed(2)}/${q('spentRatio', 0.9).toFixed(2)}  over budget ${pct((l) => l.spentRatio > 1)}  late ${pct((l) => l.weeksLate > 0)}`);
   console.log(`script ${avg('script').toFixed(0)} casting ${avg('casting').toFixed(0)} cut ${avg('cut').toFixed(0)} poster ${avg('poster').toFixed(0)}  missed reqs ${avg('missed').toFixed(2)}`);
-  console.log(`nominated ${pct((l) => l.noms > 0)} won ${pct((l) => l.wins > 0)}  credits/film ${avg('credits').toFixed(0)} rep/film ${avg('rep').toFixed(0)}  sequels ${pct((l) => l.sequel)}`);
+  console.log(`nominated ${pct((l) => l.noms > 0)} won ${pct((l) => l.wins > 0)}  money/film $${avg('money').toFixed(0)}K  level ${avg('level').toFixed(1)}  sequels ${pct((l) => l.sequel)}`);
   const arches = [...new Set(logs.map((l) => l.archetype))];
   for (const a of arches) {
     const L = logs.filter((l) => l.archetype === a);

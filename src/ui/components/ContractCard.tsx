@@ -2,7 +2,8 @@ import type { Contract } from '../../engine/types';
 import { ARCHETYPE_NAMES } from '../../engine/contracts';
 import { genreName } from '../../engine/data/genres';
 import { describeBonus, describeHardReq, money } from '../../engine/format';
-import { Calendar, Clapper, Coins, Ticket, Star } from './Icons';
+import { Calendar, Clapper, Coins, Box } from './Icons';
+import { TUNING } from '../../engine/tuning';
 import { Difficulty } from './ui';
 
 const WEIGHT_LABELS = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' } as const;
@@ -32,9 +33,10 @@ export function ContractDetails({ c }: { c: Contract }) {
       </div>
       <ContractFacts c={c} />
       <div className="reward-row">
-        <span><Ticket size={18} /> {c.rewards.credits} credits</span>
-        <span><Star size={18} /> {c.rewards.reputation} rep</span>
+        <span><Coins size={18} /> Fee {money(c.rewards.fee)} at a C · ×{TUNING.rewards.gradeMult.A} at an A</span>
+        <span><Box size={18} /> B: {TUNING.talentPacks.casting.name} · A: {TUNING.talentPacks.star.name}</span>
       </div>
+      <p className="small muted">Level {c.level} brief. A +{TUNING.ladder.climb.A} levels · B +{TUNING.ladder.climb.B} · C stays · D {TUNING.ladder.climb.D} · F ends the career.</p>
       <section>
         <div className="section-label">Graded on</div>
         <div className="weights">

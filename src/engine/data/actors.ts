@@ -40,31 +40,22 @@ const AGES: AgeBracket[] = ['young', 'adult', 'veteran'];
 
 const inRange = (rng: Rng, [a, b]: readonly [number, number]) => rng.int(a, b);
 
-export function generateActor(rng: Rng, usedNames: Set<string>, forcedRarity?: Rarity): Actor {
-  const t = TUNING.actors;
-  const rarity: Rarity = forcedRarity ?? rng.weighted(t.rarityOdds);
-  const unusedFamous = FAMOUS.filter((n) => !usedNames.has(n.name));
-  const wantsFamous = rarity === 'legendary' || (rarity === 'epic' && rng.chance(0.5));
-  const famous = wantsFamous && unusedFamous.length > 0;
-  let name = '';
-  let gender: 'f' | 'm' = rng.chance(0.5) ? 'f' : 'm';
-  if (famous) {
-    const f = rng.pick(unusedFamous);
-    name = f.name;
-    gender = f.gender;
-  } else {
-    const kind = rng.chance(0.6) ? 'common' : 'random';
-    for (let i = 0; i < 50; i++) {
-      name = makeName(rng, kind, gender);
-      if (!usedNames.has(name)) break;
-    }
-  }
-  usedNames.add(name);
+/** Named stars are always epic or legendary: the first six of each gender in FAMOUS are legendary. */
+export function famousRarity(name: string): Rarity | undefined {
+  const i = FAMOUS.findIndex((f) => f.name === name);
+  if (i < 0) return undefined;
+  const perGender = TUNING.actors.legendaryFamous / 2;
+  return i % (FAMOUS.length / 2) < perGender ? 'legendary' : 'epic';
+}
+export const famousOfRarity = (rarity: Rarity) => FAMOUS.filter((f) => famousRarity(f.name) === rarity);
 
+/** Stats, skills and traits for an actor of a rarity. */
+function rollActor(rng: Rng, name: string, gender: 'f' | 'm', rarity: Rarity): Actor {
+  const t = TUNING.actors;
   let starPower = inRange(rng, t.starPower[rarity]);
   let acting = inRange(rng, t.acting[rarity]);
-  // Hidden gem: low star power, high acting. Only on common/rare cards.
-  if ((rarity === 'common' || rarity === 'rare') && rng.chance(t.hiddenGemChance)) {
+  // Hidden gem: low star power, high acting. Only on unnamed actors.
+  if ((rarity === 'common' || rarity === 'uncommon' || rarity === 'rare') && rng.chance(t.hiddenGemChance)) {
     starPower = Math.min(starPower, rng.int(5, 30));
     acting = inRange(rng, t.hiddenGemActing);
   }
@@ -83,19 +74,41 @@ export function generateActor(rng: Rng, usedNames: Set<string>, forcedRarity?: R
     const second = rng.pick(TRAITS);
     if (!traits.includes(second)) traits.push(second);
   }
-
-  const actor: Actor = { id: makeId('act', rng), name, starPower, acting, skills, rarity, traits, age: rng.pick(AGES), gender };
-  if (famous) actor.famous = true;
-  return actor;
+  return { id: makeId('act', rng), name, starPower, acting, skills, rarity, traits, age: rng.pick(AGES), gender };
 }
 
-export function generateActorPool(rng: Rng, size: number = TUNING.actors.poolSize, used = new Set<string>()): Actor[] {
+/** An unnamed actor (common, uncommon or rare) with a name not in usedNames. */
+export function generateActor(rng: Rng, usedNames: Set<string>, rarity: Rarity): Actor {
+  if (rarity === 'epic' || rarity === 'legendary') throw new Error('Epic and legendary actors are named stars: use generateStar');
+  const gender: 'f' | 'm' = rng.chance(0.5) ? 'f' : 'm';
+  const kind = rng.chance(0.6) ? 'common' : 'random';
+  let name = '';
+  for (let i = 0; i < 50; i++) {
+    name = makeName(rng, kind, gender);
+    if (!usedNames.has(name)) break;
+  }
+  usedNames.add(name);
+  return rollActor(rng, name, gender, rarity);
+}
+
+/** A named star. Their rarity is fixed by who they are. */
+export function generateStar(rng: Rng, star: { name: string; gender: 'f' | 'm' }): Actor {
+  return { ...rollActor(rng, star.name, star.gender, famousRarity(star.name)!), famous: true };
+}
+
+/** The roster a new studio starts with: commons and uncommons. */
+export function generateStartRoster(rng: Rng): Actor[] {
+  const used = new Set<string>();
   const pool: Actor[] = [];
-  // Guarantee at least a couple of legendaries and epics for the lead draws.
-  pool.push(generateActor(rng, used, 'legendary'), generateActor(rng, used, 'legendary'));
-  for (let i = 0; i < 4; i++) pool.push(generateActor(rng, used, 'epic'));
-  while (pool.length < size) pool.push(generateActor(rng, used));
+  for (const [rarity, n] of Object.entries(TUNING.actors.startRoster) as [Rarity, number][]) {
+    for (let i = 0; i < n; i++) pool.push(generateActor(rng, used, rarity));
+  }
   return assignPortraits(pool);
+}
+
+/** Unknowns who turn up at a casting session when the roster runs dry. */
+export function generateFreshFaces(rng: Rng, n: number, used = new Set<string>()): Actor[] {
+  return Array.from({ length: n }, () => generateActor(rng, used, rng.weighted(TUNING.actors.freshFaceOdds as Record<Rarity, number>)));
 }
 
 export const isHiddenGem = (a: Actor) => a.starPower <= 35 && a.acting >= 75;

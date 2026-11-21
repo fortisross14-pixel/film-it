@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FAMOUS, generateActorPool } from '../src/engine/data/actors';
+import { FAMOUS, generateStar, generateStartRoster } from '../src/engine/data/actors';
 import { createRng } from '../src/engine/rng';
 import { assignPortraits, expressionCol, parsePortrait, portraitOf } from '../src/engine/portraits';
 import type { Actor } from '../src/engine/types';
@@ -28,7 +28,8 @@ describe('portraits', () => {
   });
 
   it('a generated pool has no two actors sharing a face', () => {
-    const pool = generateActorPool(createRng(5));
+    const rng = createRng(5);
+    const pool = assignPortraits([...generateStartRoster(rng), ...FAMOUS.slice(0, 6).map((f) => generateStar(rng, f))]);
     const keys = pool.map((a) => a.portrait);
     expect(keys.every(Boolean)).toBe(true);
     expect(new Set(keys).size).toBe(pool.length);

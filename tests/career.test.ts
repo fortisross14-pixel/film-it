@@ -1,7 +1,7 @@
 import { enterCareer, parkCareer, runningCareers } from '../src/engine/career';
 import { newProfile, startFilm } from '../src/engine/profile';
 import type { Film, Profile } from '../src/engine/types';
-import { bestGrade, recordFilm, retireCareer, retirementBonus, startCareer, type CareerResult } from '../src/engine/career';
+import { bestGrade, legacyTitle, levelAfter, recordFilm, retireCareer, startCareer, type CareerResult } from '../src/engine/career';
 import { buyDirector } from '../src/engine/progression';
 import { addBeat, addRole, addScene, finishScript, type EditResult } from '../src/engine/script';
 import { castActor, drawCards, finishCasting, rolePay, budgetLeft } from '../src/engine/casting';
@@ -17,19 +17,24 @@ const okC = (r: CareerResult | { ok: boolean; profile?: Profile; reason?: string
 };
 const ok = (r: EditResult): Film => { if (!r.ok) throw new Error(r.reason); return r.film; };
 
+const mk = (g: string, pack?: string) => ({ grade: g, report: { rewards: { pack } }, results: { nominations: [], wins: [], boxOffice: 0 } }) as unknown as Film;
+
 describe('careers', () => {
-  it('starts with a profile, resets its level, and opens a board', () => {
+  it('starts with a profile at level 1 and opens a board', () => {
     const p0 = newProfile('T', 7);
     expect(startCareer(p0, 'masterScifi').ok).toBe(false); // locked
     const p = okC(startCareer(p0, 'starterA', 1));
-    expect(p.career).toMatchObject({ directorId: 'starterA', reputation: 0, level: 1, status: 'active' });
-    expect(p.contractBoard).toHaveLength(TUNING.contracts.boardSize);
-    expect(p.contractBoard.every((c) => c.studio.tier === 1)).toBe(true);
+    expect(p.career).toMatchObject({ directorId: 'starterA', level: 1, topLevel: 1, status: 'active' });
+    // Two at your level, a third (no safe step below level 1), and a locked teaser two levels up.
+    expect(p.contractBoard.map((c) => [c.level, c.tag, !!c.locked])).toEqual([[1, 'match', false], [1, 'match', false], [1, 'match', false], [3, 'teaser', true]]);
+    expect(p.contractBoard.filter((c) => !c.locked).every((c) => c.studio.tier === 1)).toBe(true);
+    expect(p.contractBoard.every((c) => p.unlocks.genres.includes(c.genre))).toBe(true);
+    expect(startFilm(p, p.contractBoard[3].id).ok).toBe(false); // teaser
     expect(startCareer(p, 'starterA').ok).toBe(false); // one career per director
   });
 
   it('runs up to 3 careers side by side, each with its own board and film', () => {
-    let p = { ...newProfile('T', 7), credits: 5000 };
+    let p = { ...newProfile('T', 7), money: 5000 };
     p = okC(buyDirector(p, 'masterScifi'));
     p = okC(startCareer(p, 'starterA', 1));
     const a = p.career!.id;
@@ -51,48 +56,59 @@ describe('careers', () => {
     expect(p.parked).toHaveLength(3);
   });
 
-  it('unlocks profiles with credits from the bank, then starts careers with them', () => {
-    let p = { ...newProfile('T', 7), credits: 700 };
+  it('buys profiles with studio money, then starts careers with them', () => {
+    let p = { ...newProfile('T', 7), money: 700 };
     p = okC(buyDirector(p, 'masterScifi'));
+    expect(p.money).toBe(100);
     p = okC(startCareer(p, 'masterScifi', 1));
     expect(p.career!.directorId).toBe('masterScifi');
   });
 
-  it('retiring pays a bonus from reputation and ends the career', () => {
-    let p = okC(startCareer(newProfile('T', 7), 'starterB', 1));
-    p = { ...p, career: { ...p.career!, reputation: 400 } };
-    const credits = p.credits;
+  it('retiring ends the career early', () => {
+    const p = okC(startCareer(newProfile('T', 7), 'starterB', 1));
     const q = okC(retireCareer(p, 99));
     expect(q.career).toBeUndefined();
-    expect(q.careers).toHaveLength(1);
     expect(q.careers[0]).toMatchObject({ status: 'retired', endedAt: 99 });
-    expect(q.credits).toBe(credits + retirementBonus(p.career!));
+    expect(q.money).toBe(p.money);
     expect(q.contractBoard).toHaveLength(0);
   });
 
-  it('is fired after too many F grades in a row', () => {
+  it('climbs the ladder with the grade', () => {
+    expect([levelAfter(1, 'A'), levelAfter(1, 'B'), levelAfter(4, 'C'), levelAfter(4, 'D'), levelAfter(1, 'D'), levelAfter(9, 'A')]).toEqual([3, 2, 4, 3, 1, 10]);
     let p = okC(startCareer(newProfile('T', 7), 'starterB', 1));
-    const film = { grade: 'F', results: { nominations: [], wins: [], boxOffice: 0 } } as unknown as Film;
-    for (let i = 0; i < TUNING.career.firedAfterFs - 1; i++) {
-      const r = recordFilm(p, film, 5, 0);
-      expect(r.fired).toBe(false);
-      p = r.profile;
-    }
-    const r = recordFilm(p, film, 5, 0);
-    expect(r.fired).toBe(true);
-    expect(r.profile.career).toBeUndefined();
-    expect(r.profile.careers[0].status).toBe('fired');
-    expect(r.profile.careers[0].films).toBe(TUNING.career.firedAfterFs);
+    let r = recordFilm(p, mk('A', 'star'), 100, 0);
+    expect(r.outcome).toMatchObject({ fired: false, wrapped: false, levelFrom: 1, levelTo: 3, genresOpened: ['horror'], pack: 'star' });
+    p = r.profile;
+    expect(p.career).toMatchObject({ level: 3, topLevel: 3, films: 1, earnings: 100, lastGrade: 'A', packsEarned: 1 });
+    expect(p.talentPacks.star).toBe(1);
+    expect(p.unlocks.genres).toContain('horror');
+    expect(p.contractBoard.map((c) => c.tag)).toEqual(['match', 'match', 'stretch', 'teaser']);
+    expect(p.contractBoard.map((c) => c.level)).toEqual([3, 3, 4, 5]);
+    r = recordFilm(p, mk('D'), 10, 0);
+    expect(r.profile.career).toMatchObject({ level: 2, topLevel: 3 });
+    expect(r.profile.contractBoard.map((c) => c.tag)).toEqual(['match', 'match', 'safe', 'teaser']);
   });
 
-  it('a B breaks the F streak', () => {
+  it('one F ends the career', () => {
     let p = okC(startCareer(newProfile('T', 7), 'starterB', 1));
-    const mk = (g: string) => ({ grade: g, results: { nominations: [], wins: [], boxOffice: 0 } }) as unknown as Film;
-    p = recordFilm(p, mk('F'), 0, 0).profile;
-    p = recordFilm(p, mk('B'), 0, 10).profile;
-    p = recordFilm(p, mk('F'), 0, 0).profile;
-    expect(p.career!.fStreak).toBe(1);
-    expect(bestGrade(p.career!)).toBe('B');
+    p = recordFilm(p, mk('B', 'casting'), 0, 0).profile;
+    const r = recordFilm(p, mk('F'), 0, 0);
+    expect(r.outcome.fired).toBe(true);
+    expect(r.profile.career).toBeUndefined();
+    expect(r.profile.careers[0]).toMatchObject({ status: 'fired', films: 2 });
+    expect(bestGrade(r.profile.careers[0])).toBe('B');
+    expect(legacyTitle(r.profile.careers[0])).toBe('A brief flame');
+  });
+
+  it('wraps after 10 films', () => {
+    let p = okC(startCareer(newProfile('T', 7), 'starterB', 1));
+    for (let i = 0; i < TUNING.ladder.maxFilms - 1; i++) p = recordFilm(p, mk('B'), 0, 0).profile;
+    expect(p.career!.level).toBe(10);
+    const r = recordFilm(p, mk('C'), 0, 0);
+    expect(r.outcome.wrapped).toBe(true);
+    expect(r.profile.careers[0]).toMatchObject({ status: 'wrapped', films: 10, topLevel: 10 });
+    expect(r.profile.unlocks.genres).toEqual(expect.arrayContaining(['horror', 'scifi', 'fantasy']));
+    expect(legacyTitle(r.profile.careers[0])).toBe('Blockbuster royalty');
   });
 });
 
@@ -134,7 +150,7 @@ describe('end to end: one full contract through the engine, no UI', () => {
     // Shooting: one club week, then shoot each scene once on the best set and keep the better cut.
     p = okP(doWeek(p, { kind: 'club' }));
     for (const s of p.activeFilm!.scenes) {
-      p = okP(doWeek(p, { kind: 'shoot', sceneId: s.id, setId: s.tone === 'thrill' ? 'cityStreet' : 'apartment', focus: 'dialogue' }));
+      p = okP(doWeek(p, { kind: 'shoot', sceneId: s.id, setId: s.tone === 'thrill' ? 'warehouse' : 'apartment', focus: 'dialogue' }));
       const v = [...p.activeFilm!.shooting!.pending!.versions].sort((a, b) => b.score - a.score)[0];
       p = okP(chooseVersion(p, v.id));
     }
@@ -152,13 +168,13 @@ describe('end to end: one full contract through the engine, no UI', () => {
     const film = p.activeFilm!;
     expect(film.results!.publicRating).toBeGreaterThan(0);
     expect(['A', 'B', 'C', 'D', 'F']).toContain(film.grade);
-    const credits = p.credits;
+    const money = p.money;
     const after = deliverFilm(p);
     if (!after.ok) throw new Error(after.reason);
     expect(after.profile.filmography).toHaveLength(1);
-    expect(after.profile.credits).toBeGreaterThan(credits);
+    if (film.grade !== 'F') expect(after.profile.money).toBeGreaterThan(money);
+    expect(after.outcome).toBeDefined();
     expect(budgetLeft).toBeDefined();
-    // The career continues (one F does not get you fired).
     expect(after.profile.career?.films ?? after.profile.careers[0].films).toBe(1);
   });
 });

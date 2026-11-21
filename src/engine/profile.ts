@@ -7,7 +7,7 @@ import { DIRECTORS } from './data/directors';
 import { STARTER_SET_IDS } from './data/sets';
 import { TOPIC_PACKS } from './data/topics';
 import { FILM_TITLE_PARTS } from './data/studios';
-import { generateActorPool } from './data/actors';
+import { generateStartRoster } from './data/actors';
 import { generateBoard } from './contracts';
 
 export function newProfile(name: string, seed = Date.now() >>> 0): Profile {
@@ -19,7 +19,7 @@ export function newProfile(name: string, seed = Date.now() >>> 0): Profile {
     name,
     createdAt: Date.now(),
     seed,
-    credits: TUNING.startingCredits,
+    money: TUNING.startingMoney,
     careers: [],
     parked: [],
     unlocks: {
@@ -27,9 +27,11 @@ export function newProfile(name: string, seed = Date.now() >>> 0): Profile {
       topics: [...starterPack.topicIds],
       packs: ['starter'],
       sets: [...STARTER_SET_IDS],
+      genres: [...TUNING.genres.start],
     },
+    talentPacks: { casting: 0, star: 0 },
     directors: Object.fromEntries(starterDirectors.map((id) => [id, { id, level: 1, films: 0 }])),
-    actorPool: generateActorPool(rng),
+    actorPool: generateStartRoster(rng),
     contractBoard: [],
     filmography: [],
   };
@@ -44,10 +46,11 @@ export function withRng<T>(p: Profile, fn: (rng: ReturnType<typeof createRng>) =
   return { profile: { ...p, seed: rng.state() }, value };
 }
 
-/** New briefs for the active career, scaled by its reputation. No career → no board. */
+/** New briefs for the active career, at its level, in the genres you have opened. No career → no board. */
 export function refreshBoard(p: Profile): Profile {
   if (!p.career) return { ...p, contractBoard: [] };
-  const { profile, value } = withRng(p, (rng) => generateBoard(rng, { reputation: p.career!.reputation }));
+  const c = p.career;
+  const { profile, value } = withRng(p, (rng) => generateBoard(rng, { level: c.level, lastGrade: c.lastGrade, genres: p.unlocks.genres }));
   return { ...profile, contractBoard: value };
 }
 
@@ -64,6 +67,7 @@ export function startFilm(p: Profile, contractId: string, directorIdArg?: string
   if (!directorId) return { ok: false, reason: 'Start a career first' };
   const contract = p.contractBoard.find((c) => c.id === contractId);
   if (!contract) return { ok: false, reason: 'Contract not on the board' };
+  if (contract.locked) return { ok: false, reason: `Reach level ${contract.level} to take this one` };
   if (!p.unlocks.directors.includes(directorId)) return { ok: false, reason: 'Director is locked' };
 
   const { profile, value: film } = withRng(p, (rng): Film => ({

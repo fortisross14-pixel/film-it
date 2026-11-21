@@ -110,13 +110,11 @@ export function gradeFilm(film: Film, results: FilmResults, _history: FilmRecord
   const grade = LETTERS[Math.min(LETTERS.length - 1, LETTERS.indexOf(letterBeforeCaps) + missedReqs.length)];
 
   const R = TUNING.rewards;
-  const mult = R.gradeMult[grade];
   const winsCount = results.wins.length;
   const rewards = {
-    reputation: Math.round(c.rewards.reputation * mult),
-    credits: Math.round(c.rewards.credits * mult),
-    unspentCredits: Math.round(Math.max(0, c.budget - totalSpent) * R.unspentCreditsPerK),
-    awardRep: (results.nominations.length - winsCount) * R.nominationRep + winsCount * (R.winRep + R.nominationRep),
+    fee: Math.round((c.rewards.fee * R.gradeMult[grade]) / 5) * 5,
+    awardBonus: grade === 'F' ? 0 : (results.nominations.length - winsCount) * R.nominationBonus + winsCount * (R.winBonus + R.nominationBonus),
+    pack: TUNING.packForGrade[grade],
   };
 
   return {

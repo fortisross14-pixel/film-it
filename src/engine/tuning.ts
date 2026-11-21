@@ -1,24 +1,20 @@
 // All balance numbers live here. Values are first guesses; tune at the end.
 // Money is in $K (thousands of dollars) everywhere in the engine.
 
-import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from './types';
+import type { Archetype, DeliveryStrictness, ExpectationWeights, GenreId, Grade, Rarity, TalentPackId } from './types';
 
 export const TUNING = {
   /** Portrait art: the strongest skill picks the expression when at least this high, else calm. */
   portraits: { expressiveSkill: 70 },
   /** Minimum final score for each letter grade. */
   gradeThresholds: { A: 90, B: 75, C: 48, D: 34, F: 0 },
-  saveSlots: 3,
-  saveVersion: 6,
+  saveVersion: 7,
 
   contracts: {
-    boardSize: 4,
     runtimeOptions: [85, 90, 95, 100, 105, 110, 120, 130],
     runtimeTolerance: 5,
     /** Budget tiers in $K. Index = budget tier (0 = micro). */
     budgetTiers: [3_000, 10_000, 25_000, 60_000, 150_000],
-    /** Studio tier → max budget tier offered. */
-    studioMaxBudgetTier: [1, 2, 3, 4, 4],
     /** Deadline weeks per minute of runtime, before archetype modifiers. */
     weeksPerMinute: 0.21,
     minDeadlineWeeks: 12,
@@ -38,7 +34,10 @@ export const TUNING = {
       tightship: 0.8,
     } satisfies Record<Archetype, number>,
     leadStarPowerMin: [35, 45, 55, 65, 72], // by budget tier
-    rewardBase: { reputation: 40, credits: 60 },
+    /** Director's fee at a C grade, $K: base + perLevel × level, × (1 + perDifficulty × (difficulty − 1)). */
+    feeBase: 40,
+    feePerLevel: 25,
+    feePerDifficulty: 0.15,
   },
 
   /** Expectation profiles: weights for studio satisfaction. Each sums to 1. */
@@ -69,32 +68,68 @@ export const TUNING = {
   /** Archetypes offered by the generator (MVP: 3; set to all 5 later if wanted). */
   generatorArchetypes: ['blockbuster', 'award', 'indie', 'crowd', 'tightship'] as Archetype[],
 
-  /** Reputation needed for each tier. Index = tier - 1. */
-  reputationTiers: [0, 150, 400, 900, 1800],
+  /**
+   * The career ladder. A career makes up to maxFilms films; each grade moves the level
+   * (an F ends the career). The level picks the studio tier and budget tier of the board.
+   */
+  ladder: {
+    maxLevel: 10,
+    maxFilms: 10,
+    climb: { A: 2, B: 1, C: 0, D: -1, F: 0 } satisfies Record<Grade, number>,
+    /** Index = level − 1. */
+    studioTier: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+    budgetTier: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4],
+    /** Board: two briefs at your level, one safe (level − 1) or a stretch (level + 1 after an A), and a locked teaser this far up. */
+    teaserAhead: 2,
+  },
 
-  startingCredits: 100,
+  /** Genres open from the start, and the level a career must reach to open the others for good. */
+  genres: {
+    start: ['drama', 'romance', 'comedy', 'action', 'thriller'] as GenreId[],
+    unlockAtLevel: { horror: 3, scifi: 5, fantasy: 7 } as Partial<Record<GenreId, number>>,
+  },
+
+  /** Money ($K) a new studio starts with. */
+  startingMoney: 100,
 
   actors: {
-    poolSize: 60,
-    rarityOdds: { common: 0.6, rare: 0.27, epic: 0.1, legendary: 0.03 } satisfies Record<Rarity, number>,
+    /** Starting roster: commons and uncommons only. */
+    startRoster: { common: 16, uncommon: 10 } satisfies Partial<Record<Rarity, number>>,
+    /** Fresh faces who turn up when the roster runs dry in a casting session. */
+    freshFaceOdds: { common: 0.7, uncommon: 0.3 } satisfies Partial<Record<Rarity, number>>,
     /** Star power range by rarity. */
     starPower: {
-      common: [10, 45],
-      rare: [30, 65],
-      epic: [55, 85],
-      legendary: [80, 100],
+      common: [10, 40],
+      uncommon: [25, 55],
+      rare: [40, 70],
+      epic: [60, 88],
+      legendary: [82, 100],
     } satisfies Record<Rarity, [number, number]>,
     acting: {
-      common: [25, 65],
-      rare: [40, 75],
+      common: [25, 62],
+      uncommon: [35, 70],
+      rare: [45, 80],
       epic: [55, 90],
-      legendary: [65, 98],
+      legendary: [68, 98],
     } satisfies Record<Rarity, [number, number]>,
-    /** Chance a common/rare card is a hidden gem (low star, high acting). */
+    /** How many of the named stars (in FAMOUS order, alternating) are legendary; the rest are epic. */
+    legendaryFamous: 12,
+    /** A duplicate named star from a pack makes yours more famous instead. */
+    duplicateStar: 5,
+    duplicateActing: 2,
+    /** Chance a common/uncommon/rare card is a hidden gem (low star, high acting). */
     hiddenGemChance: 0.12,
     hiddenGemActing: [78, 95] as [number, number],
     traitChance: 0.35,
   },
+
+  /** Talent packs: 3 new actors each. Earned with a B (casting) or an A (star), or bought. */
+  talentPacks: {
+    casting: { name: 'Casting call', cards: 3, price: 150, odds: { rare: 0.85, epic: 0.13, legendary: 0.02 }, guaranteed: undefined },
+    star: { name: 'Star pack', cards: 3, price: 450, odds: { rare: 0.45, epic: 0.45, legendary: 0.1 }, guaranteed: 'epic', unlockAtLevel: 5 },
+  } satisfies Record<TalentPackId, { name: string; cards: number; price: number; odds: Partial<Record<Rarity, number>>; guaranteed?: Rarity; unlockAtLevel?: number }>,
+  /** Which pack a grade earns. */
+  packForGrade: { A: 'star', B: 'casting' } as Partial<Record<Grade, TalentPackId>>,
 
   directors: {
     maxLevel: 10,
@@ -174,10 +209,10 @@ export const TUNING = {
     redrawFeeMin: 15,
     /** Rarity weights per billing tier (lead draws lean to stars). */
     rarityWeights: {
-      lead: { common: 1, rare: 2, epic: 3, legendary: 3 },
-      second: { common: 1.5, rare: 2, epic: 2, legendary: 1 },
-      support: { common: 3, rare: 2, epic: 1, legendary: 0.5 },
-      minor: { common: 4, rare: 2, epic: 0.5, legendary: 0.2 },
+      lead: { common: 1, uncommon: 1.5, rare: 2, epic: 3, legendary: 3 },
+      second: { common: 1.5, uncommon: 2, rare: 2, epic: 2, legendary: 1 },
+      support: { common: 3, uncommon: 2.5, rare: 2, epic: 1, legendary: 0.5 },
+      minor: { common: 4, uncommon: 3, rare: 2, epic: 0.5, legendary: 0.2 },
     },
     scoutGemWeight: 2.5,
     scoutFeeDiscount: 0.4,
@@ -372,18 +407,14 @@ export const TUNING = {
   },
 
   rewards: {
-    gradeMult: { A: 1.5, B: 1.2, C: 1, D: 0.6, F: 0.3 },
-    nominationRep: 10,
-    winRep: 30,
-    /** Unspent budget → credits per $K. */
-    unspentCreditsPerK: 0.002,
+    /** Fee multiplier by grade (F pays nothing: the career is over). */
+    gradeMult: { A: 1.5, B: 1.2, C: 1, D: 0.6, F: 0 },
+    /** Award bonus money, $K. */
+    nominationBonus: 10,
+    winBonus: 40,
     bonusGoalPoints: 1,
   },
   career: {
-    /** Retiring pays credits per reputation point earned in the career. */
-    retireCreditsPerRep: 0.25,
-    /** Fired after this many F grades in a row (no retirement bonus). */
-    firedAfterFs: 2,
     /** Careers that can run side by side. */
     maxCareers: 3,
   },

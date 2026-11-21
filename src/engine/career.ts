@@ -1,12 +1,13 @@
-// Careers: pick a director profile and play contracts with it. Reputation and the
-// director's level grow within the career; credits go to the global bank. A career ends
-// when you retire it (bonus from reputation) or get fired (too many F grades in a row).
+// Careers: pick a director profile and climb the ladder (levels 1–10) over up to 10 films.
+// Each grade moves the level: A +2, B +1, C stays, D −1. One F and the career is over.
+// The fee goes to the studio's money; a B or an A also earns a talent pack. Reaching new
+// levels opens genres for every career.
 
-import type { Career, Film, Grade, ParkedCareer, Profile } from './types';
+import type { Career, Film, GenreId, Grade, ParkedCareer, Profile, TalentPackId } from './types';
 import { TUNING } from './tuning';
 import { makeId } from './rng';
 import { withRng, refreshBoard } from './profile';
-import { reputationTier } from './progression';
+import { grantTalentPack, unlockGenresForLevel } from './progression';
 
 export type CareerResult = { ok: true; profile: Profile } | { ok: false; reason: string };
 const fail = (reason: string): CareerResult => ({ ok: false, reason });
@@ -46,56 +47,83 @@ export function startCareer(p: Profile, directorId: string, now = Date.now()): C
   p = parkCareer(p);
   const { profile, value: id } = withRng(p, (rng) => makeId('career', rng));
   const career: Career = {
-    id, directorId, startedAt: now, status: 'active', reputation: 0, level: 1, films: 0, earnings: 0, fStreak: 0,
-    grades: [], nominations: 0, wins: 0, boxOffice: 0,
+    id, directorId, startedAt: now, status: 'active', level: 1, topLevel: 1, films: 0, earnings: 0,
+    grades: [], nominations: 0, wins: 0, boxOffice: 0, packsEarned: 0,
   };
   const directors = { ...p.directors, [directorId]: { ...(p.directors[directorId] ?? { id: directorId, films: 0 }), id: directorId, level: 1 } };
   return { ok: true, profile: refreshBoard({ ...profile, career, directors }) };
 }
 
-/** Retirement bonus: credits from the reputation built in this career. */
-export const retirementBonus = (c: Career) => Math.round(c.reputation * C().retireCreditsPerRep);
-
-function endCareer(p: Profile, status: 'retired' | 'fired', now: number): Profile {
-  const c = p.career!;
-  const bonus = status === 'retired' ? retirementBonus(c) : 0;
-  const ended: Career = { ...c, status, endedAt: now, earnings: c.earnings + bonus };
-  return { ...p, credits: p.credits + bonus, career: undefined, careers: [...p.careers, ended], contractBoard: [] };
+function endCareer(p: Profile, status: Career['status'], now: number): Profile {
+  const ended: Career = { ...p.career!, status, endedAt: now };
+  return { ...p, career: undefined, careers: [...p.careers, ended], contractBoard: [] };
 }
 
+/** Stop a career early (frees its slot). */
 export function retireCareer(p: Profile, now = Date.now()): CareerResult {
   if (!p.career) return fail('No career to retire');
   if (p.activeFilm) return fail('Finish or abandon the film in production first');
   return { ok: true, profile: endCareer(p, 'retired', now) };
 }
 
-/** Called when a film is delivered: update the career, maybe fire the director. */
-export function recordFilm(p: Profile, film: Film, creditsEarned: number, reputationEarned: number, now = Date.now()): { profile: Profile; fired: boolean } {
+export const levelAfter = (level: number, grade: Grade) =>
+  Math.max(1, Math.min(TUNING.ladder.maxLevel, level + TUNING.ladder.climb[grade]));
+
+export interface FilmOutcome {
+  /** An F: the career is over. */
+  fired: boolean;
+  /** The 10th film: the career is complete. */
+  wrapped: boolean;
+  levelFrom: number;
+  levelTo: number;
+  genresOpened: GenreId[];
+  pack?: TalentPackId;
+}
+
+/** Called when a film is delivered: move the career up or down the ladder, or end it. */
+export function recordFilm(p: Profile, film: Film, moneyEarned: number, now = Date.now()): { profile: Profile; outcome: FilmOutcome } {
   const c = p.career;
-  if (!c) return { profile: p, fired: false };
   const grade = film.grade as Grade;
-  const fStreak = grade === 'F' ? c.fStreak + 1 : 0;
+  const none: FilmOutcome = { fired: false, wrapped: false, levelFrom: c?.level ?? 1, levelTo: c?.level ?? 1, genresOpened: [] };
+  if (!c) return { profile: p, outcome: none };
+  const fired = grade === 'F';
+  const level = fired ? c.level : levelAfter(c.level, grade);
+  const pack = film.report?.rewards.pack;
   const career: Career = {
     ...c,
-    reputation: c.reputation + reputationEarned,
-    level: Math.min(TUNING.directors.maxLevel, c.level + 1),
+    level,
+    topLevel: Math.max(c.topLevel ?? c.level, level),
     films: c.films + 1,
-    earnings: c.earnings + creditsEarned,
-    fStreak,
+    earnings: c.earnings + moneyEarned,
     grades: [...c.grades, grade],
+    lastGrade: grade,
     nominations: c.nominations + (film.results?.nominations.length ?? 0),
     wins: c.wins + (film.results?.wins.length ?? 0),
     boxOffice: c.boxOffice + (film.results?.boxOffice ?? 0),
+    packsEarned: c.packsEarned + (pack ? 1 : 0),
   };
   const d = p.directors[c.directorId] ?? { id: c.directorId, level: 1, films: 0 };
-  let next: Profile = { ...p, career, directors: { ...p.directors, [c.directorId]: { ...d, level: career.level, films: d.films + 1 } } };
-  const fired = fStreak >= C().firedAfterFs;
-  next = fired ? endCareer(next, 'fired', now) : refreshBoard(next);
-  return { profile: next, fired };
+  let next: Profile = { ...p, career, directors: { ...p.directors, [c.directorId]: { ...d, level, films: d.films + 1 } } };
+  if (pack) next = grantTalentPack(next, pack);
+  const g = unlockGenresForLevel(next, career.topLevel);
+  next = g.profile;
+  const wrapped = !fired && career.films >= TUNING.ladder.maxFilms;
+  next = fired ? endCareer(next, 'fired', now) : wrapped ? endCareer(next, 'wrapped', now) : refreshBoard(next);
+  return { profile: next, outcome: { fired, wrapped, levelFrom: c.level, levelTo: level, genresOpened: g.opened, pack } };
 }
-
-export const careerTier = (p: Profile) => reputationTier(p.career?.reputation ?? 0);
 
 const ORDER: Grade[] = ['A', 'B', 'C', 'D', 'F'];
 export const bestGrade = (c: Career): Grade | undefined =>
   c.grades.length ? c.grades.reduce((a, g) => (ORDER.indexOf(g) < ORDER.indexOf(a) ? g : a)) : undefined;
+
+/** A line for the hall of fame. */
+export function legacyTitle(c: Career): string {
+  const top = c.topLevel ?? c.level;
+  if (c.status === 'fired') return c.films <= 3 ? 'A brief flame' : 'Gone too soon';
+  if (c.status === 'retired' && c.films < TUNING.ladder.maxFilms) return c.films ? 'Left the business early' : 'Never got started';
+  if (top >= TUNING.ladder.maxLevel && c.wins >= 3) return 'Hollywood legend';
+  if (top >= TUNING.ladder.maxLevel) return 'Blockbuster royalty';
+  if (top >= 7) return 'A household name';
+  if (top >= 4) return 'A respected director';
+  return 'A working director';
+}

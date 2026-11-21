@@ -2,6 +2,7 @@
 import type { ActionDef, Beat, Contract, Meter, Profile, RoleType, Tone } from '../../src/engine/types';
 import { newProfile, startFilm } from '../../src/engine/profile';
 import { startCareer } from '../../src/engine/career';
+import { openTalentPack } from '../../src/engine/progression';
 import {
   addBeat, addRole, addScene, availableActions, checkRequirements, finishScript, genreTarget, layout, placeScene, setTopic,
 } from '../../src/engine/script';
@@ -201,14 +202,14 @@ export function post(p: Profile, bot: Bot): Profile {
 export interface FilmLog {
   bot: Bot; genre: string; archetype: string; budget: number; grade: string; score: number; satisfaction: number;
   audience: number; critics: number; boRatio: number; spentRatio: number; weeksLate: number; noms: number; wins: number;
-  script: number; casting: number; cut: number; poster: number; credits: number; rep: number; sequel: boolean;
+  script: number; casting: number; cut: number; poster: number; money: number; level: number; sequel: boolean;
   components: Record<string, number>; missed: number; factors: Record<string, number>; missedList: string[]; awards: string[]; costs?: Record<string, number>;
 }
 
 /** Play one film from the current board; returns the new profile and a log line. */
 export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog } {
   const d = directorById(p.career!.directorId);
-  const board = [...p.contractBoard];
+  const board = p.contractBoard.filter((c) => !c.locked);
   const pickScore = (c: Contract) => (c.sequelOf ? 50 : 0) + Math.max(0, ...(d.genreAffinity.length ? d.genreAffinity.map((g) => genreCloseness(g, c.genre)) : [0.5])) * 10 - c.difficulty;
   const contract = bot === 'careful' ? board.sort((a, b) => pickScore(b) - pickScore(a))[0] : board[0];
   p = ok(startFilm(p, contract.id), 'start').profile;
@@ -224,8 +225,8 @@ export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog
     satisfaction: rep.satisfaction, audience: f.results!.publicRating, critics: f.results!.criticsRating,
     boRatio: f.results!.boxOffice / f.contract.boxOfficeTarget, spentRatio: spent(f) / f.contract.budget, weeksLate: rep.weeksLate,
     noms: f.results!.nominations.length, wins: f.results!.wins.length, script: f.scriptQuality ?? 0, casting: f.castingScore ?? 0,
-    cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, credits: rep.rewards.credits + rep.rewards.unspentCredits,
-    rep: rep.rewards.reputation + rep.rewards.awardRep, sequel: !!f.franchise, components: rep.components, missed: rep.missedReqs.length,
+    cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, money: rep.rewards.fee + rep.rewards.awardBonus,
+    level: f.contract.level, sequel: !!f.franchise, components: rep.components, missed: rep.missedReqs.length,
     factors: f.results!.factors, missedList: rep.missedReqs, awards: f.results!.nominations,
     costs: f.ledger.reduce<Record<string, number>>((m, e) => {
       const k = e.label.replace(/^Week \d+: /, '').replace(/:.*$/, '').replace(/ —.*$/, '');
@@ -235,10 +236,14 @@ export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog
   };
   void checkRequirements; void budgetLeft;
   p = ok(deliverFilm(p, 0), 'deliver').profile;
+  // Open every talent pack earned straight away.
+  for (const id of ['casting', 'star'] as const) {
+    while (p.talentPacks[id] > 0) p = ok(openTalentPack(p, id), 'open pack').profile;
+  }
   return { profile: p, log };
 }
 
-/** Play a career of up to n films (stops if fired). */
+/** Play a career of up to n films (stops when it ends). */
 export function playCareer(seed: number, bot: Bot, n = 6, directorId = 'starterA') {
   let p = ok(startCareer(newProfile('Sim', seed), directorId, 0), 'career').profile;
   const logs: FilmLog[] = [];

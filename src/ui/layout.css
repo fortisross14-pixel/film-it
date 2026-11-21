@@ -186,11 +186,12 @@
 .face-empty.big { width: 48px; height: 48px; font-size: 1.2rem; }
 .paper .actor-card { position: relative; border-width: 3px; padding-top: 18px; }
 .paper .actor-card.r-common { border-color: #8d8a9e; }
+.paper .actor-card.r-uncommon { border-color: #3f9b5a; }
 .paper .actor-card.r-rare { border-color: #3b82f6; }
 .paper .actor-card.r-epic { border-color: #a855f7; box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
 .paper .actor-card.r-legendary { border-color: #f5b700; box-shadow: 0 0 16px rgba(245, 183, 0, 0.45); background: linear-gradient(#fffaf0, var(--panel)); }
 .rarity-ribbon { position: absolute; top: -1px; right: 12px; font-size: 0.68rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 0 0 6px 6px; color: #fff; }
-.rarity-ribbon.r-common { background: #8d8a9e; } .rarity-ribbon.r-rare { background: #3b82f6; }
+.rarity-ribbon.r-common { background: #8d8a9e; } .rarity-ribbon.r-uncommon { background: #3f9b5a; } .rarity-ribbon.r-rare { background: #3b82f6; }
 .rarity-ribbon.r-epic { background: #a855f7; } .rarity-ribbon.r-legendary { background: #c98f00; }
 .money-line { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-size: 0.9rem; padding: 6px 8px; border-radius: 8px; background: var(--panel-2); }
 .money-line .after { flex-basis: 100%; }
@@ -254,3 +255,20 @@
 .title-screen .settings-btn { background: rgba(0,0,0,0.4); color: var(--chrome-text); border-color: #6b5848; }
 .sticky-tabs { position: sticky; top: 0; z-index: 12; }
 @media (max-width: 760px) { .phase-screen > .tabs2 { position: sticky; top: 62px; z-index: 12; box-shadow: 0 4px 10px rgba(60,40,20,0.12); } }
+
+/* ---- Career ladder, goal and talent packs ---- */
+.goal-card p { margin: 4px 0 10px; }
+.genre-track { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tag.good { background: #d8ecd9; color: var(--good); }
+.tag.bad { background: #f4d6d2; color: var(--bad); }
+.tag.locked { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+.level-bar { display: inline-flex; gap: 3px; align-items: center; }
+.level-bar > span { width: 14px; height: 8px; border-radius: 2px; background: var(--panel-2); border: 1px solid var(--line); }
+.level-bar > span.on { background: var(--accent); border-color: var(--accent-text); }
+.talent-pack { border-width: 2px; }
+.talent-pack.tp-casting { border-color: #3b82f6; }
+.talent-pack.tp-star { border-color: #a855f7; background: linear-gradient(#fbf3ff, var(--panel)); }
+.pack-reveal .reveal-card { display: grid; gap: 6px; justify-items: start; animation: reveal-in 420ms ease-out both; }
+@keyframes reveal-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pack-reveal .reveal-card { animation: none; } }
+.title-screen .erase { color: var(--chrome-muted); margin-top: 8px; }

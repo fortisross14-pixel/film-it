@@ -4,7 +4,8 @@ import { SETS } from '../../../engine/data/sets';
 import { actionById } from '../../../engine/data/actions';
 import { toneById } from '../../../engine/data/tones';
 import type { Tone } from '../../../engine/types';
-import { buySet, setUnlockText } from '../../../engine/progression';
+import { buySet } from '../../../engine/progression';
+import { topicById } from '../../../engine/data/topics';
 import { money } from '../../../engine/format';
 import { IsoSet } from '../../components/IsoSet';
 
@@ -16,14 +17,14 @@ export function SetCatalogueTab() {
     <div>
       {msg && <p className="bad">{msg}</p>}
       <div className="grid">
-        {SETS.map((s) => {
+        {[...SETS].sort((a, b) => Number(p.unlocks.sets.includes(b.id)) - Number(p.unlocks.sets.includes(a.id))).map((s) => {
           const unlocked = p.unlocks.sets.includes(s.id);
           const best = (Object.entries(s.toneFit) as [Tone, number][])
             .sort((a, b) => b[1] - a[1])
             .slice(0, 2)
             .map(([id]) => toneById(id).name.toLowerCase());
           const special = Object.keys(s.actionFit ?? {}).map((id) => actionById(id).verb);
-          const buyable = !unlocked && s.unlock.kind === 'credits';
+          const u = s.unlock;
           return (
             <div key={s.id} className={`card ${unlocked ? '' : 'locked'}`}>
               <div className="row between">
@@ -32,11 +33,11 @@ export function SetCatalogueTab() {
               </div>
               <IsoSet set={s} extras={Math.min(s.extrasCapacity, 30)} height={130} />
               <p className="small">Best: {best.join(', ')}{special.length > 0 && <> · {special.join(', ')}</>}</p>
-              {!unlocked && <p className="small">🔒 {setUnlockText(s)}</p>}
-              {buyable && s.unlock.kind === 'credits' && (
+              {!unlocked && u.kind === 'topic' && <p className="small">🔒 Comes with the {topicById(u.topicId).name} topic</p>}
+              {!unlocked && u.kind === 'buy' && (
                 <button
                   className="primary"
-                  disabled={p.credits < s.unlock.cost}
+                  disabled={p.money < u.cost}
                   onClick={() => {
                     const r = buySet(p, s.id);
                     if (r.ok) {
@@ -45,7 +46,7 @@ export function SetCatalogueTab() {
                     } else setMsg(r.reason);
                   }}
                 >
-                  Unlock · {s.unlock.cost} credits
+                  Buy · {money(u.cost)}
                 </button>
               )}
             </div>

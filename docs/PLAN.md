@@ -8,7 +8,7 @@ so they can be tuned in one place later.
 Architecture (from the requirements): Vite + React + TypeScript, deployed to GitHub
 Pages. Game logic lives in pure engine modules under `src/engine/` (no React imports,
 unit-tested with Vitest). The UI under `src/ui/` only reads engine state and calls
-engine functions. Saves go to localStorage with 3 slots.
+engine functions. One permanent save in localStorage (no slots).
 
 Each milestone ends with: engine tests passing, a typecheck/build passing, and the
 new phase playable in the browser.
@@ -291,6 +291,36 @@ Audit of every screen against the owner's feedback, and what changed:
 | No install | PWA: manifest, icons, service worker (offline play), **Install app** button on the title screen and in the ⚙ menu (iOS gets Add to Home Screen steps), and persistent storage is requested for saves. |
 
 Phone screenshots: `docs/screens/m-*.png`.
+
+## Career ladder and collection (done)
+
+Owner feedback: the game had no clear goal, and credits plus reputation were two confusing currencies.
+Adapted from Built it!'s loop (start a career, climb, unlock, retry with more):
+
+- **One permanent studio.** No save slots: one save holds everything (`save.ts`, save v7). Old slot
+  saves are carried over once (the slot with most films wins); credits become money, reputation is dropped.
+- **Money is the only currency** (`Profile.money`, $K). Every film pays the director's fee
+  (`contracts.feeBase + feePerLevel × level`, × difficulty, × grade: A 1.5 … D 0.6, F 0) plus an award bonus.
+- **The ladder replaces reputation.** A career makes up to 10 films and has a level 1–10 that picks the studio
+  tier and budget tier of its board (`tuning.ladder`). A +2 levels, B +1, C holds, D −1, **one F ends the career**.
+  Ten films wraps it into the Hall of fame with a title (`legacyTitle`). Retiring early is allowed (no bonus).
+- **Board:** two briefs at your level, a safe one a level down (or a stretch a level up after an A), and a locked
+  teaser two levels up showing what climbing opens. Sequels replace one of the at-level briefs.
+- **Genres** open for good when any career reaches a level: start with Drama, Romance, Comedy, Action, Thriller;
+  Horror at 3, Sci-Fi at 5, Fantasy at 7. Boards only offer open genres.
+- **Actors are a roster** (`Profile.actorPool`). It starts with 16 commons and 10 uncommons. **Talent packs** add
+  3 actors each: a B earns a Casting call (rare 85 / epic 13 / legendary 2%), an A a Star pack (rare 45 / epic 45 /
+  legendary 10%, at least one epic). Both are also sold in the shop (Star packs once a career reaches level 5).
+  Unnamed actors are common, uncommon or rare; **named stars are always epic or legendary** (12 legendary, 24 epic).
+  A duplicate star gets +5 star power instead. Fresh faces at casting are common or uncommon.
+- **Sets:** 3 to start (Apartment, Park, Warehouse); the other basics are bought, topic sets come with their pack.
+- **Directors:** the 2 basics to start; the rest are bought.
+- UI: title screen with Continue / Found your studio; Studio with a Goal card (best level, named stars, directors,
+  sets, genres), Actors (packs, opening reveal, roster by rarity), Shop, Hall of fame; career board with level tags
+  and the locked teaser; verdict shows money, pack and the level change.
+
+First simulation run (6 films per career): the careful bot gets 28% A / 40% B and averages level 2.8;
+the naive bot is fired early. Balance is still deferred.
 
 ## Still open
 

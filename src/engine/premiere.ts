@@ -11,7 +11,7 @@ import { chosenTake, weeksUsed } from './shooting';
 import { participants, spent } from './script';
 import { withRng } from './profile';
 import { gradeFilm } from './grade';
-import { recordFilm } from './career';
+import { recordFilm, type FilmOutcome } from './career';
 import { afterDelivery, franchiseEffect } from './franchise';
 import { RIVAL_DIRECTORS } from './data/rivals';
 import { workingTitle } from './titles';
@@ -24,7 +24,7 @@ const P = () => TUNING.premiere;
 const clamp = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 
-export type PremiereResult = { ok: true; profile: Profile; fired?: boolean } | { ok: false; reason: string };
+export type PremiereResult = { ok: true; profile: Profile; fired?: boolean; outcome?: FilmOutcome } | { ok: false; reason: string };
 const fail = (reason: string): PremiereResult => ({ ok: false, reason });
 
 export const FESTIVALS = ['Sunvale Film Festival', 'Golden Lantern Fest', 'Northlight Independent', 'Harbour Lights Festival'];
@@ -182,25 +182,23 @@ export function runPremiere(p: Profile): PremiereResult {
 }
 
 /**
- * Deliver the film: credits to the bank, reputation and a level to the career, the film
- * into the filmography, and a fresh contract board — or the career ends if the director
- * is fired.
+ * Deliver the film: the fee and award bonus to the studio's money, the career moves up or
+ * down the ladder (or ends), the film into the filmography, and a fresh contract board.
  */
 export function deliverFilm(p: Profile, now = Date.now()): PremiereResult {
   const film = p.activeFilm;
   if (!film?.results || !film.report) return fail('Premiere first');
   const r = film.report.rewards;
-  const credits = r.credits + r.unspentCredits;
-  const reputation = r.reputation + r.awardRep;
+  const earned = r.fee + r.awardBonus;
   const base: Profile = {
     ...p,
-    credits: p.credits + credits,
+    money: p.money + earned,
     filmography: [...p.filmography, { film: { ...film, phase: 'done' }, careerId: p.career?.id, completedAt: now }],
     activeFilm: undefined,
   };
-  const { profile, fired } = recordFilm(base, film, credits, reputation, now);
+  const { profile, outcome } = recordFilm(base, film, earned, now);
   const done = withRng(profile, (rng) => afterDelivery(profile, film, rng));
-  return { ok: true, profile: { ...done.value, seed: done.profile.seed }, fired };
+  return { ok: true, profile: { ...done.value, seed: done.profile.seed }, fired: outcome.fired, outcome };
 }
 
 /** Facts for the red carpet moment. */

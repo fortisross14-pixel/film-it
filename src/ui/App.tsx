@@ -1,13 +1,13 @@
 import { GameProvider, useGame } from './store';
-import { SlotsScreen } from './screens/SlotsScreen';
+import { TitleScreen } from './screens/TitleScreen';
 import { StudioScreen } from './screens/StudioScreen';
 import { CareerScreen } from './screens/CareerScreen';
 import { ProductionScreen } from './screens/ProductionScreen';
 
-// Title → studio (unlocks, up to 3 careers) → a career (contracts) → production (one film).
+// Title (one permanent save) → studio (unlocks, up to 3 careers) → a career (contracts) → production (one film).
 function Router() {
   const { profile } = useGame();
-  if (!profile) return <SlotsScreen />;
+  if (!profile) return <TitleScreen />;
   if (profile.activeFilm) return <ProductionScreen />;
   if (profile.career) return <CareerScreen />;
   return <StudioScreen />;

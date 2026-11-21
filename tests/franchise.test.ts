@@ -55,7 +55,7 @@ describe('sequels', () => {
     const hit = graded('A');
     expect(isHit(hit)).toBe(true);
     expect(isHit(graded('F'))).toBe(false);
-    const s = sequelContract(createRng(2), hit, 0);
+    const s = sequelContract(createRng(2), hit, 1);
     expect(s.title).toBe(`${hit.title} 2`);
     expect(s.budget).toBeGreaterThan(hit.contract.budget);
     expect(s.studio).toEqual(hit.contract.studio);
@@ -67,15 +67,16 @@ describe('sequels', () => {
   it('afterDelivery puts the sequel first on the board', () => {
     const p = postProfile();
     const board = castProfile().contractBoard.length ? castProfile().contractBoard : [];
-    const fresh = Array.from({ length: TUNING.contracts.boardSize }, (_, i) => ({ ...sequelContract(createRng(9 + i), graded('A'), 0), sequelOf: undefined, id: `c${i}` }));
+    const fresh = Array.from({ length: 4 }, (_, i) => ({ ...sequelContract(createRng(9 + i), graded('A'), 1), sequelOf: undefined, id: `c${i}` }));
     const q = afterDelivery({ ...p, activeFilm: undefined, contractBoard: board.length >= 4 ? board : fresh }, graded('A'), createRng(3));
     expect(q.contractBoard[0].sequelOf).toBeDefined();
-    expect(q.contractBoard).toHaveLength(TUNING.contracts.boardSize);
+    expect(q.contractBoard[0].rewards.fee).toBeGreaterThan(0);
+    expect(q.contractBoard).toHaveLength(4);
   });
 
   it('sequels get a fanbase but some critics fatigue; the lead comes back in the first draw', () => {
     const hit = graded('A');
-    const s = sequelContract(createRng(2), hit, 0);
+    const s = sequelContract(createRng(2), hit, 1);
     let p = castProfile();
     p = { ...p, activeFilm: undefined, contractBoard: [s] };
     const started = startFilm(p, s.id);
@@ -93,7 +94,7 @@ describe('sequels', () => {
 
   it('bringing back the lead meets the bonus goal', () => {
     const hit = graded('A');
-    const s = sequelContract(createRng(2), hit, 0);
+    const s = sequelContract(createRng(2), hit, 1);
     const film: Film = { ...hit, contract: s };
     expect(gradeFilm(film, hit.results!).bonusMet.some((b) => b.startsWith('Bring back'))).toBe(true);
   });

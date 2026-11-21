@@ -9,7 +9,7 @@ import type { Rng } from './rng';
 import { assignPortraits } from './portraits';
 import { TUNING } from './tuning';
 import { actionById } from './data/actions';
-import { SKILLS, generateActorPool, isHiddenGem } from './data/actors';
+import { SKILLS, generateFreshFaces, isHiddenGem } from './data/actors';
 import { directorById } from './data/directors';
 import { affinityBonus, specialtyScale } from './director';
 import { withRng } from './profile';
@@ -150,7 +150,7 @@ export function drawCards(p: Profile, roleId: string): CastResult {
     // Running low on talent: fresh faces join the pool.
     if (available.length < C().cardsPerDraw) {
       // Portraits are re-picked against the whole pool so newcomers get unused faces.
-      const fresh = generateActorPool(rng, 6, new Set(pool.map((a) => a.name))).map((a) => ({ ...a, portrait: undefined }));
+      const fresh = generateFreshFaces(rng, 6, new Set(pool.map((a) => a.name)));
       const freshIds = new Set(fresh.map((a) => a.id));
       pool = assignPortraits([...pool, ...fresh]);
       available = [...available, ...pool.filter((a) => freshIds.has(a.id))];

@@ -210,6 +210,7 @@ button.icon { min-width: 44px; padding: 0 8px; }
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: 12px; margin-top: 10px; }
 .actor-card { display: grid; gap: 8px; border-width: 2px; }
 .actor-card.r-common { border-color: #6b6880; }
+.actor-card.r-uncommon { border-color: #3f9b5a; }
 .actor-card.r-rare { border-color: #3b82f6; }
 .actor-card.r-epic { border-color: #a855f7; }
 .actor-card.r-legendary { border-color: #f5b700; box-shadow: 0 0 12px rgba(245, 183, 0, 0.35); }

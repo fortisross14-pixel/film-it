@@ -14,7 +14,6 @@ import type { Rng } from './rng';
 import { TUNING } from './tuning';
 import { generateContract } from './contracts';
 import { effectiveBoxOfficeTarget } from './marketing';
-import { reputationTier } from './progression';
 import { chosenTake } from './shooting';
 import { participants } from './script';
 
@@ -60,10 +59,10 @@ export function isHit(film: Film): boolean {
 const roundTo = (n: number, step: number) => Math.round(n / step) * step;
 
 /** The sequel brief for a hit film. */
-export function sequelContract(rng: Rng, film: Film, reputation: number): Contract {
+export function sequelContract(rng: Rng, film: Film, level: number): Contract {
   const franchise = film.franchise?.name ?? film.title;
   const number = (film.franchise?.number ?? 1) + 1;
-  const base = generateContract(rng, reputationTier(reputation), { archetype: film.contract.archetype, genre: film.contract.genre });
+  const base = generateContract(rng, level, { archetype: film.contract.archetype, genre: film.contract.genre });
   const lead = film.roles.find((r) => r.type === 'main')?.actor;
   const budget = roundTo(film.contract.budget * Q().budgetMult, 500);
   const bonusGoals: Contract['bonusGoals'] = [
@@ -83,7 +82,7 @@ export function sequelContract(rng: Rng, film: Film, reputation: number): Contra
     boxOfficeTarget: roundTo(film.contract.boxOfficeTarget * Q().budgetMult, 500),
     marketing: roundTo(budget * TUNING.marketing.shareOfBudget, 100),
     bonusGoals,
-    rewards: { reputation: Math.round(base.rewards.reputation * Q().rewardMult), credits: Math.round(base.rewards.credits * Q().rewardMult) },
+    rewards: { fee: Math.round((base.rewards.fee * Q().rewardMult) / 5) * 5 },
     sequelOf: { filmId: film.id, franchise, number, topicId: film.topicId, leadActorId: lead?.id },
   };
 }
@@ -98,6 +97,9 @@ export function franchiseEffect(film: Film) {
 /** After delivery: update actors, and put a sequel brief on the board for a hit. */
 export function afterDelivery(p: Profile, film: Film, rng: Rng): Profile {
   const actorPool = updateActorCareers(p.actorPool, film);
-  const board = p.career && isHit(film) ? [sequelContract(rng, film, p.career.reputation), ...p.contractBoard.slice(0, TUNING.contracts.boardSize - 1)] : p.contractBoard;
+  // The sequel takes the place of one of the briefs at your level.
+  const board = p.career && isHit(film)
+    ? [{ ...sequelContract(rng, film, p.career.level), tag: 'match' as const }, ...p.contractBoard.filter((_, i) => i !== 1)]
+    : p.contractBoard;
   return { ...p, actorPool, contractBoard: board };
 }
