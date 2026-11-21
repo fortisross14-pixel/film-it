@@ -6,7 +6,7 @@ import { actionById } from '../../engine/data/actions';
 import { AXES, TONES, toneById } from '../../engine/data/tones';
 import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
-import { describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
+import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
 import { TUNING } from '../../engine/tuning';
 import {
   DURATIONS, ROLE_TYPES, addBeat, addRole, addScene, availableActions, canAddRole, checkRequirements, fillerShare,
@@ -368,7 +368,7 @@ function SceneCard({
       <p className="small muted">
         Cost {money(sceneCost(scene, director, level, film.contract.budget))}
         {scene.beats.some((b) => actionById(b.actionId).stunt) && ' · stunts'}
-        {scene.beats.length > 0 && ` · ${scene.beats.map((b) => `${roleName(b.roleId)} ${actionById(b.actionId).verb}${b.targetId ? ' ' + roleName(b.targetId) : ''}`).join(', then ')}`}
+        {scene.beats.length > 0 && ` · ${scene.beats.map((b) => describeBeat(roleName(b.roleId), b.actionId, b.targetId ? roleName(b.targetId) : undefined)).join(', then ')}`}
       </p>
     </div>
   );

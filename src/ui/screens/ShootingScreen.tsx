@@ -160,7 +160,7 @@ export function ShootingScreen() {
   );
 }
 
-function Calendar({ film }: { film: Film }) {
+export function Calendar({ film }: { film: Film }) {
   const used = weeksUsed(film);
   const total = Math.max(film.contract.deadlineWeeks, used);
   return (

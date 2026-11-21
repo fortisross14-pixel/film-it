@@ -54,3 +54,11 @@ export function describeBonus(b: BonusGoal): string {
       return `Critics rating ≥ ${b.min}`;
   }
 }
+
+/** "The Villain fights and wins The Hero", "The Hero dances with Anna", "The Villain escapes". */
+export function describeBeat(who: string, actionId: string, target?: string): string {
+  const a = actionById(actionId);
+  if (!target) return `${who} ${a.verb}`;
+  const prep = a.prep && a.prep !== 'To' ? ` ${a.prep.toLowerCase()}` : '';
+  return `${who} ${a.verb}${prep} ${target}`;
+}

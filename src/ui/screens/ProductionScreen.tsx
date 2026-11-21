@@ -7,6 +7,7 @@ import type { FilmPhase } from '../../engine/types';
 import { ScriptEditor } from './ScriptEditor';
 import { CastingScreen } from './CastingScreen';
 import { ShootingScreen } from './ShootingScreen';
+import { PostScreen } from './PostScreen';
 
 const PHASES: { id: FilmPhase; label: string }[] = [
   { id: 'script', label: 'Script' },
@@ -52,6 +53,8 @@ export function ProductionScreen() {
           <CastingScreen />
         ) : film.phase === 'shooting' ? (
           <ShootingScreen />
+        ) : film.phase === 'post' ? (
+          <PostScreen />
         ) : (
         <div className="production-body">
           <div className="card placeholder">

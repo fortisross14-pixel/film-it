@@ -9,7 +9,7 @@ import { GENRE_PROFILE } from '../src/engine/data/tones';
 import { SETS } from '../src/engine/data/sets';
 import { TOPICS, TOPIC_PACKS } from '../src/engine/data/topics';
 import { DIRECTORS } from '../src/engine/data/directors';
-import { describeHardReq, money } from '../src/engine/format';
+import { describeBeat, describeHardReq, money } from '../src/engine/format';
 import { applyDelivery, letterFor, satisfaction } from '../src/engine/grade';
 
 function memoryStore(): KeyValueStore {
@@ -100,6 +100,9 @@ describe('contracts', () => {
     expect(describeHardReq({ kind: 'leadStarPower', min: 60 })).toContain('60');
     expect(money(25000)).toBe('$25M');
     expect(money(750)).toBe('$750K');
+    expect(describeBeat('Ann', 'dances', 'Bob')).toBe('Ann dances with Bob');
+    expect(describeBeat('Ann', 'fightsAndWins', 'Bob')).toBe('Ann fights and wins Bob');
+    expect(describeBeat('Ann', 'escapes')).toBe('Ann escapes');
   });
 });
 

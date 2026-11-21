@@ -110,11 +110,22 @@ new phase playable in the browser.
   factor chips, cast fatigue/bond/discovered chemistry, animated stage with bubbles over the
   actors, version picker, log.
 
-## Milestone 5 — Post-production
+## Milestone 5 — Post-production (done)
 
-- Scene-by-scene playback of the chosen version with its score; optional cut of a weak scene.
-- Film-wide music tier; per-scene VFX and SFX with genre weights, diminishing returns and
-  overproduction; post days; Auto-polish.
+- `post.ts`: choose the take per scene from every stored take (defaults to the one picked on
+  set); cut a weak scene back to filler (keep at least 2); film-wide music (library: small
+  flat bonus; composer: + emotional scenes; star composer: large bonus, Best Score eligible);
+  per-scene VFX and SFX (none/basic/pro/premium) weighted by genre, boosted in stunt scenes,
+  with diminishing returns across the film and an overproduction critics penalty for heavy
+  CGI in low-VFX genres. The Editor makes post cheaper and stronger.
+- Edits are free until the cut is locked; then music, polish and post crew are charged and
+  post days become post weeks against the same deadline.
+- Auto-polish: greedy best value per $K for a chosen budget.
+- Final cut quality = minutes-weighted scene scores + filler; best/worst scene feed the
+  premiere (critics like peaks, the public punishes bad scenes).
+- UI: per-scene edit cards (take picker, VFX/SFX, score breakdown, cut/restore), scene
+  playback on its set with the cast and beats as captions, music, auto-polish, cost/time
+  summary, lock → premiere.
 
 ## Milestone 6 — Premiere, results and grade
 

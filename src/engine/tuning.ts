@@ -249,6 +249,41 @@ export const TUNING = {
     /** Filler is shot in one block at wrap: one week, mediocre. */
     fillerScore: 45,
   },
+  post: {
+    /** Editing the cut always takes this many post days. */
+    baseEditDays: 5,
+    daysPerWeek: 5,
+    /** Post crew per week, as a share of the shooting crew cost. */
+    crewShare: 0.5,
+    /** Music: cost $K at the reference budget (scaled like writing), days, bonuses. */
+    music: {
+      none: { cost: 0, days: 0, flat: 0, emotional: 0 },
+      library: { cost: 100, days: 2, flat: 3, emotional: 0 },
+      composer: { cost: 500, days: 5, flat: 3, emotional: 8 },
+      star: { cost: 1500, days: 8, flat: 6, emotional: 12 },
+    },
+    /** VFX / SFX per scene slot. */
+    tiers: {
+      vfx: { none: [0, 0, 0], basic: [150, 1, 4], pro: [400, 2, 8], premium: [900, 4, 13] }, // [cost, days, points]
+      sfx: { none: [0, 0, 0], basic: [60, 1, 4], pro: [150, 2, 8], premium: [350, 3, 13] },
+    },
+    /** How much each genre cares about VFX / SFX (0–1). */
+    vfxWeight: { action: 0.9, drama: 0.15, romance: 0.15, comedy: 0.3, thriller: 0.4, horror: 0.5, scifi: 1, fantasy: 1 },
+    sfxWeight: { action: 1, drama: 0.3, romance: 0.25, comedy: 0.4, thriller: 0.9, horror: 1, scifi: 0.7, fantasy: 0.6 },
+    /** Scenes with stunts get more out of VFX/SFX. */
+    stuntSceneMult: 1.25,
+    /** Diminishing returns: the nth best slot of a kind counts decay^(n-1). */
+    decay: 0.85,
+    /** Overproduction: VFX points in low-weight genres cost critics points. */
+    overproductionBelowWeight: 0.5,
+    overproductionPerPoint: 0.5,
+    overproductionCap: 30,
+    /** The Editor: cheaper and stronger polish. */
+    editorDiscount: 0.25,
+    editorBoost: 0.25,
+    /** Cutting a scene returns its minutes to filler; keep at least this many. */
+    minScenesAfterCut: 2,
+  },
 } as const;
 
 export type Tuning = typeof TUNING;
