@@ -4,6 +4,8 @@
 import type { Archetype, DeliveryStrictness, ExpectationWeights, Rarity } from './types';
 
 export const TUNING = {
+  /** Portrait art: the strongest skill picks the expression when at least this high, else calm. */
+  portraits: { expressiveSkill: 70 },
   /** Minimum final score for each letter grade. */
   gradeThresholds: { A: 90, B: 75, C: 48, D: 34, F: 0 },
   saveSlots: 3,

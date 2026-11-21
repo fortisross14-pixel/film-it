@@ -45,7 +45,7 @@ function rolesFor(c: Contract): RoleType[] {
 }
 
 /** Write a sensible script for the brief (the careful bot; the naive bot uses fewer, shallower scenes). */
-function writeScript(p: Profile, bot: Bot): Profile {
+export function writeScript(p: Profile, bot: Bot): Profile {
   let f = p.activeFilm!;
   const c = f.contract;
   for (const t of rolesFor(c)) f = ok(addRole(f, t), 'role').film;
@@ -107,7 +107,7 @@ function writeScript(p: Profile, bot: Bot): Profile {
   return { ...p, activeFilm: f };
 }
 
-function cast(p: Profile, bot: Bot): Profile {
+export function cast(p: Profile, bot: Bot): Profile {
   const film = p.activeFilm!;
   const share = { lead: 0.45, second: 0.25, support: 0.15, minor: 0.08 };
   const castBudget = film.contract.budget * 0.38;

@@ -6,6 +6,7 @@
 
 import type { Actor, Billing, DirectorDef, Film, Profile, Rarity, Role, Skill, SkillMap } from './types';
 import type { Rng } from './rng';
+import { assignPortraits } from './portraits';
 import { TUNING } from './tuning';
 import { actionById } from './data/actions';
 import { SKILLS, generateActorPool, isHiddenGem } from './data/actors';
@@ -148,9 +149,11 @@ export function drawCards(p: Profile, roleId: string): CastResult {
     let available = pool.filter((a) => !blocked.has(a.id));
     // Running low on talent: fresh faces join the pool.
     if (available.length < C().cardsPerDraw) {
-      const fresh = generateActorPool(rng, 6, new Set(pool.map((a) => a.name)));
-      pool = [...pool, ...fresh];
-      available = [...available, ...fresh];
+      // Portraits are re-picked against the whole pool so newcomers get unused faces.
+      const fresh = generateActorPool(rng, 6, new Set(pool.map((a) => a.name))).map((a) => ({ ...a, portrait: undefined }));
+      const freshIds = new Set(fresh.map((a) => a.id));
+      pool = assignPortraits([...pool, ...fresh]);
+      available = [...available, ...pool.filter((a) => freshIds.has(a.id))];
     }
     // A sequel's first draw for the lead brings back the original star (if still available).
     const returning = role.type === 'main' && state.draws === 0 ? available.find((a) => a.id === film.contract.sequelOf?.leadActorId) : undefined;

@@ -2,6 +2,7 @@ import type { Actor, ActorTrait, AgeBracket, Rarity, Skill, SkillMap } from '../
 import type { Rng } from '../rng';
 import { makeId } from '../rng';
 import { TUNING } from '../tuning';
+import { assignPortraits } from '../portraits';
 
 export const SKILLS: Skill[] = ['action', 'comedy', 'drama', 'romance', 'menace'];
 
@@ -10,6 +11,11 @@ const COMMON_F = ['Hannah', 'Sarah', 'Emily', 'Laura', 'Anna', 'Kate', 'Lisa', '
 const COMMON_M = ['John', 'Chris', 'Mike', 'David', 'James', 'Tom', 'Paul', 'Mark', 'Dan', 'Steve', 'Ben', 'Sam'];
 const COMMON_LAST = ['Smith', 'Mills', 'Myers', 'Johnson', 'Brown', 'Taylor', 'Walker', 'Hall', 'Young', 'King', 'Wright', 'Green', 'Baker', 'Carter', 'Turner', 'Parker', 'Cooper', 'Ward', 'Price', 'Bell', 'Reed', 'Hayes', 'Fox', 'Lane'];
 // Syllables for totally random names ("Zarvo Quillent").
+/** Gender implied by a common first name, if any (older saves have no gender field). */
+export function genderFromName(name: string): 'f' | 'm' | undefined {
+  const first = name.split(' ')[0];
+  return COMMON_F.includes(first) ? 'f' : COMMON_M.includes(first) ? 'm' : FAMOUS.find((f) => f.name === name)?.gender;
+}
 const SYL_A = ['Za', 'Ko', 'Mir', 'Vel', 'Tor', 'Lu', 'Bri', 'Ost', 'Fen', 'Ri', 'Dax', 'Yo', 'Quil', 'Sev', 'Ar', 'Ném'];
 const SYL_B = ['ro', 'lin', 'ka', 'vo', 'ett', 'is', 'ana', 'den', 'ux', 'ari', 'el', 'ova', 'ent', 'ick', 'yn', 'oss'];
 /** Parody stars (18 women, 18 men). Order matches the portrait grid in docs/art/face-prompts.md. */
@@ -89,7 +95,7 @@ export function generateActorPool(rng: Rng, size: number = TUNING.actors.poolSiz
   pool.push(generateActor(rng, used, 'legendary'), generateActor(rng, used, 'legendary'));
   for (let i = 0; i < 4; i++) pool.push(generateActor(rng, used, 'epic'));
   while (pool.length < size) pool.push(generateActor(rng, used));
-  return pool;
+  return assignPortraits(pool);
 }
 
 export const isHiddenGem = (a: Actor) => a.starPower <= 35 && a.acting >= 75;

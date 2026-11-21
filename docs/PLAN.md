@@ -265,6 +265,14 @@ What changed (all in `tuning.ts`):
   and every draw holds at least one affordable card. Before this, small briefs were often only
   playable over budget.
 
+## Actor portraits (done)
+
+The four face grids (young, adult, veteran, famous look-alikes) are cut into 6×6 WebP sheets
+(about 95 KB each). `portraits.ts` gives each actor a cell: the sheet by age, the rows by gender,
+and the column by strongest skill, which sets the expression (calm when no skill stands out).
+Parody stars get their look-alike. Within a pool no two actors share a face. Older saves without
+stored portraits get the best match on the fly.
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

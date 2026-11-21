@@ -166,7 +166,7 @@ export interface Actor {
   films?: number;
   wins?: number;
   credits?: { title: string; grade: string }[];
-  /** Asset key for commissioned cartoon portrait art; undefined = procedural face. */
+  /** Portrait cell, "<sheet>:<0–35>" (see portraits.ts); undefined = best match by gender, age and skills. */
   portrait?: string;
   /** Directors who discovered this actor (fee discount later). */
   discoveredBy?: string[];
