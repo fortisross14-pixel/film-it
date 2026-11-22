@@ -4,6 +4,7 @@ import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { sceneName, stageCast } from './ShootingScreen';
 import { ActionBar, Sheet, Tabs, useToast } from '../components/ui';
+import { Details } from '../components/ui';
 import { Glyph } from '../components/GameIcons';
 import { MarketingCard, PosterStudio } from '../components/PosterStudio';
 import { IsoSet } from '../components/IsoSet';
@@ -188,13 +189,16 @@ function SceneEdit({
               ))}
             </select>
           </label>
-          {take && <p className="small muted">“{take.feedback}”</p>}
           {tierRow('vfx')}
           {tierRow('sfx')}
           {score && (
-            <p className="small score-line">
-              Take {score.take} + music {score.music} + VFX {score.vfx} + SFX {score.sfx} = <strong className="big-inline">{score.total}</strong>
-            </p>
+            <div className="score-brief">
+              <strong className="big-inline">{score.total}</strong>
+              <Details label="Breakdown">
+                <p className="small">Take {score.take} + music {score.music} + VFX {score.vfx} + SFX {score.sfx}</p>
+                {take && <p className="small muted">“{take.feedback}”</p>}
+              </Details>
+            </div>
           )}
         </>
       )}

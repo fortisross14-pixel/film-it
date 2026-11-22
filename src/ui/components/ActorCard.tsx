@@ -2,6 +2,8 @@ import type { Actor, SkillMap } from '../../engine/types';
 import { SKILLS } from '../../engine/data/actors';
 import { Face } from './Face';
 import { money } from '../../engine/format';
+import { Details } from './ui';
+import { Glyph } from './GameIcons';
 
 const TRAIT_TEXT = {
   method: 'Method: +acting, slower shoots',
@@ -38,12 +40,16 @@ export function ActorCard({
         <Face actor={actor} size={compact ? 44 : 72} />
         <div>
           <div className="actor-name">{actor.name}</div>
-          <div className="small">★ {actor.starPower} star · 🎭 {actor.acting} acting</div>
-          <div className="small muted">{actor.age}{actor.traits.length > 0 && <> · {actor.traits.join(', ')}</>}</div>
+          <div className="actor-nums">
+            <span title="Star power"><Glyph name="star" size={15} /> {actor.starPower}</span>
+            <span title="Acting"><Glyph name="speech" size={15} /> {actor.acting}</span>
+            {top[0] && <span title={`${top[0]} (what this role needs)`} className="need"><Glyph name="target" size={15} /> {actor.skills[top[0]]}</span>}
+          </div>
         </div>
       </div>
       {!compact && (
-        <>
+        <Details>
+          <p className="small muted">{actor.age}{actor.traits.length > 0 && <> · {actor.traits.map((t) => TRAIT_TEXT[t]).join(' · ')}</>}</p>
           <div className="skills">
             {SKILLS.map((s) => (
               <div key={s} className={`weight ${top.includes(s) ? 'need' : ''}`}>
@@ -59,16 +65,15 @@ export function ActorCard({
               {actor.credits?.[0] && ` · last: ${actor.credits[0].title} (${actor.credits[0].grade})`}
             </p>
           )}
-          {directorId && actor.discoveredBy?.includes(directorId) && <span className="chip win">Remembers you · fee −15%</span>}
-          {actor.traits.length > 0 && <p className="small muted trait-line">{actor.traits.map((t) => TRAIT_TEXT[t]).join(' · ')}</p>}
-        </>
+        </Details>
       )}
+      {directorId && actor.discoveredBy?.includes(directorId) && <span className="chip win">Remembers you · −15%</span>}
       {(fit !== undefined || pay !== undefined) && (
         <div className="money-line">
           {fit !== undefined && <span className="fit-pill">Fit <strong className={fit >= 70 ? 'good' : fit < 45 ? 'bad' : ''}>{fit}</strong></span>}
-          {pay !== undefined && <span>Pay <strong>{money(pay)}</strong></span>}
+          {pay !== undefined && <span><Glyph name="coins" size={15} /> <strong>{money(pay)}</strong></span>}
           {budgetAfter !== undefined && (
-            <span className={`after ${tooExpensive ? 'bad' : ''}`}>Budget after <strong>{money(budgetAfter)}</strong></span>
+            <span className={`after ${tooExpensive ? 'bad' : ''}`} title="Budget left if you cast them">→ <strong>{money(budgetAfter)}</strong> left</span>
           )}
           {tooExpensive && budgetAfter === undefined && <span className="bad">over budget</span>}
         </div>

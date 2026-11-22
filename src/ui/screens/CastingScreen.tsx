@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGame, useProfile } from '../store';
 import { ActorCard } from '../components/ActorCard';
 import { Face } from '../components/Face';
-import { ActionBar, Sheet, useToast } from '../components/ui';
+import { ActionBar, Hint, Sheet, useToast } from '../components/ui';
 import { Requirements } from './ScriptEditor';
 import { SKILLS } from '../../engine/data/actors';
 import { directorById } from '../../engine/data/directors';
@@ -127,7 +127,7 @@ function RoleSheet({ roleId, onApply, onClose, onNext }: {
               );
             })}
           </div>
-          <p className="small muted center">Cards you skip are gone for this film. New cards cost more each time.</p>
+          <p className="small muted center">Skipped cards are gone<Hint>Cards you skip are gone for this film. New cards cost more each time.</Hint></p>
         </>
       ) : (
         <div className="empty">

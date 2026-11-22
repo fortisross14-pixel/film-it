@@ -204,3 +204,18 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 .mini-grade.grade-D { background: #b3561e; } .mini-grade.grade-F { background: #b3261e; }
 [data-motion='reduce'] .career-slot { animation: none; }
 [data-motion='reduce'] .career-slot:hover { transform: none; }
+
+/* Brief first, details on tap */
+.details2 { margin-top: 6px; }
+.details-btn { min-height: 0; padding: 3px 12px; border-radius: 999px; font-size: 0.8rem; font-weight: 800; color: var(--accent-text); background: transparent; border: 1px solid #d9c6a8; }
+.details-btn:hover { border-color: var(--accent); }
+.details-body { margin-top: 8px; display: grid; gap: 6px; animation: fade-in 0.2s ease both; }
+.actor-nums { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.actor-nums > span { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; background: var(--panel-2); font-weight: 800; font-size: 0.85rem; }
+.actor-nums > span .glyph { color: var(--accent-text); }
+.actor-nums > span.need { background: #fbefcf; border: 1px solid var(--accent); }
+.score-brief { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.score-brief .big-inline { font-family: var(--display); font-size: 2rem; }
+
+/* Sheet titles sit on the dark header: plain light text, not the gold-bronze heading. */
+.sheet-head h2 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--chrome-text); }

@@ -7,6 +7,7 @@ import { art } from '../art';
 import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../components/IsoSet';
 import { Bolt, Heart, Speech } from '../components/Icons';
 import { ActionBar, Sheet, Stat, Tabs, useToast } from '../components/ui';
+import { Details } from '../components/ui';
 import { Glyph, Medallion } from '../components/GameIcons';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
@@ -290,7 +291,9 @@ function ShootFlow({ initialScene, onApply, onClose }: { initialScene?: string; 
       </div>
       <details className="fold">
         <summary className="small">Why these numbers?</summary>
-        <div className="row wrap factor-chips">{prediction.factors.map((f) => <span key={f.label} className="tag">{f.label} {f.value}</span>)}</div>
+        <Details label="Why">
+          <div className="row wrap factor-chips">{prediction.factors.map((f) => <span key={f.label} className="tag">{f.label} {f.value}</span>)}</div>
+        </Details>
       </details>
     </Sheet>
   );

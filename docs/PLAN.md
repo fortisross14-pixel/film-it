@@ -411,6 +411,11 @@ Owner feedback: too much text, it felt generic and ugly in places; the mechanics
   epic and legendary cards shimmer like foil. Premiere: sweeping spotlights, camera flashes (two a second at most,
   WCAG 2.3.1), and the studio verdict slammed onto a memo as an inked rubber stamp with a short shake.
   Everything animated respects the reduce-motion setting.
+- **Brief first, details on tap** (`Details`): every card and sheet shows only the critical numbers; the full
+  breakdown opens on tap. Actor cards: star, acting, the skill the role needs, fit, pay (skills and traits on tap).
+  Contract sheet: facts, fee, must-haves (grading on tap). Must-haves list what's missing (done ones on tap). Script
+  quality: the number and the top note (components and feel on tap). Shooting forecast: the meters (factors on tap).
+  Edit: the scene score (the sum on tap). Shop and packs: names and prices (descriptions and odds behind "?").
 
 ## Still open
 

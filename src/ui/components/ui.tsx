@@ -90,6 +90,22 @@ export function useToast() {
   return { show: setText, node };
 }
 
+/**
+ * Brief first, details on tap: the critical numbers stay on screen; the full breakdown
+ * (every factor, every bar) opens below when you ask for it.
+ */
+export function Details({ children, label = 'Details' }: { children: ReactNode; label?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`details2 ${open ? 'open' : ''}`}>
+      <button type="button" className="details-btn" aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>
+        {open ? 'Hide' : label} <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+      </button>
+      {open && <div className="details-body">{children}</div>}
+    </div>
+  );
+}
+
 /** A small "?" that reveals a rule on tap: rules stay one tap away instead of on every screen. */
 export function Hint({ children, label = 'How this works' }: { children: ReactNode; label?: string }) {
   const [open, setOpen] = useState(false);

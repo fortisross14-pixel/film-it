@@ -7,7 +7,7 @@ import { AXES, TONES, toneById } from '../../engine/data/tones';
 import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
 import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
-import { ActionBar, Hint, Sheet, Tabs, useToast } from '../components/ui';
+import { ActionBar, Details, Hint, Sheet, Tabs, useToast } from '../components/ui';
 import { ActionBubbles } from '../components/ActionBubbles';
 import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { TUNING } from '../../engine/tuning';
@@ -153,6 +153,9 @@ function CheckPanel({ film, quality, reqs, cost }: { film: Film; quality: Return
           <h3>Quality</h3>
           <span className="big">{quality.total}</span>
         </div>
+        {quality.notes[0] && <p className="small">{quality.notes[0]}</p>}
+        {quality.ceiling < 100 && <p className="small muted">Ceiling {quality.ceiling} with this director</p>}
+        <Details>
         {(['fit', 'depth', 'structure', 'characters', 'coherence', 'pacing'] as const).map((k) => (
           <div key={k} className="weight">
             <span>{k[0].toUpperCase() + k.slice(1)}</span>
@@ -161,10 +164,7 @@ function CheckPanel({ film, quality, reqs, cost }: { film: Film; quality: Return
           </div>
         ))}
         {quality.directorBonus !== 0 && <p className="small">Director {quality.directorBonus > 0 ? '+' : ''}{quality.directorBonus}</p>}
-        {quality.ceiling < 100 && <p className="small muted">Your director's best script in this genre: {quality.ceiling}. A better director raises it.</p>}
-        {quality.notes.length > 0 && <ul className="reqs small muted">{quality.notes.slice(0, 4).map((n) => <li key={n}>{n}</li>)}</ul>}
-      </div>
-      <div className="card">
+        {quality.notes.length > 1 && <ul className="reqs small muted">{quality.notes.slice(1, 4).map((n) => <li key={n}>{n}</li>)}</ul>}
         <h3>Feel <span className="muted small">· ▮ = what {genreName(film.contract.genre)} fans expect</span></h3>
         {AXES.map((ax) => (
           <div key={ax.id} className="axis">
@@ -173,6 +173,7 @@ function CheckPanel({ film, quality, reqs, cost }: { film: Film; quality: Return
           </div>
         ))}
         <p className="small muted">Filler {Math.round(fillerShare(film) * 100)}% · script cost {money(cost)}</p>
+        </Details>
       </div>
     </>
   );
@@ -207,16 +208,21 @@ function SceneList({ film, onOpen }: { film: Film; onOpen: (id: string) => void 
 export function Requirements({ reqs }: { reqs: ReturnType<typeof checkRequirements> }) {
   return (
     <div className="card">
-      <h3>Requirements</h3>
+      <h3>Must-haves <span className={`tag ${reqs.every((c) => c.status === 'met') ? 'good' : ''}`}>{reqs.filter((c) => c.status === 'met').length}/{reqs.length}</span></h3>
       <ul className="checklist">
-        {reqs.map((c, i) => (
+        {reqs.filter((c) => c.status !== 'met').map((c, i) => (
           <li key={i} className={c.status}>
-            <span className="mark">{c.status === 'met' ? '✓' : c.status === 'missing' ? '✗' : '…'}</span>
+            <span className="mark">{c.status === 'missing' ? '✗' : '…'}</span>
             {describeHardReq(c.req)}
             {c.detail && <span className="muted small"> · {c.detail}</span>}
           </li>
         ))}
       </ul>
+      {reqs.some((c) => c.status === 'met') && (
+        <Details label="Done">
+          <ul className="checklist">{reqs.filter((c) => c.status === 'met').map((c, i) => <li key={i} className="met"><span className="mark">✓</span>{describeHardReq(c.req)}</li>)}</ul>
+        </Details>
+      )}
     </div>
   );
 }

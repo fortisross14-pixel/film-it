@@ -4,7 +4,7 @@ import { genreName } from '../../engine/data/genres';
 import { describeBonus, describeHardReq, money } from '../../engine/format';
 import { Calendar, Clapper, Coins } from './Icons';
 import { TUNING } from '../../engine/tuning';
-import { Difficulty, Hint } from './ui';
+import { Details, Difficulty, Hint } from './ui';
 
 const WEIGHT_LABELS = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' } as const;
 const strictLabel = (s: number) => (s > 1.2 ? 'strict' : s < 0.9 ? 'lenient' : 'normal');
@@ -38,6 +38,11 @@ export function ContractDetails({ c }: { c: Contract }) {
       </div>
 
       <section>
+        <div className="section-label">Must have</div>
+        <ul className="reqs">{c.hardReqs.map((r, i) => <li key={i}>{describeHardReq(r)}</li>)}</ul>
+      </section>
+      <Details label="How it's graded">
+      <section>
         <div className="section-label">Graded on</div>
         <div className="weights">
           {weights.map(([k, w]) => (
@@ -50,10 +55,6 @@ export function ContractDetails({ c }: { c: Contract }) {
         </div>
         <p className="small muted">Box office target {money(c.boxOfficeTarget)} · late {strictLabel(c.delivery.late)} · over budget {strictLabel(c.delivery.overBudget)}</p>
       </section>
-      <section>
-        <div className="section-label">Must have</div>
-        <ul className="reqs">{c.hardReqs.map((r, i) => <li key={i}>{describeHardReq(r)}</li>)}</ul>
-      </section>
       {c.bonusGoals.length > 0 && (
         <section>
           <div className="section-label">Bonus</div>
@@ -61,6 +62,7 @@ export function ContractDetails({ c }: { c: Contract }) {
         </section>
       )}
       <p className="small muted">{c.studio.name} · {contractGenre(c)}</p>
+      </Details>
     </div>
   );
 }

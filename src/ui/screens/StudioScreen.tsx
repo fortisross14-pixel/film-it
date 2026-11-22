@@ -235,8 +235,9 @@ function TalentArea() {
                 {have > 0 && <span className="tag good">{have} to open</span>}
               </div>
               <p className="small">
-                {def.cards} actors · {!forSale && 'once unlocked: '}{Object.entries(odds).map(([r, o]) => `${RARITY_LABEL[r as Rarity]} ${Math.round((o as number) * 100)}%`).join(' · ')}
-                {def.guaranteed && <> · at least one {RARITY_LABEL[def.guaranteed].toLowerCase()}</>}
+                <Hint label="Odds">{def.cards} actors · {!forSale && 'once unlocked: '}{Object.entries(odds).map(([r, o]) => `${RARITY_LABEL[r as Rarity]} ${Math.round((o as number) * 100)}%`).join(' · ')}
+                {def.guaranteed && <> · at least one {RARITY_LABEL[def.guaranteed].toLowerCase()}</>}</Hint>
+                {' '}{def.cards} actors{!forSale && ' · 🔒'}
               </p>
               <p className="small muted">{id === 'star' ? 'Grade A' : 'Grade B'} earns one{!forSale && def.requires ? ` · 🔒 ${upgradeById(def.requires)?.name}` : ''}</p>
               <div className="row">
@@ -312,8 +313,7 @@ function UpgradeShop() {
           <div key={u.id} className={`list-row static ${owned ? '' : 'locked'}`}>
             <span className="list-main">
               <span className="kicker">{u.kind}</span>
-              <strong>{u.name}</strong>
-              <span className="small muted">{u.text}</span>
+              <strong>{u.name}<Hint>{u.text}</Hint></strong>
               {!owned && u.requires && !p.unlocks.upgrades.includes(u.requires) && <span className="small muted">Needs {upgradeById(u.requires)!.name} first</span>}
             </span>
             {owned ? <span className="tag good">Owned</span> : (
@@ -344,8 +344,7 @@ function DirectorShop() {
               <span className="avatar"><Clapper size={22} /></span>
               <span className="list-main">
                 <strong>{d.name}</strong>
-                <span className="small muted">{directorLine(d)}</span>
-                <span className="small muted">{TIER_TEXT[d.tier]} · script up to {d.ceiling.script} · shooting up to {d.ceiling.shooting}{d.masterGenre ? ` (100 in ${genreName(d.masterGenre)})` : ''}</span>
+                <span className="small muted">{TIER_TEXT[d.tier]} · {directorLine(d)}</span>
               </span>
               {owned ? <span className="tag">Owned</span> : <span className="price"><Coins size={16} /> {money(directorCost(d))}</span>}
             </button>
