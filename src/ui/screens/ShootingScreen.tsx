@@ -131,7 +131,7 @@ export function ShootingScreen() {
           <>
             {result && <WeekResultCard r={result} onClose={() => setResult(null)} />}
             <WeekStatus film={film} />
-            <div className="activity-grid">
+            {!review.readOnly && <div className="activity-grid">
               <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot', sceneId: nextScene?.id })}>
                 <Medallion name="clapper" size={40} tone="ruby" /><strong>Shoot</strong>
               </button>
@@ -144,7 +144,7 @@ export function ShootingScreen() {
               <button className="activity a-relax" onClick={() => setFlow({ kind: 'relax' })}>
                 <Medallion name="rest" size={40} tone="gold" /><strong>Day off</strong>
               </button>
-            </div>
+            </div>}
           </>
         ) : (
           <div className="stack">
@@ -159,7 +159,7 @@ export function ShootingScreen() {
         duration={`${kept}/${film.scenes.length} kept`}
         transport={<>
           <button aria-label="Previous scene" onClick={() => setSel(film.scenes[(nextIdx - 1 + film.scenes.length) % film.scenes.length].id)}>⏮</button>
-          <button className="play rec" aria-label={`Shoot scene ${nextIdx + 1}`} title="Shoot this scene" onClick={() => setFlow({ kind: 'shoot', sceneId: nextScene?.id })}>●</button>
+          {!review.readOnly && <button className="play rec" aria-label={`Shoot scene ${nextIdx + 1}`} title="Shoot this scene" onClick={() => setFlow({ kind: 'shoot', sceneId: nextScene?.id })}>●</button>}
           <button aria-label="Next scene" onClick={() => setSel(film.scenes[(nextIdx + 1) % film.scenes.length].id)}>⏭</button>
         </>}
       >

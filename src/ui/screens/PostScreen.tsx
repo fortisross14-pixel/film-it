@@ -87,7 +87,7 @@ export function PostScreen() {
 
   return (
     <>
-      <Panel area="props" title={selScene ? `Properties · Scene ${selIdx + 1}` : 'Properties'}>
+      <Panel area="props" className={review.readOnly ? "look-only" : ""} title={selScene ? `Properties · Scene ${selIdx + 1}` : 'Properties'}>
         {selScene && <SceneEdit film={film} scene={selScene} index={selIdx} score={scoreOf(selScene.id)} onApply={apply} />}
       </Panel>
 
@@ -116,7 +116,7 @@ export function PostScreen() {
         </Monitor>
       )}
 
-      <Panel area="side" tabs={[{ id: 'sound', label: 'Music & FX' }, { id: 'poster', label: 'Poster' }, { id: 'marketing', label: 'Marketing' }]} tab={tab === 'scenes' ? 'sound' : tab} onTab={(t) => setTab(t as PostTab)}>
+      <Panel area="side" className={review.readOnly ? "look-only" : ""} tabs={[{ id: 'sound', label: 'Music & FX' }, { id: 'poster', label: 'Poster' }, { id: 'marketing', label: 'Marketing' }]} tab={tab === 'scenes' ? 'sound' : tab} onTab={(t) => setTab(t as PostTab)}>
         {(tab === 'sound' || tab === 'scenes') && (
           <>
             <div className="section-label">Music</div>

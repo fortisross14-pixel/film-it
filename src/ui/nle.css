@@ -13,7 +13,7 @@
 .nle *::selection { background: var(--nle-blue); color: #fff; }
 
 /* ---------- Top bar ---------- */
-.nle-top { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; height: 48px; padding: 0 12px; background: #1b1b1d; border-bottom: 1px solid #000; }
+.nle-top { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; height: 48px; padding: 0 12px; background: #1b1b1d; border-bottom: 1px solid #000; }
 .nle-top-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .nle-logo { height: 26px; width: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); }
 .nle-icon { min-height: 0; width: 34px; height: 30px; padding: 0; background: transparent; border: 0; color: var(--nle-text); font-size: 1.2rem; box-shadow: none; }
@@ -22,7 +22,7 @@
 .nle-ws { padding: 6px 10px; color: var(--nle-muted); font-size: 14px; white-space: nowrap; border-bottom: 2px solid transparent; }
 .nle-ws.done { color: #b9b9bf; }
 .nle-ws.on { color: #fff; border-bottom-color: #fff; }
-.nle-title { color: #e8e8ea; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44vw; }
+.nle-title { color: #e8e8ea; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; text-align: center; }
 .nle-title .dim { color: var(--nle-muted); }
 .nle-top-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .nle-top-right .hud-pill { background: var(--nle-panel2); border-color: var(--nle-line); color: var(--nle-text); box-shadow: none; }
@@ -347,3 +347,7 @@
 .nle-page > * { max-width: 1040px; margin-left: auto; margin-right: auto; }
 .nle .nle-page .action-bar { position: sticky; bottom: 0; }
 @media (max-width: 900px) { .nle-page { padding: 12px 10px 90px; } .nle .nle-page .action-bar { position: fixed; } }
+
+/* Reviewing a locked phase: settings are shown, not changeable (tabs still switch). */
+.nle .look-only .nle-panel-body :is(button, select, input) { pointer-events: none; opacity: 0.6; }
+.nle .look-only .nle-panel-body :is(button, select).on, .nle .look-only .nle-panel-body .selected { opacity: 1; }

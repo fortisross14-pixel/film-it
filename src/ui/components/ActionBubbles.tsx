@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { Glyph, Medallion, type GlyphName } from './GameIcons';
+import { useReview } from '../review';
 
 export interface BubbleAction {
   id: string;
@@ -20,6 +21,8 @@ export function ActionBubbles({ label, icon = 'plus', actions, closeOnPick = fal
   label: string; icon?: GlyphName; actions: BubbleAction[]; closeOnPick?: boolean; primary?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // Reviewing a locked phase: look only, no actions.
+  if (useReview().readOnly) return null;
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
