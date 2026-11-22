@@ -17,6 +17,7 @@ import { directorById } from '../../src/engine/data/directors';
 import { genreCloseness } from '../../src/engine/data/genres';
 import { SETS } from '../../src/engine/data/sets';
 import { TOPICS } from '../../src/engine/data/topics';
+import { UPGRADES, gear } from '../../src/engine/data/upgrades';
 import { FAMOUS, generateStar } from '../../src/engine/data/actors';
 import { assignPortraits } from '../../src/engine/portraits';
 import { createRng } from '../../src/engine/rng';
@@ -183,7 +184,9 @@ export function post(p: Profile, bot: Bot): Profile {
   if (bot === 'average') f = ok(setMusic(f, 'library'), 'music').film;
   if (bot === 'careful') {
     const left = f.contract.budget - spent(f);
-    f = ok(setMusic(f, left > f.contract.budget * 0.25 ? 'composer' : 'library'), 'music').film;
+    const music = gear(f.upgrades).music;
+    const best = music.includes('star') && left > f.contract.budget * 0.4 ? 'star' : music.includes('composer') && left > f.contract.budget * 0.25 ? 'composer' : 'library';
+    f = ok(setMusic(f, best), 'music').film;
     const leftAfter = f.contract.budget - spent(f) - postSummary(f, level).musicCost;
     if (leftAfter > 0) f = autoPolish(f, leftAfter * 0.3, level);
     // Poster: suitable style, fitting font, stars billed big, superstar faces.
@@ -305,7 +308,7 @@ export function veteranStudio(p: Profile): Profile {
     ...p,
     unlocks: {
       directors: DIRECTORS.map((d) => d.id), sets: SETS.map((s) => s.id), topics: TOPICS.map((t) => t.id),
-      packs: TOPIC_PACKS.map((t) => t.id), genres: [...p.unlocks.genres, 'horror', 'scifi', 'fantasy'],
+      packs: TOPIC_PACKS.map((t) => t.id), genres: [...p.unlocks.genres, 'horror', 'scifi', 'fantasy'], upgrades: UPGRADES.map((u) => u.id),
     },
     actorPool: assignPortraits([...p.actorPool, ...stars]),
   };

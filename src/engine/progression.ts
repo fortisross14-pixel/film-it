@@ -11,6 +11,7 @@ import { GENRE_IDS } from './data/genres';
 import { FAMOUS, famousOfRarity, generateActor, generateStar } from './data/actors';
 import { assignPortraits } from './portraits';
 import { withRng } from './profile';
+import { UPGRADES, gear, upgradeById, type UpgradeId } from './data/upgrades';
 
 export const directorCost = (d: DirectorDef) => (d.unlock.kind === 'buy' ? d.unlock.cost : 0);
 
@@ -96,21 +97,31 @@ export function unlockGenresForLevel(p: Profile, level: number): { profile: Prof
 
 export const packDef = (id: TalentPackId) => TUNING.talentPacks[id];
 
-/** A pack type can be bought once a career has reached its level. */
+/** Agency level from the studio upgrades: 0 none, 1 Talent agency, 2 Star agency. */
+export const agencyLevel = (p: Profile) => gear(p.unlocks.upgrades).agency;
+
+/** Star packs need the Talent agency. */
 export function packForSale(p: Profile, id: TalentPackId): boolean {
-  const at = (packDef(id) as { unlockAtLevel?: number }).unlockAtLevel;
-  return !at || bestLevel(p) >= at;
+  const req = packDef(id).requires;
+  return !req || p.unlocks.upgrades.includes(req);
 }
+
+/** The odds a pack opens with today. */
+export const packOdds = (p: Profile, id: TalentPackId) => packDef(id).odds[agencyLevel(p)];
 
 export function buyTalentPack(p: Profile, id: TalentPackId): PurchaseResult {
   const def = packDef(id);
-  if (!packForSale(p, id)) return fail(`Reach level ${(def as { unlockAtLevel?: number }).unlockAtLevel} in a career first`);
+  if (!packForSale(p, id)) return fail(`Needs the ${upgradeById(def.requires!)?.name} upgrade`);
   const no = short(p, def.price);
   if (no) return fail(no);
   return { ok: true, profile: { ...p, money: p.money - def.price, talentPacks: { ...p.talentPacks, [id]: (p.talentPacks[id] ?? 0) + 1 } } };
 }
 
-export const grantTalentPack = (p: Profile, id: TalentPackId): Profile => ({ ...p, talentPacks: { ...p.talentPacks, [id]: (p.talentPacks[id] ?? 0) + 1 } });
+export const grantTalentPack = (p: Profile, id: TalentPackId): Profile => {
+  // Without the Talent agency an A earns a Casting call instead.
+  const pack = packForSale(p, id) ? id : 'casting';
+  return { ...p, talentPacks: { ...p.talentPacks, [pack]: (p.talentPacks[pack] ?? 0) + 1 } };
+};
 
 export interface PackCard {
   actor: Actor;
@@ -120,43 +131,42 @@ export interface PackCard {
 export type OpenResult = { ok: true; profile: Profile; cards: PackCard[] } | { ok: false; reason: string };
 
 /**
- * Open a talent pack: each card rolls a rarity. Rare cards are new unnamed actors; epic and
- * legendary cards are named stars (one you don't have yet if any are left; a duplicate boosts yours).
+ * Open a talent pack: each card rolls a rarity from the odds for your agency. Epic cards are
+ * unnamed until the Star agency, then named stars while any are left. Legendary cards are
+ * always named stars; once you have them all, a duplicate makes yours more famous.
  */
 export function openTalentPack(p: Profile, id: TalentPackId): OpenResult {
   if ((p.talentPacks[id] ?? 0) < 1) return { ok: false, reason: 'No pack to open' };
   const def = packDef(id);
+  const odds = packOdds(p, id);
+  const agency = agencyLevel(p);
   const A = TUNING.actors;
   const { profile, value } = withRng(p, (rng) => {
     let roster = [...p.actorPool];
     const cards: PackCard[] = [];
     const used = new Set(roster.map((a) => a.name));
+    const add = (actor: Actor) => { roster.push(actor); cards.push({ actor, duplicate: false }); };
     for (let i = 0; i < def.cards; i++) {
-      let rarity = rng.weighted(def.odds as Record<Rarity, number>);
-      // The guaranteed card: the last one is at least this good.
-      const g = (def as { guaranteed?: Rarity }).guaranteed;
-      if (g && i === def.cards - 1 && !cards.some((c) => c.actor.rarity === g || c.actor.rarity === 'legendary') && rarity !== 'legendary') rarity = g;
-      if (rarity === 'epic' || rarity === 'legendary') {
-        const tier = famousOfRarity(rarity);
-        const fresh = tier.filter((f) => !used.has(f.name));
+      let rarity = rng.weighted(odds as Record<Rarity, number>);
+      // The guaranteed card: the last one is at least this good (when the agency allows it).
+      const g = def.guaranteed;
+      if (g && agency >= 1 && i === def.cards - 1 && !cards.some((c) => c.actor.rarity === g || c.actor.rarity === 'legendary') && rarity !== 'legendary') rarity = g;
+      const freshStar = (r: Rarity) => famousOfRarity(r).filter((f) => !used.has(f.name));
+      if (rarity === 'legendary' || (rarity === 'epic' && agency >= 2 && freshStar('epic').length)) {
+        const fresh = freshStar(rarity);
         if (fresh.length) {
           const star = generateStar(rng, rng.pick(fresh));
           used.add(star.name);
-          roster.push(star);
-          cards.push({ actor: star, duplicate: false });
+          add(star);
         } else {
-          const name = rng.pick(tier).name;
+          const name = rng.pick(famousOfRarity(rarity)).name;
           const idx = roster.findIndex((a) => a.name === name);
           const a = roster[idx];
           const boosted = { ...a, starPower: Math.min(100, a.starPower + A.duplicateStar), acting: Math.min(100, a.acting + A.duplicateActing) };
           roster[idx] = boosted;
           cards.push({ actor: boosted, duplicate: true });
         }
-      } else {
-        const actor = generateActor(rng, used, rarity);
-        roster.push(actor);
-        cards.push({ actor, duplicate: false });
-      }
+      } else add(generateActor(rng, used, rarity));
     }
     roster = assignPortraits(roster);
     const byId = new Map(roster.map((a) => [a.id, a]));
@@ -169,6 +179,25 @@ export function openTalentPack(p: Profile, id: TalentPackId): OpenResult {
   };
 }
 
+// ---------------- Studio upgrades ----------------
+
+export function upgradeForSale(p: Profile, id: UpgradeId): { ok: boolean; reason?: string } {
+  const u = upgradeById(id);
+  if (!u) return { ok: false, reason: 'Unknown upgrade' };
+  if (p.unlocks.upgrades.includes(id)) return { ok: false, reason: 'Already owned' };
+  if (u.requires && !p.unlocks.upgrades.includes(u.requires)) return { ok: false, reason: `Needs ${upgradeById(u.requires)!.name} first` };
+  return { ok: true };
+}
+
+export function buyUpgrade(p: Profile, id: UpgradeId): PurchaseResult {
+  const u = upgradeById(id);
+  const sale = upgradeForSale(p, id);
+  if (!u || !sale.ok) return fail(sale.reason!);
+  const no = short(p, u.cost);
+  if (no) return fail(no);
+  return { ok: true, profile: { ...p, money: p.money - u.cost, unlocks: { ...p.unlocks, upgrades: [...p.unlocks.upgrades, id] } } };
+}
+
 // ---------------- Collection ----------------
 
 export interface CollectionProgress {
@@ -177,6 +206,7 @@ export interface CollectionProgress {
   topics: [number, number];
   genres: [number, number];
   stars: [number, number];
+  upgrades: [number, number];
 }
 
 /** How much of the game is unlocked: the long-term goal next to climbing careers. */
@@ -188,6 +218,7 @@ export function collection(p: Profile): CollectionProgress {
     topics: [p.unlocks.packs.length, TOPIC_PACKS.length],
     genres: [p.unlocks.genres.length, GENRE_IDS.length],
     stars: [FAMOUS.filter((f) => names.has(f.name)).length, FAMOUS.length],
+    upgrades: [p.unlocks.upgrades.length, UPGRADES.length],
   };
 }
 
@@ -197,6 +228,7 @@ export function unlockProgress(p: Profile): { owned: number; total: number; rema
     ...DIRECTORS.map((d) => ({ owned: p.unlocks.directors.includes(d.id), cost: directorCost(d) })),
     ...TOPIC_PACKS.map((x) => ({ owned: p.unlocks.packs.includes(x.id), cost: x.cost })),
     ...SETS.filter((s) => s.unlock.kind === 'buy').map((s) => ({ owned: p.unlocks.sets.includes(s.id), cost: setCost(s) })),
+    ...UPGRADES.map((u) => ({ owned: p.unlocks.upgrades.includes(u.id), cost: u.cost })),
   ];
   return {
     owned: items.filter((i) => i.owned).length,

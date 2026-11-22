@@ -7,13 +7,15 @@ import { addBeat, addRole, addScene, finishScript, type EditResult } from '../sr
 import { castActor, drawCards, finishCasting, type CastResult } from '../src/engine/casting';
 import { chooseVersion, doWeek, wrapShooting, type ShootResult } from '../src/engine/shooting';
 import { startCareer } from '../src/engine/career';
+import { UPGRADES } from '../src/engine/data/upgrades';
 
 export const ok = (r: EditResult): Film => { if (!r.ok) throw new Error(r.reason); return r.film; };
 export const okP = (r: CastResult | ShootResult): Profile => { if (!r.ok) throw new Error(r.reason); return r.profile; };
 
 /** 3 scenes: thrill chase, romantic declaration, thrill climax. Main=role1, Villain=role2, Love=role3. */
 export function castProfile(genre: GenreId = 'thriller', budget = 25000): Profile {
-  const started = startCareer(newProfile('T', 33), 'starterB', 1);
+  const base = newProfile('T', 33);
+  const started = startCareer({ ...base, unlocks: { ...base.unlocks, upgrades: UPGRADES.map((u) => u.id) } }, 'starterB', 1);
   if (!started.ok) throw new Error(started.reason);
   const c = { ...generateContract(createRng(2), 1, { archetype: 'crowd', genre }), budget, rating: 'PG-13' as const, secondaryGenre: undefined };
   const p = { ...started.profile, contractBoard: [c] };

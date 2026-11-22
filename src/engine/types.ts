@@ -434,6 +434,8 @@ export interface Film {
   fillerShot: boolean;
   poster?: PosterDesign;
   marketing?: MarketingState;
+  /** Studio upgrades in place when the film started (undefined on older films: everything allowed). */
+  upgrades?: string[];
   /** Franchise this film belongs to (number 2+ = sequel). */
   franchise?: { name: string; number: number };
   shooting?: ShootingState;
@@ -516,6 +518,8 @@ export interface Profile {
     sets: string[];
     /** Genres the boards offer. More open as careers climb. */
     genres: GenreId[];
+    /** Studio upgrades (data/upgrades.ts): agencies, post house, composers, marketing. */
+    upgrades: string[];
   };
   /** Unopened talent packs. */
   talentPacks: Record<TalentPackId, number>;

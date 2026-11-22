@@ -232,7 +232,7 @@ describe('progression', () => {
   it('sells and opens talent packs', () => {
     let p = { ...newProfile('T', 1), money: 1000 };
     expect(packForSale(p, 'casting')).toBe(true);
-    expect(packForSale(p, 'star')).toBe(false); // needs a career at level 5
+    expect(packForSale(p, 'star')).toBe(false); // needs the Talent agency
     expect(buyTalentPack(p, 'star').ok).toBe(false);
     const r = buyTalentPack(p, 'casting');
     if (!r.ok) throw new Error(r.reason);
@@ -242,16 +242,39 @@ describe('progression', () => {
     const o = openTalentPack(p, 'casting');
     if (!o.ok) throw new Error(o.reason);
     expect(o.cards).toHaveLength(3);
-    expect(o.cards.every((c) => ['rare', 'epic', 'legendary'].includes(c.actor.rarity))).toBe(true);
-    expect(o.cards.every((c) => !!c.actor.famous === (c.actor.rarity !== 'rare'))).toBe(true);
+    // No agency: commons and uncommons only.
+    expect(o.cards.every((c) => ['common', 'uncommon'].includes(c.actor.rarity) && !c.actor.famous)).toBe(true);
     expect(o.profile.actorPool).toHaveLength(p.actorPool.length + o.cards.filter((c) => !c.duplicate).length);
     expect(o.profile.talentPacks.casting).toBe(0);
     expect(openTalentPack(o.profile, 'casting').ok).toBe(false);
     expect(new Set(o.profile.actorPool.map((a) => a.portrait)).size).toBe(o.profile.actorPool.length);
   });
 
+  it('agencies open better cards: unnamed rare/epic, then legendary and named stars', () => {
+    const open = (upgrades: string[], id: 'casting' | 'star', n = 30) => {
+      let p = newProfile('T', 4);
+      p = { ...p, unlocks: { ...p.unlocks, upgrades } };
+      for (let i = 0; i < n; i++) p = grantTalentPack(p, id);
+      const cards = [];
+      for (let i = 0; i < n; i++) { const o = openTalentPack(p, id); if (!o.ok) throw new Error(o.reason); p = o.profile; cards.push(...o.cards); }
+      return cards;
+    };
+    const one = open(['agency1'], 'casting');
+    expect(one.some((c) => c.actor.rarity === 'epic')).toBe(true);
+    expect(one.every((c) => c.actor.rarity !== 'legendary' && !c.actor.famous && c.actor.rarity !== 'common')).toBe(true);
+    const two = open(['agency1', 'agency2'], 'casting');
+    expect(two.some((c) => c.actor.rarity === 'legendary')).toBe(true);
+    expect(two.filter((c) => c.actor.rarity === 'legendary').every((c) => c.actor.famous)).toBe(true);
+    expect(two.some((c) => c.actor.rarity === 'epic' && c.actor.famous)).toBe(true);
+    // Without the Talent agency a Star pack can't be bought, and an A earns a Casting call.
+    const p = newProfile('T', 4);
+    expect(buyTalentPack({ ...p, money: 9999 }, 'star').ok).toBe(false);
+    expect(grantTalentPack(p, 'star').talentPacks).toEqual({ casting: 1, star: 0 });
+  });
+
   it('a star pack always holds an epic or better; duplicates boost the star you have', () => {
     let p = newProfile('T', 3);
+    p = { ...p, unlocks: { ...p.unlocks, upgrades: ['agency1', 'agency2'] } };
     for (let i = 0; i < 40; i++) p = grantTalentPack(p, 'star');
     for (let i = 0; i < 40; i++) {
       const o = openTalentPack(p, 'star');

@@ -10,6 +10,7 @@
 // (bigger box office, a little awards push, but a higher box office target) or less
 // (smaller box office, a lower target). Each request takes a week.
 
+import { gear } from './data/upgrades';
 import type { Film, FilmRecord, GenreId, MarketingLevel, PosterDesign, PosterFont, PosterSize, PosterStyle, Role } from './types';
 import { TUNING } from './tuning';
 import { createRng } from './rng';
@@ -212,6 +213,7 @@ export const effectiveBoxOfficeTarget = (film: Film) => Math.round(film.contract
 export function requestMarketing(film: Film, level: MarketingLevel): MarketingResult {
   if (film.phase !== 'post') return fail('Marketing is decided during editing');
   if (level === marketingLevel(film)) return fail('That is the current plan');
+  if (!gear(film.upgrades).marketing.includes(level)) return fail('Needs the Marketing department upgrade');
   const week = film.calendar.shootWeeks + film.calendar.postWeeks + 1;
   return {
     ok: true,

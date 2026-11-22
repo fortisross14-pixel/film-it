@@ -77,9 +77,9 @@ function rollActor(rng: Rng, name: string, gender: 'f' | 'm', rarity: Rarity): A
   return { id: makeId('act', rng), name, starPower, acting, skills, rarity, traits, age: rng.pick(AGES), gender };
 }
 
-/** An unnamed actor (common, uncommon or rare) with a name not in usedNames. */
+/** An unnamed actor (common to epic) with a name not in usedNames. Legendary actors are always named stars. */
 export function generateActor(rng: Rng, usedNames: Set<string>, rarity: Rarity): Actor {
-  if (rarity === 'epic' || rarity === 'legendary') throw new Error('Epic and legendary actors are named stars: use generateStar');
+  if (rarity === 'legendary') throw new Error('Legendary actors are named stars: use generateStar');
   const gender: 'f' | 'm' = rng.chance(0.5) ? 'f' : 'm';
   const kind = rng.chance(0.6) ? 'common' : 'random';
   let name = '';

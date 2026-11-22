@@ -81,7 +81,7 @@ describe('careers', () => {
     expect(r.outcome).toMatchObject({ fired: false, wrapped: false, levelFrom: 1, levelTo: 3, genresOpened: ['horror'], pack: 'star' });
     p = r.profile;
     expect(p.career).toMatchObject({ level: 3, topLevel: 3, films: 1, earnings: 100, lastGrade: 'A', packsEarned: 1 });
-    expect(p.talentPacks.star).toBe(1);
+    expect(p.talentPacks).toEqual({ casting: 1, star: 0 }); // no Talent agency yet: a Casting call
     expect(p.unlocks.genres).toContain('horror');
     expect(p.contractBoard.map((c) => c.tag)).toEqual(['match', 'match', 'stretch', 'teaser']);
     expect(p.contractBoard.map((c) => c.level)).toEqual([3, 3, 4, 5]);

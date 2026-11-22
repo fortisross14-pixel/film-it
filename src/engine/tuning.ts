@@ -8,7 +8,7 @@ export const TUNING = {
   portraits: { expressiveSkill: 70 },
   /** Minimum final score for each letter grade. */
   gradeThresholds: { A: 90, B: 75, C: 48, D: 34, F: 0 },
-  saveVersion: 7,
+  saveVersion: 8,
 
   contracts: {
     runtimeOptions: [85, 90, 95, 100, 105, 110, 120, 130],
@@ -123,12 +123,24 @@ export const TUNING = {
     traitChance: 0.35,
   },
 
-  /** Talent packs: 3 new actors each. Earned with a B (casting) or an A (star), or bought. */
+  /**
+   * Talent packs: 3 new actors each. Odds by agency level (0 = none, 1 = Talent agency,
+   * 2 = Star agency). Star packs need the Talent agency. Epic cards are unnamed until the
+   * Star agency, which also brings legendary cards: always named stars.
+   */
   talentPacks: {
-    casting: { name: 'Casting call', cards: 3, price: 100, odds: { rare: 0.85, epic: 0.13, legendary: 0.02 }, guaranteed: undefined },
-    star: { name: 'Star pack', cards: 3, price: 300, odds: { rare: 0.45, epic: 0.45, legendary: 0.1 }, guaranteed: 'epic', unlockAtLevel: 5 },
-  } satisfies Record<TalentPackId, { name: string; cards: number; price: number; odds: Partial<Record<Rarity, number>>; guaranteed?: Rarity; unlockAtLevel?: number }>,
-  /** Which pack a grade earns. */
+    casting: { name: 'Casting call', cards: 3, price: 100, requires: undefined, odds: [
+      { common: 0.45, uncommon: 0.55 },
+      { uncommon: 0.35, rare: 0.5, epic: 0.15 },
+      { rare: 0.5, epic: 0.35, legendary: 0.15 },
+    ] },
+    star: { name: 'Star pack', cards: 3, price: 300, requires: 'agency1', guaranteed: 'epic', odds: [
+      { rare: 1 },
+      { rare: 0.4, epic: 0.6 },
+      { epic: 0.55, legendary: 0.45 },
+    ] },
+  } as Record<TalentPackId, { name: string; cards: number; price: number; requires?: string; guaranteed?: Rarity; odds: Partial<Record<Rarity, number>>[] }>,
+  /** Which pack a grade earns (an A earns a Star pack once you have the Talent agency, else a Casting call). */
   packForGrade: { A: 'star', B: 'casting' } as Partial<Record<Grade, TalentPackId>>,
 
   directors: {

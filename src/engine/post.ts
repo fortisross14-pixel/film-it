@@ -10,6 +10,7 @@ import { directorById } from './data/directors';
 import { specialtyScale } from './director';
 import { budgetScale, realMinutes, sceneMinutes } from './script';
 import { chosenTake, crewWeekCost } from './shooting';
+import { gear, UNLOCKED_BY, upgradeById } from './data/upgrades';
 
 export type PostResult = { ok: true; film: Film } | { ok: false; reason: string };
 const fail = (reason: string): PostResult => ({ ok: false, reason });
@@ -41,13 +42,17 @@ export function setCut(film: Film, sceneId: string, cut: boolean): PostResult {
   return { ok: true, film: replace(film, { ...s, cut }) };
 }
 
+const needs = (opt: MusicTier | PolishTier) => `Needs the ${upgradeById(UNLOCKED_BY[opt] ?? '')?.name ?? 'right'} upgrade`;
+
 export function setMusic(film: Film, music: MusicTier): PostResult {
+  if (!gear(film.upgrades).music.includes(music)) return fail(needs(music));
   return { ok: true, film: { ...film, music } };
 }
 
 export function setPolish(film: Film, sceneId: string, kind: PolishKind, tier: PolishTier): PostResult {
   const s = film.scenes.find((x) => x.id === sceneId);
   if (!s) return fail('Unknown scene');
+  if (!gear(film.upgrades).polish.includes(tier)) return fail(needs(tier));
   return { ok: true, film: replace(film, { ...s, [kind]: tier }) };
 }
 
@@ -163,6 +168,7 @@ export function postSummary(film: Film, level = 1): PostSummary {
  * gained per $K, respecting diminishing returns and overproduction.
  */
 export function autoPolish(film: Film, budget: number, level = 1): Film {
+  const g = gear(film.upgrades);
   let f: Film = { ...film, music: 'none', scenes: film.scenes.map((s) => ({ ...s, vfx: 'none', sfx: 'none' })) };
   const value = (x: Film) => {
     const s = postSummary(x, level);
@@ -181,11 +187,11 @@ export function autoPolish(film: Film, budget: number, level = 1): Film {
       if (gain > 0 && (!best || gain / extra > best.ratio)) best = { film: next, ratio: gain / extra };
     };
     const mi = MUSIC_TIERS.indexOf(f.music);
-    if (mi < MUSIC_TIERS.length - 1) tryMove({ ...f, music: MUSIC_TIERS[mi + 1] });
+    if (mi < MUSIC_TIERS.length - 1 && g.music.includes(MUSIC_TIERS[mi + 1])) tryMove({ ...f, music: MUSIC_TIERS[mi + 1] });
     for (const s of f.scenes.filter((x) => !x.cut)) {
       for (const kind of ['vfx', 'sfx'] as const) {
         const i = POLISH_TIERS.indexOf(s[kind]);
-        if (i < POLISH_TIERS.length - 1) tryMove(replace(f, { ...s, [kind]: POLISH_TIERS[i + 1] }));
+        if (i < POLISH_TIERS.length - 1 && g.polish.includes(POLISH_TIERS[i + 1])) tryMove(replace(f, { ...s, [kind]: POLISH_TIERS[i + 1] }));
       }
     }
     if (!best) break;

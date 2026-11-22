@@ -13,6 +13,7 @@ import { DIRECTORS } from './data/directors';
 import { SETS } from './data/sets';
 import { TOPICS, TOPIC_PACKS } from './data/topics';
 import { GENRE_IDS } from './data/genres';
+import { UPGRADES } from './data/upgrades';
 import { famousRarity } from './data/actors';
 import { generateBoard, feeFor } from './contracts';
 import { createRng } from './rng';
@@ -49,6 +50,8 @@ const MIGRATIONS: Record<number, (d: RawSave) => RawSave> = {
   5: (d) => ({ ...d, parked: [] }),
   // 7: credits and reputation are gone. Studio money, a career ladder, genres, a roster, talent packs.
   6: migrateTo7,
+  // 8: studio upgrades (agencies, post house, composers, marketing).
+  7: (d) => ({ ...d, unlocks: { ...(d.unlocks as object), upgrades: [] } }),
 };
 
 type OldCareer = Career & { reputation?: number };
@@ -121,6 +124,7 @@ export function validateProfile(d: unknown): Profile | undefined {
     topics: (p.unlocks.topics ?? []).filter(has(TOPICS)),
     packs: (p.unlocks.packs ?? []).filter(has(TOPIC_PACKS)),
     genres: (p.unlocks.genres ?? []).filter((g) => GENRE_IDS.includes(g)),
+    upgrades: (p.unlocks.upgrades ?? []).filter((u) => UPGRADES.some((x) => x.id === u)),
   };
   if (!unlocks.genres.length) unlocks.genres = [...TUNING.genres.start];
   if (!unlocks.directors.length) return undefined;
