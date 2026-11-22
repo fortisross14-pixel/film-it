@@ -13,6 +13,8 @@ export const TUNING = {
   contracts: {
     runtimeOptions: [85, 90, 95, 100, 105, 110, 120, 130],
     runtimeTolerance: 5,
+    /** Chance an offer is in one of the studio's favourite genres. */
+    studioTaste: 0.7,
     /** Budget tiers in $K. Index = budget tier (0 = micro). */
     budgetTiers: [3_000, 10_000, 25_000, 60_000, 150_000],
     /** Deadline weeks per minute of runtime, before archetype modifiers. */

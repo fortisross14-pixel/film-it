@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { genreName } from '../../engine/data/genres';
 import { useGame, useProfile } from '../store';
 import { Shell, type NavItem } from '../components/Shell';
 import { Clapper, Coins, Film, Home, Masks, People, Trophy } from '../components/Icons';
@@ -36,11 +37,11 @@ export function ProductionScreen() {
     <Shell
       nav={nav} active={film.phase} progress
       title={film.title}
-      sub={`${PHASES[phaseIdx]?.label ?? ''} · week ${weeksUsed(film)}/${film.contract.deadlineWeeks}`}
+      sub={`${genreName(film.contract.genre)} for ${film.contract.studio.name} · ${PHASES[phaseIdx]?.label ?? ''} · week ${weeksUsed(film)}/${film.contract.deadlineWeeks}`}
       pills={<span className={`hud-pill ${left < 0 ? 'bad' : ''}`} title="Budget left"><Coins size={18} /> {money(left)}</span>}
       actions={<>
         <button className="ghost-btn" onClick={() => setBrief(true)}>Brief</button>
-        {p.career && !film.results && <button className="icon ghost-btn" aria-label="Back to the studio (the film waits)" title="Studio" onClick={() => update(parkCareer)}><Home size={20} /></button>}
+        {p.career && !film.results && <button className="icon ghost-btn" aria-label="Back home (the film waits)" title="Home" onClick={() => update(parkCareer)}><Home size={20} /></button>}
       </>}
     >
       {film.phase === 'script' && <ScriptEditor />}

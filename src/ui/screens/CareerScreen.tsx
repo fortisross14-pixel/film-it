@@ -6,7 +6,7 @@ import { useGame, useProfile } from '../store';
 import { Shell, type NavItem } from '../components/Shell';
 import { Coins, Film, Home, Reel } from '../components/Icons';
 import { Poster } from '../components/Poster';
-import { ContractDetails, ContractFacts, contractGenre } from '../components/ContractCard';
+import { ContractDetails, ContractFacts, GenreBadge, contractGenre } from '../components/ContractCard';
 import { Difficulty, Sheet, Stat } from '../components/ui';
 import { directorById } from '../../engine/data/directors';
 import { genreCloseness } from '../../engine/data/genres';
@@ -37,7 +37,7 @@ export function CareerScreen() {
   const nav: NavItem[] = [
     { id: 'contracts', label: 'Contracts', icon: <Reel size={22} /> },
     { id: 'career', label: 'Career', icon: <Film size={22} /> },
-    { id: 'studio', label: 'Studio', icon: <Home size={22} /> },
+    { id: 'studio', label: 'Home', icon: <Home size={22} /> },
   ];
   return (
     <Shell
@@ -77,7 +77,8 @@ function ContractList({ d }: { d: DirectorDef }) {
                 {!x.locked && fit.tone === 'good' && <span className="cc-fit" title={fit.text}>★</span>}
               </span>
               <span className="cc-body">
-                <span className="cc-genre">{contractGenre(x)}</span>
+                <GenreBadge c={x} />
+                <span className="cc-studio">{x.studio.name}</span>
                 {x.locked ? <span className="small muted">{x.studio.name} · {money(x.budget)}</span> : <ContractFacts c={x} />}
                 {!x.locked && (
                   <span className="cc-foot">

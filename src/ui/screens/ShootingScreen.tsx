@@ -8,7 +8,7 @@ import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../com
 import { Bolt, Heart, Speech } from '../components/Icons';
 import { ActionBar, Sheet, Stat, Tabs, useToast } from '../components/ui';
 import { Details } from '../components/ui';
-import { Glyph, Medallion } from '../components/GameIcons';
+import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
 import { actionById } from '../../engine/data/actions';
@@ -40,6 +40,28 @@ export function stageCast(film: Film, s: Scene): StageActor[] {
 }
 
 type ShootTab = 'week' | 'scenes' | 'cast' | 'log';
+interface WeekResult { week: number; text: string; fatigue: number; bond: number; spent: number; kept: number }
+
+/** What last week did, in one card that stays put until the next week. */
+function WeekResultCard({ r, onClose }: { r: WeekResult; onClose: () => void }) {
+  const chip = (cond: boolean, icon: GlyphName, label: string, good: boolean) =>
+    cond && <span className={`delta ${good ? 'good' : 'bad'}`}><Glyph name={icon} size={16} /> {label}</span>;
+  return (
+    <div className="card week-result" role="status">
+      <div className="row between">
+        <span className="kicker">Week {r.week} done</span>
+        <button className="icon ghost-btn small" aria-label="Dismiss" onClick={onClose}>✕</button>
+      </div>
+      <strong className="wr-text">{r.text}</strong>
+      <div className="wr-deltas">
+        {chip(r.kept > 0, 'film', `+${r.kept} take kept`, true)}
+        {chip(Math.round(r.bond) !== 0, 'heart', `Bond ${r.bond > 0 ? '+' : ''}${Math.round(r.bond)}`, r.bond > 0)}
+        {chip(Math.round(r.fatigue) !== 0, 'sweat', `Fatigue ${r.fatigue > 0 ? '+' : ''}${Math.round(r.fatigue)}%`, r.fatigue < 0)}
+        {chip(r.spent > 0, 'coins', `−${money(r.spent)}`, false)}
+      </div>
+    </div>
+  );
+}
 type Flow = null | { kind: 'shoot'; sceneId?: string } | { kind: 'practice' } | { kind: 'club' } | { kind: 'relax' };
 
 /** Shooting is a week-by-week loop: see where you stand, pick this week's activity, play it. */
@@ -54,12 +76,22 @@ export function ShootingScreen() {
   const blockers = shootingBlockers(film);
   const kept = film.scenes.filter((s) => s.chosenTakeId).length;
 
+  const [result, setResult] = useState<WeekResult | null>(null);
   const apply = (r: ShootResult) => {
     if (!r.ok) return toast.show(r.reason), false;
     update(() => r.profile);
-    const log = r.profile.activeFilm?.shooting?.log;
+    const next = r.profile.activeFilm;
+    const log = next?.shooting?.log;
     const last = log?.[log.length - 1];
-    if (last && last !== st.log[st.log.length - 1] && !r.profile.activeFilm?.shooting?.pending) toast.show(`Week ${last.week}: ${last.text}`);
+    if (next?.shooting && last && last !== st.log[st.log.length - 1]) {
+      setResult({
+        week: last.week, text: last.text,
+        fatigue: avgFatigue(next) - avgFatigue(film), bond: next.shooting.bond - st.bond,
+        spent: budgetLeftShooting(film) - budgetLeftShooting(next),
+        kept: next.scenes.filter((s) => s.chosenTakeId).length - kept,
+      });
+      setTab('week');
+    }
     return true;
   };
 
@@ -74,6 +106,7 @@ export function ShootingScreen() {
 
       {tab === 'week' && (
         <>
+          {result && <WeekResultCard r={result} onClose={() => setResult(null)} />}
           <WeekStatus film={film} />
           <div className="activity-grid">
             <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot' })}>

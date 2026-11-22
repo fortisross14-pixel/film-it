@@ -76,7 +76,7 @@ export function startFilm(p: Profile, contractId: string, directorIdArg?: string
     title: contract.title ?? `${rng.pick(FILM_TITLE_PARTS.first)} ${rng.pick(FILM_TITLE_PARTS.second)}`,
     contract: structuredClone(contract) as Contract,
     directorId,
-    directorName: p.name,
+    directorName: p.career?.name ?? p.name,
     upgrades: [...p.unlocks.upgrades],
     franchise: contract.sequelOf ? { name: contract.sequelOf.franchise, number: contract.sequelOf.number } : undefined,
     phase: 'script',

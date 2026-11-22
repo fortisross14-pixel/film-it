@@ -182,7 +182,7 @@ export function PremiereScreen() {
 
             {shown(5) && (
               <div className="card">
-                <button className="link" onClick={() => setShowWhy(!showWhy)}>{showWhy ? 'Hide' : 'How the studio graded it'}</button>
+                <button className="link" onClick={() => setShowWhy(!showWhy)}>{showWhy ? 'Hide' : `How ${film.contract.studio.name} graded it`}</button>
                 {showWhy && (
                   <>
                     <table className="table">
@@ -253,7 +253,7 @@ function VerdictRewards({ film }: { film: Film }) {
         {rep.rewards.boxOfficeBonus > 0 && <tr><td>Box office beat the target</td><td className="good">+{money(rep.rewards.boxOfficeBonus)}</td></tr>}
         {rep.rewards.ratingBonus > 0 && <tr><td>Audience and critics</td><td className="good">+{money(rep.rewards.ratingBonus)}</td></tr>}
         {rep.rewards.awardBonus > 0 && <tr><td>Awards</td><td className="good">+{money(rep.rewards.awardBonus)}</td></tr>}
-        <tr><td><strong>The studio earns</strong></td><td><strong>{money(rep.rewards.total)}</strong></td></tr>
+        <tr><td><strong>You earn</strong></td><td><strong>{money(rep.rewards.total)}</strong></td></tr>
       </tbody>
     </table>
     {newRecords(p, film).length > 0 && (

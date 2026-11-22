@@ -22,7 +22,7 @@ export const UPGRADES: UpgradeDef[] = [
   { id: 'post2', name: 'VFX studio', kind: 'Post', cost: 1600, requires: 'post1', text: 'Premium, blockbuster-grade visual effects and sound.' },
   { id: 'composer', name: 'Composer contract', kind: 'Music', cost: 400, text: 'An original score instead of library music: lifts emotional scenes.' },
   { id: 'starComposer', name: 'Star composer', kind: 'Music', cost: 1150, requires: 'composer', text: 'A famous composer: a big lift, and a shot at Best Score.' },
-  { id: 'marketing', name: 'Marketing department', kind: 'Marketing', cost: 800, text: 'Ask the studio to push a film harder: bigger opening, better award chances.' },
+  { id: 'marketing', name: 'Marketing department', kind: 'Marketing', cost: 800, text: 'Ask studios to push your films harder: bigger opening, better award chances.' },
 ];
 
 export const upgradeById = (id: string) => UPGRADES.find((u) => u.id === id);

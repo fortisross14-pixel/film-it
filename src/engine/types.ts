@@ -78,6 +78,10 @@ export interface Studio {
   id: string;
   name: string;
   tier: number; // 1–5
+  /** Genres this studio usually makes (offers lean towards them). */
+  likes?: GenreId[];
+  /** The strictest rating it makes (family studios: PG). */
+  maxRating?: AgeRating;
 }
 
 /** An action a character can do in a scene ("fights and wins", "declares love"). */

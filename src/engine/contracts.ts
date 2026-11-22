@@ -74,7 +74,9 @@ export function generateContract(rng: Rng, levelArg: number, opts: GenerateOptio
   const studio = rng.pick(studios.length ? studios : STUDIOS.filter((s) => s.tier <= studioTier));
   const archetype = opts.archetype ?? rng.pick(TUNING.generatorArchetypes);
   const open = opts.genres?.length ? GENRE_IDS.filter((g) => opts.genres!.includes(g)) : GENRE_IDS;
-  const genre = opts.genre ?? rng.pick(open);
+  // Studios lean towards the genres they like.
+  const liked = open.filter((g) => studio.likes?.includes(g));
+  const genre = opts.genre ?? (liked.length && rng.chance(TUNING.contracts.studioTaste) ? rng.pick(liked) : rng.pick(open));
   const secondaryCandidates = open.filter((g) => g !== genre && genreCloseness(genre, g) > 0);
   const secondaryGenre = secondaryCandidates.length && rng.chance(0.3) ? rng.pick(secondaryCandidates) : undefined;
 
@@ -86,7 +88,8 @@ export function generateContract(rng: Rng, levelArg: number, opts: GenerateOptio
     T.minDeadlineWeeks,
     Math.round(runtime * T.weeksPerMinute * T.deadlineModifier[archetype]) + budgetTier,
   );
-  const rating = rng.pick(GENRE_RATINGS[genre]);
+  const ratings = GENRE_RATINGS[genre].filter((r) => !studio.maxRating || ratingIndex(r) <= ratingIndex(studio.maxRating));
+  const rating = rng.pick(ratings.length ? ratings : ['PG' as const]);
 
   // ---- Hard requirements ----
   const hardReqs: HardRequirement[] = [{ kind: 'runtime', target: runtime, tolerance: T.runtimeTolerance }];

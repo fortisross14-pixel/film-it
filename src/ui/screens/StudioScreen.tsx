@@ -30,6 +30,7 @@ import { FilmographyTab } from './tabs/FilmographyTab';
 import { TrophyRoomTab } from './tabs/TrophyRoomTab';
 
 type Area = 'careers' | 'talent' | 'shop' | 'hall';
+const AREA_TITLE: Record<Area, string> = { careers: 'Your directors', talent: 'Actors', shop: 'Shop', hall: 'Hall of fame' };
 const PHASE_NAME: Record<string, string> = { script: 'Writing', casting: 'Casting', shooting: 'Shooting', post: 'Editing', premiere: 'Premiere' };
 const SPECIALTY_TEXT: Record<string, string> = {
   script: 'Script', casting: 'Casting', shooting: 'Shooting', post: 'Post', genre: 'Genre master',
@@ -39,7 +40,7 @@ const PACK_IDS: TalentPackId[] = ['casting', 'star'];
 const RARITIES: Rarity[] = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
 
 export const MoneyPill = ({ p }: { p: Profile }) => (
-  <span className="hud-pill" title="Studio money: every career's fees, spent in the shop"><Coins size={18} /> {money(p.money)}</span>
+  <span className="hud-pill" title="Your earnings: every film pays you; spend it in the shop"><Coins size={18} /> {money(p.money)}</span>
 );
 
 export function StudioScreen() {
@@ -47,13 +48,13 @@ export function StudioScreen() {
   const [area, setArea] = useState<Area>('careers');
   const unopened = PACK_IDS.reduce((a, id) => a + (p.talentPacks[id] ?? 0), 0);
   const nav: NavItem[] = [
-    { id: 'careers', label: 'Careers', icon: <Home size={22} /> },
+    { id: 'careers', label: 'Directors', icon: <Home size={22} /> },
     { id: 'talent', label: unopened ? `Actors (${unopened})` : 'Actors', icon: <People size={22} /> },
     { id: 'shop', label: 'Shop', icon: <Box size={22} /> },
     { id: 'hall', label: 'Hall of fame', icon: <Trophy size={22} /> },
   ];
   return (
-    <Shell nav={nav} active={area} onNav={(id) => setArea(id as Area)} title={`${p.name}'s studio`} pills={<MoneyPill p={p} />}>
+    <Shell nav={nav} active={area} onNav={(id) => setArea(id as Area)} title={AREA_TITLE[area]} pills={<MoneyPill p={p} />}>
       {area === 'careers' && <CareersArea onShop={() => setArea('shop')} />}
       {area === 'talent' && <TalentArea />}
       {area === 'shop' && <ShopArea />}
@@ -74,7 +75,7 @@ function CareersArea({ onShop }: { onShop: () => void }) {
   return (
     <div className="stack">
       <GoalCard />
-      <h2>Careers</h2>
+      <h2>Your directors</h2>
       <div className="slot-grid">
         {running.map(({ career: c, activeFilm }) => (
           <button key={c.id} className="card career-slot" onClick={() => {
@@ -97,7 +98,7 @@ function CareersArea({ onShop }: { onShop: () => void }) {
         {Array.from({ length: free }, (_, i) => (
           <button key={`free${i}`} className="card career-slot empty" onClick={() => setPicking(true)}>
             <Medallion name="plus" size={46} tone="muted" />
-            <strong>New career</strong>
+            <strong>New director</strong>
           </button>
         ))}
       </div>
@@ -117,7 +118,7 @@ function GoalCard() {
     ['star', 'Stars', col.stars[0], col.stars[1]],
     ['clapper', 'Directors', col.directors[0], col.directors[1]],
     ['building', 'Sets', col.sets[0], col.sets[1]],
-    ['sliders', 'Upgrades', col.upgrades[0], col.upgrades[1]],
+    ['sliders', 'Team', col.upgrades[0], col.upgrades[1]],
   ];
   return (
     <div className="card goal-card">
@@ -170,7 +171,7 @@ function NewCareerSheet({ onClose, onShop }: { onClose: () => void; onShop: () =
   const [name, setName] = useState('');
   return (
     <Sheet
-      title="New career" kicker="Create a director" onClose={onClose}
+      title="New director" kicker="Studios will call" onClose={onClose}
       footer={
         <>
           <button onClick={onShop}>More directors</button>
@@ -291,7 +292,7 @@ function ShopArea() {
   return (
     <div className="stack">
       <h2>Shop</h2>
-      <Tabs tabs={[{ id: 'studio', label: 'Studio' }, { id: 'directors', label: 'Directors' }, { id: 'sets', label: 'Sets' }, { id: 'topics', label: 'Topics' }]} value={tab} onChange={setTab} />
+      <Tabs tabs={[{ id: 'studio', label: 'Team' }, { id: 'directors', label: 'Directors' }, { id: 'sets', label: 'Sets' }, { id: 'topics', label: 'Topics' }]} value={tab} onChange={setTab} />
       {tab === 'studio' && <UpgradeShop />}
       {tab === 'directors' && <DirectorShop />}
       {tab === 'topics' && <TopicPacksTab />}

@@ -1,4 +1,5 @@
-import type { Contract } from '../../engine/types';
+import type { Contract, GenreId } from '../../engine/types';
+import { Glyph, type GlyphName } from './GameIcons';
 import { ARCHETYPE_NAMES } from '../../engine/contracts';
 import { genreName } from '../../engine/data/genres';
 import { describeBonus, describeHardReq, money } from '../../engine/format';
@@ -8,6 +9,20 @@ import { Details, Difficulty, Hint } from './ui';
 
 const WEIGHT_LABELS = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' } as const;
 const strictLabel = (s: number) => (s > 1.2 ? 'strict' : s < 0.9 ? 'lenient' : 'normal');
+
+const GENRE_GLYPH: Record<GenreId, GlyphName> = {
+  action: 'bolt', drama: 'speech', romance: 'romance', comedy: 'comic', thriller: 'target', horror: 'scary', scifi: 'sparkle', fantasy: 'star',
+};
+
+/** The genre as a coloured badge: the first thing you read on an offer. */
+export function GenreBadge({ c, big }: { c: Contract; big?: boolean }) {
+  return (
+    <span className={`genre-badge g-${c.genre} ${big ? 'big' : ''}`}>
+      <Glyph name={GENRE_GLYPH[c.genre]} size={big ? 22 : 16} />
+      {genreName(c.genre)}{c.secondaryGenre && <span className="gb-second"> / {genreName(c.secondaryGenre)}</span>}
+    </span>
+  );
+}
 
 export const contractGenre = (c: Contract) => `${genreName(c.genre)}${c.secondaryGenre ? ' / ' + genreName(c.secondaryGenre) : ''}`;
 
@@ -27,6 +42,10 @@ export function ContractDetails({ c }: { c: Contract }) {
   const weights = (Object.entries(c.weights) as [keyof typeof WEIGHT_LABELS, number][]).filter(([, w]) => w > 0).sort((a, b) => b[1] - a[1]);
   return (
     <div className="stack contract-details">
+      <div className="brief-head">
+        <GenreBadge c={c} big />
+        <span className="brief-studio">{c.studio.name}</span>
+      </div>
       <div className="row between">
         <span className="tag">{ARCHETYPE_NAMES[c.archetype]}</span>
         <Difficulty n={c.difficulty} />

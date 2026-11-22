@@ -13,7 +13,6 @@ import { art } from '../art';
 export function TitleScreen() {
   const { open } = useGame();
   const [save, setSave] = useState(() => load());
-  const [name, setName] = useState('');
   const p = save.profile;
   const unreadable = !p && save.status !== 'empty';
 
@@ -26,13 +25,13 @@ export function TitleScreen() {
         <SettingsButton />
       </div>
       <div className="slots">
-        <div className="card slot">
+        <div className={`card slot ${!p && !unreadable ? 'bare' : ''}`}>
           {p ? (
             <>
-              <div className="slot-title">{p.name}'s studio</div>
+              <div className="slot-title">Welcome back</div>
               {save.message && <p className="small muted">{save.message}</p>}
               <p className="muted">
-                {money(p.money)} · {runningCareers(p).length} running career{runningCareers(p).length === 1 ? '' : 's'} · {p.filmography.length} film{p.filmography.length === 1 ? '' : 's'}
+                {money(p.money)} · {runningCareers(p).length} director{runningCareers(p).length === 1 ? '' : 's'} at work · {p.filmography.length} film{p.filmography.length === 1 ? '' : 's'}
               </p>
               <button className="primary" onClick={() => open(p)}>Continue ▶</button>
             </>
@@ -46,11 +45,7 @@ export function TitleScreen() {
               }}>Start over</button>
             </>
           ) : (
-            <form onSubmit={(e) => { e.preventDefault(); open(newProfile(name.trim() || 'My')); }}>
-              <div className="slot-title">Found your studio</div>
-              <input autoFocus placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
-              <button className="primary" type="submit">Start ▶</button>
-            </form>
+            <button className="primary big-cta" onClick={() => open(newProfile('Player'))}>Play ▶</button>
           )}
         </div>
       </div>

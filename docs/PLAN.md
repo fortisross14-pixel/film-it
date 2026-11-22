@@ -417,6 +417,19 @@ Owner feedback: too much text, it felt generic and ugly in places; the mechanics
   quality: the number and the top note (components and feel on tap). Shooting forecast: the meters (factors on tap).
   Edit: the scene score (the sum on tap). Shop and packs: names and prices (descriptions and odds behind "?").
 
+## You are a director, studios hire you (done)
+
+- No studio of your own: the title screen just says Play; the hub is "Your directors"; you start a new director, not a
+  studio. Money is your earnings; upgrades are your team.
+- Studios are the companies that make offers, with parody names (Farmer Bros., Walt Lindsey Studios, Paramounty,
+  Blumhaus, B25 Films…) and their own taste: offers lean 70% towards the genres a studio likes, and family studios
+  (DreamPorks, Walt Lindsey) stay PG.
+- The genre is a coloured badge on every offer and the headline of the brief; the production bar reads
+  "Horror for Blumhaus · Shooting · week 3/20".
+- Shooting: each week ends with one result card (what happened, bond, fatigue, money, takes) instead of a toast.
+- Touch: hover effects only on devices with a mouse, and taps on a card's picture or label always press the card
+  (fixes bubbles that needed two taps on tablets).
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

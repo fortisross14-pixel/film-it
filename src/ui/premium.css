@@ -219,3 +219,48 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 
 /* Sheet titles sit on the dark header: plain light text, not the gold-bronze heading. */
 .sheet-head h2 { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--chrome-text); }
+
+/* Genre badge: the first thing you read on an offer */
+.genre-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px; border-radius: 999px; font-weight: 900; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; background: var(--gc, #6b5848); box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.18); align-self: start; justify-self: start; }
+.genre-badge.big { font-size: 1.05rem; padding: 6px 16px 6px 10px; }
+.genre-badge .gb-second { opacity: 0.8; font-weight: 700; }
+.genre-badge.g-action { --gc: linear-gradient(180deg, #e0662f, #a8401a); } .genre-badge.g-drama { --gc: linear-gradient(180deg, #7b5aa6, #523a78); }
+.genre-badge.g-romance { --gc: linear-gradient(180deg, #e0567d, #a8304f); } .genre-badge.g-comedy { --gc: linear-gradient(180deg, #e8b21e, #b07e06); }
+.genre-badge.g-thriller { --gc: linear-gradient(180deg, #4b6a8a, #2c4258); } .genre-badge.g-horror { --gc: linear-gradient(180deg, #5a1f1f, #2a0d0d); }
+.genre-badge.g-scifi { --gc: linear-gradient(180deg, #2fa3b8, #1a6b7a); } .genre-badge.g-fantasy { --gc: linear-gradient(180deg, #3f9b5a, #26683a); }
+.genre-badge { background: var(--gc); }
+.cc-studio { font-weight: 800; font-size: 0.9rem; }
+.contract-card .cc-genre { display: none; }
+.brief-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.brief-studio { font-family: var(--display); font-weight: 700; font-size: 1.05rem; }
+
+/* Bubbles: lighter pill chips that pop close to the button */
+.bubble-cloud { gap: 8px; max-width: 520px; }
+.bubble { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border-radius: 999px; background: #fffaf0; border: 1px solid #d9c6a8; box-shadow: 0 3px 10px rgba(40, 20, 5, 0.18); animation-duration: 0.22s; }
+.bubble .bubble-label { background: none; border: 0; box-shadow: none; padding: 0; font-size: 0.9rem; }
+.bubble.hot { border-color: var(--primary); }
+.bubble-badge { top: -8px; right: -6px; }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(10px) scale(0.8); } to { opacity: 1; transform: none; } }
+
+/* Touch screens: no hover effects, so a tap is always a press (iOS treats hover changes as a first tap). */
+@media (hover: none) {
+  .contract-card:hover, .cast-card:hover, .talent-pack:hover, .paper .actor-card:hover, .career-slot:hover { transform: none; box-shadow: inherit; }
+  .contract-card:hover::after, .cast-card:hover::after, .talent-pack:hover::after, .paper .actor-card:hover::after { opacity: 0; animation: none; }
+  .bubble:hover .medallion { transform: none; }
+  button.primary:hover:not(:disabled) { filter: none; }
+}
+
+/* Shooting: last week's result, one stable card */
+.week-result { border: 2px solid var(--accent); background: linear-gradient(180deg, #fffaf0, #fbefcf); animation: fade-in 0.25s ease both; }
+.week-result .wr-text { display: block; margin: 4px 0 8px; }
+.wr-deltas { display: flex; flex-wrap: wrap; gap: 6px; }
+.delta { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-weight: 800; background: var(--panel-2); }
+.delta.good { color: var(--good); background: #e2f1e4; } .delta.bad { color: var(--bad); background: #f8e1dd; }
+.big-cta { font-size: 1.2rem; padding: 12px 36px; }
+
+/* Bubbles: the button itself is always the tap target, and it does not shrink or move while pressed. */
+.bubble > * { pointer-events: none; }
+.bubble:active:not(:disabled), .bubble-trigger:active:not(:disabled) { transform: none; }
+/* Same for every card-like button: taps on its picture or label always press the card. */
+.contract-card > *, .cast-card > *, .career-slot > *, .activity > *, .topic-chip > *, button.list-row > *, .role-token.add > * { pointer-events: none; }
+.title-screen .slot.bare { background: none; border: 0; box-shadow: none; display: grid; place-items: center; }
