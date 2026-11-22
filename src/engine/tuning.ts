@@ -35,8 +35,8 @@ export const TUNING = {
     } satisfies Record<Archetype, number>,
     leadStarPowerMin: [35, 45, 55, 65, 72], // by budget tier
     /** Director's fee at a C grade, $K: base + perLevel × level, × (1 + perDifficulty × (difficulty − 1)). */
-    feeBase: 40,
-    feePerLevel: 25,
+    feeBase: 10,
+    feePerLevel: 4,
     feePerDifficulty: 0.15,
   },
 
@@ -125,8 +125,8 @@ export const TUNING = {
 
   /** Talent packs: 3 new actors each. Earned with a B (casting) or an A (star), or bought. */
   talentPacks: {
-    casting: { name: 'Casting call', cards: 3, price: 150, odds: { rare: 0.85, epic: 0.13, legendary: 0.02 }, guaranteed: undefined },
-    star: { name: 'Star pack', cards: 3, price: 450, odds: { rare: 0.45, epic: 0.45, legendary: 0.1 }, guaranteed: 'epic', unlockAtLevel: 5 },
+    casting: { name: 'Casting call', cards: 3, price: 100, odds: { rare: 0.85, epic: 0.13, legendary: 0.02 }, guaranteed: undefined },
+    star: { name: 'Star pack', cards: 3, price: 300, odds: { rare: 0.45, epic: 0.45, legendary: 0.1 }, guaranteed: 'epic', unlockAtLevel: 5 },
   } satisfies Record<TalentPackId, { name: string; cards: number; price: number; odds: Partial<Record<Rarity, number>>; guaranteed?: Rarity; unlockAtLevel?: number }>,
   /** Which pack a grade earns. */
   packForGrade: { A: 'star', B: 'casting' } as Partial<Record<Grade, TalentPackId>>,
@@ -413,12 +413,12 @@ export const TUNING = {
    * + awards (per nomination and win, × (1 + awardPerLevel × (level − 1))).
    */
   rewards: {
-    gradeMult: { A: 1.5, B: 1.2, C: 1, D: 0.6, F: 0 },
-    boxOfficeBonusCap: 1.5,
+    gradeMult: { A: 1.4, B: 1.15, C: 1, D: 0.6, F: 0 },
+    boxOfficeBonusCap: 0.5,
     ratingFloor: 60,
-    nominationBonus: 10,
-    winBonus: 40,
-    awardPerLevel: 0.25,
+    nominationBonus: 5,
+    winBonus: 20,
+    awardPerLevel: 0.1,
     bonusGoalPoints: 1,
   },
   career: {

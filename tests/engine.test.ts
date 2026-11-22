@@ -184,7 +184,8 @@ describe('profile & film start', () => {
 
 describe('progression', () => {
   it('buys director profiles with studio money', () => {
-    const p = { ...newProfile('T', 1), money: 1000 };
+    const cost = DIRECTORS.find((d) => d.id === 'masterScifi')!.unlock as { cost: number };
+    const p = { ...newProfile('T', 1), money: cost.cost + 400 };
     const r = buyDirector(p, 'masterScifi');
     expect(r.ok).toBe(true);
     if (!r.ok) return;

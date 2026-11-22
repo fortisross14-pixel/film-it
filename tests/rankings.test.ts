@@ -19,7 +19,8 @@ describe('what a film pays', () => {
   it('adds box office, ratings and awards bonuses', () => {
     const base = filmPay(c, 'B', results({}));
     const hit = filmPay(c, 'B', results({ boxOffice: c.boxOfficeTarget * 2 }));
-    expect(hit.boxOfficeBonus).toBe(Math.round(c.rewards.fee / 5) * 5);
+    expect(hit.boxOfficeBonus).toBe(Math.round((c.rewards.fee * Math.min(1, TUNING.rewards.boxOfficeBonusCap)) / 5) * 5);
+    expect(hit.boxOfficeBonus).toBeGreaterThan(0);
     const huge = filmPay(c, 'B', results({ boxOffice: c.boxOfficeTarget * 10 }));
     expect(huge.boxOfficeBonus).toBe(Math.round((c.rewards.fee * TUNING.rewards.boxOfficeBonusCap) / 5) * 5);
     expect(filmPay(c, 'B', results({ publicRating: 90, criticsRating: 90 })).ratingBonus).toBeGreaterThan(0);

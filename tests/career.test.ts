@@ -2,7 +2,8 @@ import { enterCareer, parkCareer, runningCareers } from '../src/engine/career';
 import { newProfile, startFilm } from '../src/engine/profile';
 import type { Film, Profile } from '../src/engine/types';
 import { bestGrade, legacyTitle, levelAfter, recordFilm, retireCareer, startCareer, type CareerResult } from '../src/engine/career';
-import { buyDirector } from '../src/engine/progression';
+import { buyDirector, directorCost } from '../src/engine/progression';
+import { directorById } from '../src/engine/data/directors';
 import { addBeat, addRole, addScene, finishScript, type EditResult } from '../src/engine/script';
 import { castActor, drawCards, finishCasting, rolePay, budgetLeft } from '../src/engine/casting';
 import { chooseVersion, crewWeekCost, doWeek, wrapShooting } from '../src/engine/shooting';
@@ -34,7 +35,7 @@ describe('careers', () => {
   });
 
   it('runs up to 3 careers side by side, each with its own board and film', () => {
-    let p = { ...newProfile('T', 7), money: 5000 };
+    let p = { ...newProfile('T', 7), money: 50_000 };
     p = okC(buyDirector(p, 'masterScifi'));
     p = okC(startCareer(p, 'starterA', 1));
     const a = p.career!.id;
@@ -57,7 +58,7 @@ describe('careers', () => {
   });
 
   it('buys profiles with studio money, then starts careers with them', () => {
-    let p = { ...newProfile('T', 7), money: 700 };
+    let p = { ...newProfile('T', 7), money: directorCost(directorById('masterScifi')) + 100 };
     p = okC(buyDirector(p, 'masterScifi'));
     expect(p.money).toBe(100);
     p = okC(startCareer(p, 'masterScifi', 1));

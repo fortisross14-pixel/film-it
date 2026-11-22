@@ -202,7 +202,7 @@ export function post(p: Profile, bot: Bot): Profile {
 export interface FilmLog {
   bot: Bot; genre: string; archetype: string; budget: number; grade: string; score: number; satisfaction: number;
   audience: number; critics: number; boRatio: number; spentRatio: number; weeksLate: number; noms: number; wins: number;
-  script: number; casting: number; cut: number; poster: number; money: number; level: number; sequel: boolean;
+  script: number; casting: number; cut: number; poster: number; money: number; pay: { fee: number; boxOffice: number; rating: number; awards: number }; level: number; sequel: boolean;
   components: Record<string, number>; missed: number; factors: Record<string, number>; missedList: string[]; awards: string[]; costs?: Record<string, number>;
 }
 
@@ -225,7 +225,7 @@ export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog
     satisfaction: rep.satisfaction, audience: f.results!.publicRating, critics: f.results!.criticsRating,
     boRatio: f.results!.boxOffice / f.contract.boxOfficeTarget, spentRatio: spent(f) / f.contract.budget, weeksLate: rep.weeksLate,
     noms: f.results!.nominations.length, wins: f.results!.wins.length, script: f.scriptQuality ?? 0, casting: f.castingScore ?? 0,
-    cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, money: rep.rewards.total,
+    cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, money: rep.rewards.total, pay: { fee: rep.rewards.fee, boxOffice: rep.rewards.boxOfficeBonus, rating: rep.rewards.ratingBonus, awards: rep.rewards.awardBonus },
     level: f.contract.level, sequel: !!f.franchise, components: rep.components, missed: rep.missedReqs.length,
     factors: f.results!.factors, missedList: rep.missedReqs, awards: f.results!.nominations,
     costs: f.ledger.reduce<Record<string, number>>((m, e) => {
