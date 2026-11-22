@@ -7,6 +7,7 @@ import { art } from '../art';
 import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../components/IsoSet';
 import { Bolt, Heart, Speech } from '../components/Icons';
 import { ActionBar, Sheet, Stat, Tabs, useToast } from '../components/ui';
+import { Glyph, Medallion } from '../components/GameIcons';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
 import { actionById } from '../../engine/data/actions';
@@ -75,19 +76,19 @@ export function ShootingScreen() {
           <WeekStatus film={film} />
           <div className="activity-grid">
             <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot' })}>
-              <span className="a-icon">🎬</span><strong>Shoot a scene</strong>
+              <Medallion name="clapper" size={52} tone="ruby" /><strong>Shoot a scene</strong>
               <span className="small">Record a take</span>
             </button>
             <button className="activity a-practice" onClick={() => setFlow({ kind: 'practice' })}>
-              <span className="a-icon">📖</span><strong>Rehearse</strong>
+              <Medallion name="book" size={52} tone="gold" /><strong>Rehearse</strong>
               <span className="small">Sharper pace and lines</span>
             </button>
             <button className="activity a-club" onClick={() => setFlow({ kind: 'club' })}>
-              <span className="a-icon">🍸</span><strong>Club night</strong>
+              <Medallion name="glass" size={52} tone="gold" /><strong>Club night</strong>
               <span className="small">Cast bonds</span>
             </button>
             <button className="activity a-relax" onClick={() => setFlow({ kind: 'relax' })}>
-              <span className="a-icon">🌴</span><strong>Day off</strong>
+              <Medallion name="rest" size={52} tone="gold" /><strong>Day off</strong>
               <span className="small">Rest the cast</span>
             </button>
           </div>
@@ -129,8 +130,8 @@ export function ShootingScreen() {
           </>}
         >
           {flow.kind === 'club'
-            ? <p className="effect-line"><span className="good">❤ Bond ▲</span> <span className="bad">😓 Fatigue ▲</span></p>
-            : <p className="effect-line"><span className="good">😌 Fatigue ▼</span> <span className="good">⚡ Next shoot ▲</span> <span className="bad">💬 Rehearsals ▼</span></p>}
+            ? <p className="effect-line"><span className="good"><Glyph name="heart" /> Bond ▲</span> <span className="bad"><Glyph name="sweat" /> Fatigue ▲</span></p>
+            : <p className="effect-line"><span className="good"><Glyph name="sweat" /> Fatigue ▼</span> <span className="good"><Glyph name="bolt" /> Next shoot ▲</span> <span className="bad"><Glyph name="speech" /> Rehearsals ▼</span></p>}
           <div className="stat-row">
             <Stat label="Bond" value={st.bond} />
             <Stat label="Avg. fatigue" value={`${avgFatigue(film)}%`} tone={avgFatigue(film) > 50 ? 'bad' : undefined} />
@@ -167,10 +168,10 @@ function WeekStatus({ film }: { film: Film }) {
     <div className="card week-status">
       <Calendar film={film} />
       <div className="icon-stats">
-        <span title="Takes kept" className={kept === film.scenes.length ? 'good' : ''}>🎞 {kept}/{film.scenes.length}</span>
-        <span title="Cast fatigue" className={fat > 50 ? 'bad' : ''}>😓 {fat}%</span>
-        <span title="Cast bond">❤ {st.bond}</span>
-        {st.fresh > 0 && <span title="Rested" className="good">😌</span>}
+        <span title="Takes kept" className={kept === film.scenes.length ? 'good' : ''}><Glyph name="film" size={18} /> {kept}/{film.scenes.length}</span>
+        <span title="Cast fatigue" className={fat > 50 ? 'bad' : ''}><Glyph name="sweat" size={18} /> {fat}%</span>
+        <span title="Cast bond"><Glyph name="heart" size={18} /> {st.bond}</span>
+        {st.fresh > 0 && <span title="Rested" className="good"><Glyph name="rest" size={18} /> rested</span>}
       </div>
     </div>
   );
@@ -301,8 +302,8 @@ export function Calendar({ film }: { film: Film }) {
   return (
     <div className="calendar">
       <div className="row between wrap">
-        <strong className="cal-week">📅 Week {used}<span className="muted">/{film.contract.deadlineWeeks}</span>{weeksLeft(film) < 0 && <span className="bad"> · {-weeksLeft(film)} late</span>}</strong>
-        <strong className={budgetLeftShooting(film) < 0 ? 'bad' : ''}>💰 {money(budgetLeftShooting(film))}</strong>
+        <strong className="cal-week"><Glyph name="calendar" size={20} /> Week {used}<span className="muted">/{film.contract.deadlineWeeks}</span>{weeksLeft(film) < 0 && <span className="bad"> · {-weeksLeft(film)} late</span>}</strong>
+        <strong className={budgetLeftShooting(film) < 0 ? 'bad' : ''}><Glyph name="coins" size={20} /> {money(budgetLeftShooting(film))}</strong>
       </div>
       <span className="cal-bar" aria-hidden="true">
         <span className="cal-used" style={{ width: `${Math.min(100, (used / total) * 100)}%` }} />

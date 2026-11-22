@@ -8,6 +8,7 @@ import { useGame, useProfile } from '../store';
 import { Shell, type NavItem } from '../components/Shell';
 import { Box, Clapper, Coins, Home, People, Popcorn, Ticket, Tomato, Trophy } from '../components/Icons';
 import { Hint, Sheet, Stat, Tabs } from '../components/ui';
+import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { ActorCard, RARITY_LABEL } from '../components/ActorCard';
 import { DIRECTORS, directorById } from '../../engine/data/directors';
 import { GENRES, genreName } from '../../engine/data/genres';
@@ -80,18 +81,22 @@ function CareersArea({ onShop }: { onShop: () => void }) {
             const r = enterCareer(p, c.id);
             if (r.ok) update(() => r.profile);
           }}>
-            <span className="kicker">Film {Math.min(L.maxFilms, c.films + 1)}/{L.maxFilms}</span>
-            <strong className="slot-name">{careerName(c)}</strong>
-            <span className="small muted">{directorById(c.directorId).name}</span>
+            <span className="slot-head">
+              <Medallion name="clapper" size={46} tone={directorById(c.directorId).tier === 'premium' ? 'ruby' : directorById(c.directorId).tier === 'advanced' ? 'gold' : 'dark'} />
+              <span>
+                <strong className="slot-name">{careerName(c)}</strong>
+                <span className="small muted">{directorById(c.directorId).name}</span>
+              </span>
+            </span>
             <LevelBar level={c.level} />
-            <span className="small">{activeFilm ? <>🎬 {activeFilm.title} · {PHASE_NAME[activeFilm.phase]}</> : 'Picking a contract'}</span>
-            {c.grades.length > 0 && <span className="row small muted">Grades {c.grades.join(' ')}</span>}
-            <span className="slot-cta">Play ▶</span>
+            <span className="small">{activeFilm ? <><Glyph name="clapper" size={16} /> {activeFilm.title} · {PHASE_NAME[activeFilm.phase]}</> : `Film ${Math.min(L.maxFilms, c.films + 1)} of ${L.maxFilms}`}</span>
+            {c.grades.length > 0 && <span className="slot-grades">{c.grades.map((g, i) => <span key={i} className={`mini-grade grade-${g}`}>{g}</span>)}</span>}
+            <span className="slot-cta">Play</span>
           </button>
         ))}
         {Array.from({ length: free }, (_, i) => (
           <button key={`free${i}`} className="card career-slot empty" onClick={() => setPicking(true)}>
-            <span className="plus">＋</span>
+            <Medallion name="plus" size={46} tone="muted" />
             <strong>New career</strong>
           </button>
         ))}
@@ -108,11 +113,11 @@ function GoalCard() {
   const L = TUNING.ladder;
   const best = bestLevel(p);
   const locked = GENRES.filter((g) => !p.unlocks.genres.includes(g.id));
-  const tiles: [string, string, number, number][] = [
-    ['⭐', 'Stars', col.stars[0], col.stars[1]],
-    ['🎬', 'Directors', col.directors[0], col.directors[1]],
-    ['🏛', 'Sets', col.sets[0], col.sets[1]],
-    ['🎛', 'Upgrades', col.upgrades[0], col.upgrades[1]],
+  const tiles: [GlyphName, string, number, number][] = [
+    ['star', 'Stars', col.stars[0], col.stars[1]],
+    ['clapper', 'Directors', col.directors[0], col.directors[1]],
+    ['building', 'Sets', col.sets[0], col.sets[1]],
+    ['sliders', 'Upgrades', col.upgrades[0], col.upgrades[1]],
   ];
   return (
     <div className="card goal-card">
@@ -132,7 +137,7 @@ function GoalCard() {
       <div className="goal-tiles">
         {tiles.map(([icon, label, have, all]) => (
           <span key={label} className="goal-tile" title={label}>
-            <span className="gt-icon" aria-hidden="true">{icon}</span>
+            <Medallion name={icon} size={40} />
             <strong>{have}<span className="muted">/{all}</span></strong>
             <span className="gt-label">{label}</span>
           </span>

@@ -396,6 +396,22 @@ check the first-career money rules and the progression milestones on every `npm 
 
 Open: the careful bot tops out at about 5–6 acclaimed films a career with everything; a skilled human should get closer to 8.
 
+## Visual and premium pass (in progress)
+
+Owner feedback: too much text, it felt generic and ugly in places; the mechanics are fun.
+
+- Less reading: explanations behind a "?" (`Hint`), repeated labels dropped, one centred column on desktop, the
+  disabled main action reads as the next step.
+- Pictures first: contracts as poster cards, casting as cast cards with faces, characters as role tokens, topics as
+  chips rated by genre fit, compact leaderboard.
+- **Action bubbles** (`ActionBubbles`): one button ("Add a character", "Add a scene") pops the choices around it as
+  medallion bubbles; what the brief needs pulses.
+- **Icons**: drawn glyphs on gold medallions (`GameIcons.tsx`) instead of emoji.
+- **Premium layer** (`premium.css`): gradient buttons and chrome, cards deal in, lift and catch a light sweep on hover,
+  epic and legendary cards shimmer like foil. Premiere: sweeping spotlights, camera flashes (two a second at most,
+  WCAG 2.3.1), and the studio verdict slammed onto a memo as an inked rubber stamp with a short shake.
+  Everything animated respects the reduce-motion setting.
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

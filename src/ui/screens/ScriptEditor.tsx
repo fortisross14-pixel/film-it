@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import type { Beat, Film, RoleType, Scene } from '../../engine/types';
+import type { Beat, Film, RoleType, Scene, Tone } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { directorById } from '../../engine/data/directors';
 import { actionById } from '../../engine/data/actions';
@@ -8,6 +8,8 @@ import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
 import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
 import { ActionBar, Hint, Sheet, Tabs, useToast } from '../components/ui';
+import { ActionBubbles } from '../components/ActionBubbles';
+import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { TUNING } from '../../engine/tuning';
 import {
   DURATIONS, ROLE_TYPES, addBeat, addRole, addScene, availableActions, canAddRole, checkRequirements, fillerShare,
@@ -84,12 +86,21 @@ export function ScriptEditor() {
             <Timeline film={film} selected={open} onSelect={setOpen} onApply={apply} />
             <SceneList film={film} onOpen={setOpen} />
             {film.scenes.length < TUNING.script.maxScenes && (
-              <button className="primary wide" onClick={() => {
-                const r = addScene(film, { duration: 'medium', tone: 'calm' });
-                if (apply(r) && r.ok) setOpen(r.sceneId ?? null);
-              }}>+ Add scene</button>
+              <ActionBubbles
+                label="Add a scene"
+                primary
+                closeOnPick
+                actions={TONES.map((t) => ({
+                  id: t.id, label: t.name, icon: TONE_GLYPH[t.id],
+                  highlight: reqs.some((x) => x.req.kind === 'tone' && x.req.tone === t.id && x.status !== 'met'),
+                  onPick: () => {
+                    const r = addScene(film, { duration: 'medium', tone: t.id });
+                    if (apply(r) && r.ok) setOpen(r.sceneId ?? null);
+                  },
+                }))}
+              />
             )}
-            <p className="small muted center">{film.scenes.length}/{TUNING.script.maxScenes} scenes · 4–5 is typical · drag frames to move them</p>
+            <p className="small muted center">{film.scenes.length}/{TUNING.script.maxScenes} scenes<Hint>4–5 scenes is typical. Drag the frames along the strip to move them.</Hint></p>
           </>
         )
       )}
@@ -210,39 +221,44 @@ export function Requirements({ reqs }: { reqs: ReturnType<typeof checkRequiremen
   );
 }
 
-const ROLE_ICON: Record<RoleType, string> = { main: '🦸', villain: '😈', coVillain: '🦹', romanticInterest: '💘', comicRelief: '🤡', supporting: '🧑' };
+const ROLE_GLYPH: Record<RoleType, GlyphName> = { main: 'hero', villain: 'villain', coVillain: 'coVillain', romanticInterest: 'romance', comicRelief: 'comic', supporting: 'supporting' };
+const TONE_GLYPH: Record<Tone, GlyphName> = { happy: 'happy', sad: 'sad', thrill: 'thrill', calm: 'calm', romantic: 'romantic', scary: 'scary' };
 
-/** Characters as tokens: the ones in the film, then the ones you can add (roles the brief needs are flagged). */
+/** The cast as tokens; one "Add a character" button pops the roles you can add (the brief's needs pulse). */
 function CharactersPanel({ film, onApply }: { film: Film; onApply: Apply }) {
   const st = screenTime(film);
   const needed = new Set<RoleType>(['main', ...film.contract.hardReqs.flatMap((r) => (r.kind === 'role' ? [r.roleType] : []))]);
   const have = new Set(film.roles.map((r) => r.type));
   return (
-    <div className="card">
-      <div className="role-tokens">
-        {film.roles.map((r) => (
-          <div key={r.id} className="role-token on">
-            <span className="rt-icon" aria-hidden="true">{ROLE_ICON[r.type]}</span>
-            <input aria-label={`${ROLE_TYPE_NAMES[r.type]} name`} defaultValue={r.name} onBlur={(e) => e.target.value !== r.name && onApply(renameRole(film, r.id, e.target.value))} />
-            <span className={`rt-sub ${st[r.id] ? '' : 'bad'}`}>{ROLE_TYPE_NAMES[r.type]} · {st[r.id] ?? 0}′</span>
-            <button
-              className="rt-x"
-              aria-label={`Remove ${r.name}`}
-              onClick={() => {
-                if (st[r.id] && !confirm(`Remove ${r.name}? Their actions are removed from every scene.`)) return;
-                onApply(removeRole(film, r.id));
-              }}
-            >✕</button>
-          </div>
-        ))}
-        {ROLE_TYPES.filter((t) => canAddRole(film, t)).map((t: RoleType) => (
-          <button key={t} className={`role-token add ${needed.has(t) && !have.has(t) ? 'needed' : ''}`} onClick={() => onApply(addRole(film, t))}>
-            <span className="rt-icon" aria-hidden="true">{ROLE_ICON[t]}</span>
-            <strong>+ {ROLE_TYPE_NAMES[t]}</strong>
-            {needed.has(t) && !have.has(t) && <span className="rt-need">needed</span>}
-          </button>
-        ))}
-      </div>
+    <div className="card characters-card">
+      {film.roles.length > 0 && (
+        <div className="role-tokens">
+          {film.roles.map((r, i) => (
+            <div key={r.id} className="role-token on deal" style={{ ['--i' as string]: i }}>
+              <Medallion name={ROLE_GLYPH[r.type]} size={52} tone={r.type === 'villain' || r.type === 'coVillain' ? 'dark' : 'gold'} />
+              <input aria-label={`${ROLE_TYPE_NAMES[r.type]} name`} defaultValue={r.name} onBlur={(e) => e.target.value !== r.name && onApply(renameRole(film, r.id, e.target.value))} />
+              <span className={`rt-sub ${st[r.id] ? '' : 'bad'}`}>{ROLE_TYPE_NAMES[r.type]} · {st[r.id] ?? 0}′</span>
+              <button
+                className="rt-x"
+                aria-label={`Remove ${r.name}`}
+                onClick={() => {
+                  if (st[r.id] && !confirm(`Remove ${r.name}? Their actions are removed from every scene.`)) return;
+                  onApply(removeRole(film, r.id));
+                }}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <ActionBubbles
+        label={film.roles.length ? 'Add a character' : 'Add your hero'}
+        primary={film.roles.length === 0}
+        actions={ROLE_TYPES.map((t: RoleType) => ({
+          id: t, label: ROLE_TYPE_NAMES[t], icon: ROLE_GLYPH[t], disabled: !canAddRole(film, t),
+          highlight: needed.has(t) && !have.has(t), badge: needed.has(t) && !have.has(t) ? 'needed' : undefined,
+          onPick: () => onApply(addRole(film, t)),
+        }))}
+      />
     </div>
   );
 }
@@ -262,11 +278,11 @@ function RuntimeTopicBar({ film, unlocked, onApply }: { film: Film; unlocked: st
   return (
     <div className="card stack">
       <div className="runtime-row">
-        <span className="field-label">⏱ Runtime</span>
+        <span className="field-label"><Glyph name="clock" size={18} /> Runtime</span>
         <button aria-label="5 minutes shorter" onClick={() => commit(film.runtime - 5)}>−</button>
         <input className="num" aria-label="Runtime in minutes" value={rt} onChange={(e) => setRt(e.target.value)} onBlur={() => commit(Number(rt))} onKeyDown={(e) => e.key === 'Enter' && commit(Number(rt))} />
         <button aria-label="5 minutes longer" onClick={() => commit(film.runtime + 5)}>+</button>
-        <span className={`tag ${ok ? 'good' : 'bad'}`}>🎯 {film.contract.runtime}′</span>
+        <span className={`tag ${ok ? 'good' : 'bad'}`}><Glyph name="target" size={14} /> {film.contract.runtime}′</span>
       </div>
       <div>
         <span className="field-label">Topic<Hint>A topic that suits the genre lifts the script; ★ shows how well it fits {film.contract.genre}. Topic packs add new actions and sets.</Hint></span>

@@ -14,6 +14,34 @@ import { careerName, levelAfter } from '../../engine/career';
 import { RECORD_LABEL, newRecords } from '../../engine/records';
 import { genreName } from '../../engine/data/genres';
 
+/** Camera flashes on the red carpet: [left %, top %, delay s]. Eight spread over a 4 s loop: two a second at most. */
+const FLASHES: [number, number, number][] = [[12, 62, 0], [78, 58, 0.5], [30, 74, 1], [64, 70, 1.5], [8, 48, 2], [86, 44, 2.5], [44, 80, 3], [22, 54, 3.5]];
+
+/** The studio's verdict, slammed down like a rubber stamp. */
+function GradeStamp({ grade }: { grade: Grade }) {
+  const dust: [number, number][] = [[-60, -20], [-48, 30], [-10, 52], [40, 44], [62, 4], [50, -34], [6, -56], [-34, -48]];
+  return (
+    <>
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <filter id="stamp-ink">
+          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" result="noise" />
+          <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.1 1.35" result="holes" />
+          <feComposite in="SourceGraphic" in2="holes" operator="in" result="inked" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="1" seed="7" result="warp" />
+          <feDisplacementMap in="inked" in2="warp" scale="3" />
+        </filter>
+      </svg>
+      <span className={`grade-stamp g-${grade}`} role="img" aria-label={`Studio verdict: ${grade}, ${VERDICT[grade]}`}>
+        <span className="gs-letter">{grade}</span>
+        <span className="gs-word">{VERDICT[grade]}</span>
+      </span>
+      <span className="stamp-dust" aria-hidden="true">
+        {dust.map(([dx, dy], i) => <i key={i} style={{ ['--dx' as string]: `${dx}px`, ['--dy' as string]: `${dy}px` }} />)}
+      </span>
+    </>
+  );
+}
+
 const STAGES = ['Red carpet', 'Audience', 'Critics', 'Box office', 'Awards', 'Studio verdict'];
 const COMPONENT_LABEL: Record<GradeComponent, string> = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' };
 const VERDICT: Record<Grade, string> = { A: 'A hit!', B: 'A success', C: 'Solid', D: 'Disappointing', F: 'A flop' };
@@ -37,6 +65,14 @@ export function PremiereScreen() {
     <div className="premiere-layout">
       <div className="carpet-col">
         <div className="carpet-art" style={{ backgroundImage: `url(${art('premiere-bg')})` }}>
+          <span className="poster-glow" aria-hidden="true" />
+          <span className="spotlight left" aria-hidden="true" />
+          <span className="spotlight right" aria-hidden="true" />
+          {r && (
+            <span className="flashes" aria-hidden="true">
+              {FLASHES.map(([x, y, d], i) => <i key={i} className="flash" style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${d}s` }} />)}
+            </span>
+          )}
           <span className="marquee-title">{film.title}</span>
           <div className="steps-poster"><FilmPoster film={film} width={180} /></div>
         </div>
@@ -50,7 +86,7 @@ export function PremiereScreen() {
         )}
       </div>
 
-      <div className="results-col">
+      <div className={`results-col ${r && rep && shown(5) ? 'slammed' : ''}`}>
         <header className="premiere-head">
           <span className="kicker gold">✦ World premiere ✦</span>
           <h1 className="premiere-title">{film.title}</h1>
@@ -100,14 +136,9 @@ export function PremiereScreen() {
                   </>
                 ) : <div className="stat-value hidden">?</div>}
               </div>
-              <div className="card stat verdict-card">
+              <div className={`card stat verdict-card ${shown(5) ? 'stamped' : ''}`}>
                 <span className="kicker light">Studio verdict</span>
-                {shown(5) ? (
-                  <div className="verdict">
-                    <Laurels size={110}><span className={`grade-letter stamp grade-${rep.grade}`}>{rep.grade}</span></Laurels>
-                    <span className="ribbon">{VERDICT[rep.grade]}</span>
-                  </div>
-                ) : <div className="stat-value hidden light">?</div>}
+                {shown(5) ? <GradeStamp grade={rep.grade} /> : <div className="stat-value hidden light">?</div>}
               </div>
             </div>
 

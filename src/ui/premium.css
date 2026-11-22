@@ -1,0 +1,206 @@
+/* Premium layer: medallion icons, action bubbles, card motion, gradients, premiere lights.
+   Motion follows the game-feel tiers: small for hover and taps, large only for the grade.
+   Everything animated is switched off when the player (or the OS) asks for reduced motion. */
+
+/* ---------- Medallions and glyphs ---------- */
+.glyph { display: inline-block; vertical-align: middle; flex: none; }
+.medallion {
+  display: inline-grid; place-items: center; flex: none; border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #fff6d0 0%, #f3cf6a 26%, #c9922a 62%, #8a5c14 100%);
+  color: #3b2508; border: 1px solid #6f4a0e;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -3px 6px rgba(90, 50, 0, 0.45), 0 3px 8px rgba(60, 30, 0, 0.3);
+}
+.medallion.m-ruby { background: radial-gradient(circle at 32% 26%, #ffd9cf 0%, #e05a48 30%, #a3261d 68%, #5c1009 100%); color: #fff5e6; border-color: #4e0e08; }
+.medallion.m-dark { background: radial-gradient(circle at 32% 26%, #7a6a5a 0%, #3b2d22 45%, #1c140e 100%); color: #f0c75a; border-color: #0e0906; }
+.medallion.m-muted { background: radial-gradient(circle at 32% 26%, #fffaf0 0%, #eadbc0 60%, #c9b591 100%); color: #6b5848; border-color: #b9a37f; }
+
+/* ---------- Gradients and upscale chrome ---------- */
+button.primary {
+  background: linear-gradient(180deg, #d4574c 0%, #a82f27 48%, #84211b 100%);
+  border-color: #5e1612;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 200, 0.45), 0 3px 0 #561410, 0 8px 18px rgba(120, 30, 20, 0.28);
+  text-shadow: 0 1px 0 rgba(60, 10, 5, 0.5);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: inset 0 1px 0 rgba(255, 220, 200, 0.35), 0 1px 0 #561410, 0 3px 8px rgba(120, 30, 20, 0.25); }
+.hud-pill {
+  background: linear-gradient(180deg, #4a3a2a, #2a1f17);
+  border-color: #8a6a32;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 150, 0.18), 0 2px 6px rgba(0, 0, 0, 0.35);
+  color: #f6dfa6;
+}
+.paper h2 {
+  background: linear-gradient(180deg, #4a2c14 0%, #8a5a20 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.card { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 6px 18px rgba(70, 40, 15, 0.08); }
+
+/* ---------- Action bubbles ---------- */
+.bubbles { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 14px; }
+.bubble-trigger {
+  position: relative; z-index: 41; display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 20px 8px 8px; border-radius: 999px; font-weight: 800; font-size: 1rem;
+  background: linear-gradient(180deg, #fffaf0, #f0e2c6); border: 1px solid #c9a96a;
+  box-shadow: inset 0 1px 0 #fff, 0 4px 12px rgba(70, 40, 15, 0.15);
+}
+.bubble-trigger .bt-icon {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #fff6d0, #f3cf6a 30%, #c9922a 70%, #8a5c14);
+  color: #3b2508; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.bubbles.open .bubble-trigger .bt-icon { transform: rotate(45deg); }
+.bubble-trigger.primary { background: linear-gradient(180deg, #d4574c, #84211b); color: #fff5e6; border-color: #5e1612; }
+.bubble-trigger .bt-dot { position: absolute; top: 4px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: #e05a48; box-shadow: 0 0 0 3px rgba(224, 90, 72, 0.3); animation: dot-pulse 1.6s ease-in-out infinite; }
+.bubble-scrim { position: fixed; inset: 0; z-index: 40; background: radial-gradient(circle at 50% 60%, rgba(30, 18, 10, 0.15), rgba(30, 18, 10, 0.45)); backdrop-filter: blur(1.5px); animation: fade-in 0.2s ease both; }
+.bubble-cloud { position: relative; z-index: 41; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 18px; max-width: 560px; padding: 4px; }
+.bubble {
+  position: relative; display: grid; justify-items: center; gap: 6px; padding: 0; min-height: 0;
+  background: none; border: 0; box-shadow: none; cursor: pointer;
+  animation: bubble-in 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; animation-delay: calc(var(--i, 0) * 45ms);
+}
+.bubble .medallion { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.bubble:hover .medallion, .bubble:focus-visible .medallion { transform: scale(1.12) translateY(-2px); }
+.bubble-label { background: #fffaf0; border: 1px solid #d9c6a8; border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; font-weight: 800; color: var(--text); box-shadow: 0 3px 8px rgba(40, 20, 5, 0.18); white-space: nowrap; }
+.bubble.hot .medallion { animation: hot-pulse 1.4s ease-in-out infinite; }
+.bubble-badge { position: absolute; top: -6px; right: -12px; background: var(--primary); color: #fff; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 999px; }
+.bubble-empty { color: #fff5e6; font-weight: 700; }
+@keyframes bubble-in { from { opacity: 0; transform: translateY(46px) scale(0.3); } to { opacity: 1; transform: none; } }
+@keyframes hot-pulse { 0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 0 0 0 rgba(224, 90, 72, 0.55); } 50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 0 0 10px rgba(224, 90, 72, 0); } }
+@keyframes dot-pulse { 50% { transform: scale(1.25); } }
+.characters-card .role-tokens { margin-bottom: 4px; }
+.role-token.on { background: linear-gradient(180deg, #fffdf7, #f6ecd8); border: 1px solid #d8b56a; box-shadow: inset 0 1px 0 #fff, 0 4px 12px rgba(70, 40, 15, 0.12); }
+
+/* ---------- Cards: deal in, lift, sheen, foil ---------- */
+.deal, .contract-card, .cast-card, .talent-pack, .cards > .actor-card, .goal-tile {
+  animation: card-deal 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+.contract-grid > :nth-child(2), .cast-grid > :nth-child(2), .cards > :nth-child(2), .goal-tiles > :nth-child(2) { animation-delay: 60ms; }
+.contract-grid > :nth-child(3), .cast-grid > :nth-child(3), .cards > :nth-child(3), .goal-tiles > :nth-child(3) { animation-delay: 120ms; }
+.contract-grid > :nth-child(4), .cast-grid > :nth-child(4), .cards > :nth-child(4), .goal-tiles > :nth-child(4) { animation-delay: 180ms; }
+.contract-grid > :nth-child(n+5), .cast-grid > :nth-child(n+5), .cards > :nth-child(n+5) { animation-delay: 240ms; }
+.deal { animation-delay: calc(var(--i, 0) * 60ms); }
+@keyframes card-deal { from { opacity: 0; transform: translateY(18px) rotate(-1.5deg) scale(0.96); } to { opacity: 1; transform: none; } }
+
+.contract-card, .cast-card, .talent-pack, .paper .actor-card { position: relative; overflow: hidden; transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease; }
+.contract-card:hover, .cast-card:hover, .talent-pack:hover, .paper .actor-card:hover {
+  transform: perspective(700px) translateY(-5px) rotateX(3deg);
+  box-shadow: 0 16px 30px rgba(60, 30, 10, 0.22);
+}
+/* Light sweep across the card on hover. */
+.contract-card::after, .cast-card::after, .talent-pack::after, .paper .actor-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.5) 48%, rgba(255, 240, 200, 0.2) 52%, transparent 65%);
+  background-size: 260% 100%; background-position: 120% 0; opacity: 0;
+}
+.contract-card:hover::after, .cast-card:hover::after, .talent-pack:hover::after, .paper .actor-card:hover::after { opacity: 1; animation: sheen 0.9s ease forwards; }
+@keyframes sheen { from { background-position: 120% 0; } to { background-position: -40% 0; } }
+/* Foil: epic and legendary cards shimmer. */
+.paper .actor-card.r-epic::before, .paper .actor-card.r-legendary::before, .cast-card.r-epic::before, .cast-card.r-legendary::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1; mix-blend-mode: soft-light; opacity: 0.55;
+  background: linear-gradient(125deg, rgba(255, 215, 120, 0) 20%, rgba(255, 230, 150, 0.9) 35%, rgba(200, 160, 255, 0.7) 45%, rgba(130, 220, 255, 0.6) 55%, rgba(255, 215, 120, 0) 70%);
+  background-size: 300% 300%; animation: foil 6s ease-in-out infinite;
+}
+.paper .actor-card.r-epic::before, .cast-card.r-epic::before { opacity: 0.35; }
+@keyframes foil { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.talent-pack { background-image: linear-gradient(160deg, rgba(255,255,255,0.9), rgba(255,255,255,0) 60%); }
+.talent-pack.tp-star { background: linear-gradient(160deg, #fbf3ff 0%, #f2e4ff 40%, #fffaf0 100%); }
+
+/* Goal tiles and icon stats with medallions. */
+.goal-tile .medallion { margin-bottom: 2px; }
+.icon-stats > span .glyph { color: var(--accent-text); }
+.icon-stats > span.bad .glyph { color: var(--bad); }
+.icon-stats > span.good .glyph { color: var(--good); }
+.activity .medallion { margin-bottom: 4px; }
+
+/* ---------- Premiere: spotlights, flashbulbs, the stamp ---------- */
+.carpet-art { position: relative; overflow: hidden; isolation: isolate; }
+.spotlight { position: absolute; bottom: -10%; width: 38%; height: 130%; pointer-events: none; z-index: 1; mix-blend-mode: screen; transform-origin: 50% 100%;
+  background: conic-gradient(from 165deg at 50% 100%, transparent 0deg, rgba(255, 238, 190, 0.55) 12deg, rgba(255, 238, 190, 0.15) 22deg, transparent 30deg);
+  filter: blur(2px); }
+.spotlight.left { left: -6%; animation: sweep-left 7s ease-in-out infinite; }
+.spotlight.right { right: -6%; animation: sweep-right 8s ease-in-out infinite; }
+@keyframes sweep-left { 0%, 100% { transform: rotate(-22deg); } 50% { transform: rotate(18deg); } }
+@keyframes sweep-right { 0%, 100% { transform: rotate(22deg); } 50% { transform: rotate(-16deg); } }
+.flashes { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+/* At most two flashes a second across the whole carpet (WCAG 2.3.1: three or fewer). */
+.flash { position: absolute; width: 70px; height: 70px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(255, 250, 230, 0.6) 25%, transparent 70%);
+  animation: flash 4s linear infinite; }
+@keyframes flash { 0%, 92%, 100% { opacity: 0; transform: scale(0.6); } 94% { opacity: 1; transform: scale(1.1); } 97% { opacity: 0.3; } }
+.poster-glow { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 62%, rgba(255, 214, 120, 0.45), transparent 45%);
+  animation: glow 3.2s ease-in-out infinite; }
+@keyframes glow { 50% { opacity: 0.55; } }
+.carpet-art .steps-poster, .carpet-art .marquee-title { position: relative; z-index: 2; }
+
+/* The grade: a rubber stamp slammed onto the results (large tier). */
+.results-col.slammed { animation: slam-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.55s both; }
+@keyframes slam-shake {
+  0% { transform: none; } 15% { transform: translate(-7px, 3px) rotate(-0.4deg); } 30% { transform: translate(6px, -3px) rotate(0.3deg); }
+  50% { transform: translate(-3px, 2px); } 70% { transform: translate(2px, -1px); } 100% { transform: none; }
+}
+.grade-stamp { position: relative; z-index: 2; margin: 6px auto 0; pointer-events: none; display: grid; place-items: center;
+  width: 170px; height: 170px; border-radius: 50%; color: var(--stamp, #b3261e);
+  border: 7px double currentColor; box-shadow: inset 0 0 0 4px currentColor;
+  transform: rotate(-14deg); filter: url(#stamp-ink); mix-blend-mode: multiply;
+  animation: stamp-slam 0.55s cubic-bezier(0.5, 0, 0.75, 0) 0.15s backwards; }
+.grade-stamp .gs-letter { font-family: var(--display); font-size: 6.2rem; font-weight: 900; line-height: 0.9; }
+.grade-stamp .gs-word { position: absolute; bottom: 30px; font-family: var(--display); font-size: 0.9rem; letter-spacing: 0.25em; font-weight: 900; text-transform: uppercase; }
+.grade-stamp .gs-top { position: absolute; top: 26px; font-size: 0.7rem; letter-spacing: 0.3em; font-weight: 900; text-transform: uppercase; }
+.grade-stamp.g-A { --stamp: #1f7a3f; } .grade-stamp.g-B { --stamp: #2a5fa8; } .grade-stamp.g-C { --stamp: #9a6a12; }
+.grade-stamp.g-D { --stamp: #b3561e; } .grade-stamp.g-F { --stamp: #b3261e; }
+@keyframes stamp-slam {
+  0% { opacity: 0; transform: rotate(-30deg) scale(3.2); }
+  70% { opacity: 1; transform: rotate(-12deg) scale(0.92); }
+  85% { transform: rotate(-15deg) scale(1.04); }
+  100% { opacity: 1; transform: rotate(-14deg) scale(1); }
+}
+.stamp-dust { position: absolute; z-index: 1; left: 50%; top: 58%; width: 10px; height: 10px; pointer-events: none; }
+.stamp-dust i { position: absolute; width: 8px; height: 8px; border-radius: 50%; opacity: 0; background: rgba(120, 90, 60, 0.45); animation: dust 0.6s ease-out 0.62s both; }
+@keyframes dust { from { opacity: 1; transform: translate(0, 0) scale(1); } to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(2.2); } }
+.results-col { position: relative; }
+@media (max-width: 720px) { .grade-stamp { width: 132px; height: 132px; } .grade-stamp .gs-letter { font-size: 4.2rem; } .grade-stamp .gs-word { bottom: 18px; font-size: 0.62rem; } .grade-stamp .gs-top { top: 16px; font-size: 0.5rem; } }
+
+/* ---------- Reduced motion: keep the look, drop the movement ---------- */
+[data-motion='reduce'] .bubble, [data-motion='reduce'] .deal, [data-motion='reduce'] .contract-card, [data-motion='reduce'] .cast-card,
+[data-motion='reduce'] .talent-pack, [data-motion='reduce'] .cards > .actor-card, [data-motion='reduce'] .goal-tile,
+[data-motion='reduce'] .spotlight, [data-motion='reduce'] .flash, [data-motion='reduce'] .poster-glow, [data-motion='reduce'] .results-col.slammed,
+[data-motion='reduce'] .stamp-dust i, [data-motion='reduce'] .bubble.hot .medallion, [data-motion='reduce'] .bt-dot,
+[data-motion='reduce'] .actor-card::before, [data-motion='reduce'] .cast-card::before { animation: none !important; }
+[data-motion='reduce'] .flash { display: none; }
+[data-motion='reduce'] .grade-stamp { animation: fade-in 0.3s ease both; }
+[data-motion='reduce'] .contract-card:hover, [data-motion='reduce'] .cast-card:hover, [data-motion='reduce'] .talent-pack:hover, [data-motion='reduce'] .paper .actor-card:hover { transform: none; }
+
+/* The verdict card turns into a studio memo the stamp lands on. */
+.verdict-card { position: relative; overflow: hidden; }
+.verdict-card.stamped {
+  background: linear-gradient(180deg, #fffaf0 0%, #f4e8cf 100%) !important; color: var(--text);
+  border: 1px solid #d9c6a8;
+  background-image: repeating-linear-gradient(0deg, transparent 0 23px, rgba(160, 120, 70, 0.12) 23px 24px), linear-gradient(180deg, #fffaf0, #f4e8cf) !important;
+}
+.verdict-card.stamped .kicker { color: var(--muted); }
+.grade-stamp { mix-blend-mode: multiply; }
+/* Topic chips scroll sideways on phones instead of filling the screen. */
+@media (max-width: 720px) {
+  .topic-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -12px; margin-right: -12px; padding: 2px 12px 6px; }
+  .topic-chips::-webkit-scrollbar { display: none; }
+  .topic-chip { flex: none; }
+}
+.bubble-cloud { gap: 16px 24px; }
+
+/* Career slots */
+.career-slot { position: relative; overflow: hidden; gap: 10px; background: linear-gradient(160deg, #fffdf7 0%, #f6ecd8 100%); border: 1px solid #d8b56a; transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease; animation: card-deal 0.45s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.career-slot:hover { transform: translateY(-4px); box-shadow: 0 14px 28px rgba(60, 30, 10, 0.18); }
+.career-slot .slot-head { display: flex; align-items: center; gap: 12px; }
+.career-slot .slot-head > span:last-child { display: grid; }
+.career-slot .slot-cta { justify-self: end; padding: 6px 16px; border-radius: 999px; color: #fff5e6; font-weight: 800; background: linear-gradient(180deg, #d4574c, #84211b); box-shadow: inset 0 1px 0 rgba(255, 220, 200, 0.4), 0 3px 8px rgba(120, 30, 20, 0.25); }
+.career-slot .slot-cta::after { content: ' ▶'; font-size: 0.8em; }
+.career-slot.empty { background: transparent; border: 2px dashed #d9c6a8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 110px; color: var(--muted); }
+.career-slot.empty:hover { border-color: var(--accent); color: var(--text); }
+.slot-grades { display: flex; gap: 4px; flex-wrap: wrap; }
+.mini-grade { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; font-weight: 900; font-size: 0.75rem; color: #fff; background: #8d8a9e; }
+.mini-grade.grade-A { background: #1f7a3f; } .mini-grade.grade-B { background: #2a5fa8; } .mini-grade.grade-C { background: #9a6a12; }
+.mini-grade.grade-D { background: #b3561e; } .mini-grade.grade-F { background: #b3261e; }
+[data-motion='reduce'] .career-slot { animation: none; }
+[data-motion='reduce'] .career-slot:hover { transform: none; }
