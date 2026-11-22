@@ -221,7 +221,7 @@ function TalentArea() {
   const count = (r: Rarity) => p.actorPool.filter((a) => a.rarity === r).length;
   return (
     <div className="stack">
-      <h2>Talent packs<Hint>3 actors per pack, yours for every career. Rarer actors act better and sell tickets. Agencies (Shop → Studio) open rarer cards: Talent agency for rare and epic, Star agency for legendary and named stars.</Hint></h2>
+      <h2>Talent packs<Hint>3 actors per pack, yours for every career. Rarer actors act better and sell tickets. Agencies (Shop → Team) open rarer cards: Talent agency for rare and epic, Star agency for legendary and named stars.</Hint></h2>
       <div className="slot-grid">
         {PACK_IDS.map((id) => {
           const def = packDef(id);

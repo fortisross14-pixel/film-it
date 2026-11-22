@@ -4,6 +4,7 @@ import { App } from './ui/App';
 import './ui/styles.css';
 import './ui/layout.css';
 import './ui/premium.css';
+import './ui/nle.css';
 import { initPwa } from './ui/pwa';
 
 initPwa();

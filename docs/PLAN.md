@@ -430,6 +430,22 @@ Owner feedback: too much text, it felt generic and ugly in places; the mechanics
 - Touch: hover effects only on devices with a mouse, and taps on a card's picture or label always press the card
   (fixes bubbles that needed two taps on tablets).
 
+## Editing-suite workspace (done)
+
+Owner feedback: the illustrated style suits casting, the premiere and the menus, but writing, shooting and editing
+should feel like an editing suite (Premiere Pro, DaVinci Resolve).
+
+- `Nle.tsx` + `nle.css`: workspace tabs on top (the film's phases), Properties inspector, Program monitor with blue
+  timecodes and transport, side panels, a multi-track timeline with a timecode ruler, act markers and a playhead,
+  and a status bar for the phase's main action. Graphite panels, hairlines, blue accents. Phones stack it like a mobile
+  editor: monitor, timeline, then the panels.
+- **Script**: the monitor shows the selected scene as a screenplay page; V1 holds the draggable scene clips; Story,
+  Scenes and Check in Properties; the brief's must-haves on the side.
+- **Shooting**: "Camera A" shows the next scene on its best set with a record button; the dailies timeline shows kept
+  takes as clips and unshot scenes as empty slots; the week's activities in Properties, the cast on the side.
+- **Edit**: V2 effects, V1 scenes with scores, A1 music, A2 sound effects; Properties edits the selected scene; the
+  Project bin holds its takes; Music & FX, Poster and Marketing on the side; "Export to premiere".
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

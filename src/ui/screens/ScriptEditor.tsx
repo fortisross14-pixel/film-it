@@ -7,7 +7,8 @@ import { AXES, TONES, toneById } from '../../engine/data/tones';
 import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
 import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
-import { ActionBar, Details, Hint, Sheet, Tabs, useToast } from '../components/ui';
+import { ActionBar, Details, Hint, Sheet, useToast } from '../components/ui';
+import { Monitor, NleTimeline, Panel, timecode, type Track } from '../components/Nle';
 import { ActionBubbles } from '../components/ActionBubbles';
 import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { TUNING } from '../../engine/tuning';
@@ -56,55 +57,103 @@ export function ScriptEditor() {
   const met = reqs.filter((r) => r.status === 'met').length;
   const scene = film.scenes.find((s) => s.id === open);
 
+  const slots = layout(film);
+  const [sel, setSel] = useState<string | undefined>(film.scenes[0]?.id);
+  const selScene = film.scenes.find((x) => x.id === sel) ?? film.scenes[0];
+  const selIdx = selScene ? slots.findIndex((x) => x.sceneId === selScene.id) : -1;
+  const slot = selIdx >= 0 ? slots[selIdx] : undefined;
+  const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
+  const select = (id: string) => setSel(id);
+  const stepScene = (d: number) => { if (!slots.length) return; const n = slots[(Math.max(0, selIdx) + d + slots.length) % slots.length]; setSel(n.sceneId); };
+  const addSceneBubbles = film.scenes.length < TUNING.script.maxScenes && film.roles.length > 0 && (
+    <ActionBubbles
+      label="Add a scene"
+      primary
+      closeOnPick
+      actions={TONES.map((t) => ({
+        id: t.id, label: t.name, icon: TONE_GLYPH[t.id],
+        highlight: reqs.some((x) => x.req.kind === 'tone' && x.req.tone === t.id && x.status !== 'met'),
+        onPick: () => {
+          const r = addScene(film, { duration: 'medium', tone: t.id });
+          if (apply(r) && r.ok && r.sceneId) { setSel(r.sceneId); setOpen(r.sceneId); }
+        },
+      }))}
+    />
+  );
+  const tracks: Track[] = [{
+    id: 'V1', name: 'Scenes', tall: true, clips: [],
+    lane: <Timeline film={film} selected={selScene?.id ?? null} onSelect={(id) => { select(id); }} onApply={apply} bare />,
+  }];
+
   return (
-    <div className="stack phase-screen">
-      <Tabs
-        label="Script"
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { id: 'story', label: 'Story', badge: film.roles.length || undefined },
-          { id: 'scenes', label: 'Scenes', badge: film.scenes.length || undefined },
-          { id: 'check', label: 'Check', badge: `${met}/${reqs.length}` },
-        ]}
-      />
-      {tab === 'story' && (
-        <>
-          <CharactersPanel film={film} onApply={apply} />
-          <RuntimeTopicBar film={film} onApply={apply} unlocked={p.unlocks.topics} />
-          {film.roles.length > 0 && <button className="wide" onClick={() => setTab('scenes')}>Next: write scenes ›</button>}
-        </>
-      )}
-      {tab === 'scenes' && (
-        film.roles.length === 0 ? (
-          <div className="card empty">
-            <p>Add your characters first.</p>
-            <button className="primary" onClick={() => setTab('story')}>Go to Story</button>
+    <>
+      <Panel area="props" tabs={[{ id: 'story', label: 'Story' }, { id: 'scenes', label: `Scenes ${film.scenes.length}` }, { id: 'check', label: `Check ${met}/${reqs.length}` }]} tab={tab} onTab={setTab}>
+        {tab === 'story' && (
+          <>
+            <CharactersPanel film={film} onApply={apply} />
+            <RuntimeTopicBar film={film} onApply={apply} unlocked={p.unlocks.topics} />
+          </>
+        )}
+        {tab === 'scenes' && (
+          film.roles.length === 0 ? (
+            <div className="card empty">
+              <p>Add your characters first.</p>
+              <button className="primary" onClick={() => setTab('story')}>Go to Story</button>
+            </div>
+          ) : (
+            <>
+              {addSceneBubbles}
+              <SceneList film={film} onOpen={(id) => { setSel(id); setOpen(id); }} />
+              <p className="small muted center">{film.scenes.length}/{TUNING.script.maxScenes} scenes<Hint>4–5 scenes is typical. Drag the clips along the timeline to move them.</Hint></p>
+            </>
+          )
+        )}
+        {tab === 'check' && <CheckPanel film={film} quality={quality} reqs={reqs} cost={scriptCost(film, director, level)} />}
+      </Panel>
+
+      <Monitor
+        title={selScene ? `Script: Scene ${selIdx + 1}` : 'Script'}
+        current={timecode(slot?.start ?? 0)}
+        duration={timecode(film.runtime)}
+        transport={<>
+          <button aria-label="Previous scene" onClick={() => stepScene(-1)}>⏮</button>
+          <button className="play" aria-label="Edit this scene" title="Edit this scene" disabled={!selScene} onClick={() => selScene && setOpen(selScene.id)}>✎</button>
+          <button aria-label="Next scene" onClick={() => stepScene(1)}>⏭</button>
+        </>}
+      >
+        {selScene && slot ? (
+          <div className="screenplay" onClick={() => setOpen(selScene.id)} role="button" tabIndex={0} aria-label="Edit this scene">
+            <div className="sp-head">{selIdx + 1}. {toneById(selScene.tone).name} · Act {slot.act} · {slot.minutes} min</div>
+            {selScene.beats.length === 0 && <p className="sp-empty">Nothing happens yet. Tap to write this scene.</p>}
+            {selScene.beats.map((b, i) => (
+              <p key={i} className="sp-action">{describeBeat(roleName(b.roleId), b.actionId, b.targetId ? roleName(b.targetId) : undefined)}.</p>
+            ))}
+            {participants(selScene).length > 0 && <p className="sp-char">{participants(selScene).map(roleName).join(', ')}</p>}
           </div>
         ) : (
-          <>
-            <Timeline film={film} selected={open} onSelect={setOpen} onApply={apply} />
-            <SceneList film={film} onOpen={setOpen} />
-            {film.scenes.length < TUNING.script.maxScenes && (
-              <ActionBubbles
-                label="Add a scene"
-                primary
-                closeOnPick
-                actions={TONES.map((t) => ({
-                  id: t.id, label: t.name, icon: TONE_GLYPH[t.id],
-                  highlight: reqs.some((x) => x.req.kind === 'tone' && x.req.tone === t.id && x.status !== 'met'),
-                  onPick: () => {
-                    const r = addScene(film, { duration: 'medium', tone: t.id });
-                    if (apply(r) && r.ok) setOpen(r.sceneId ?? null);
-                  },
-                }))}
-              />
-            )}
-            <p className="small muted center">{film.scenes.length}/{TUNING.script.maxScenes} scenes<Hint>4–5 scenes is typical. Drag the frames along the strip to move them.</Hint></p>
-          </>
-        )
-      )}
-      {tab === 'check' && <CheckPanel film={film} quality={quality} reqs={reqs} cost={scriptCost(film, director, level)} />}
+          <div className="slate">
+            <strong>{film.roles.length ? 'No scenes yet' : 'Fade in…'}</strong>
+            <span>{film.roles.length ? 'Add a scene to start writing' : 'Add your characters in Story first'}</span>
+            {addSceneBubbles}
+          </div>
+        )}
+      </Monitor>
+
+      <Panel area="side" title="Brief">
+        <Requirements reqs={reqs} />
+        <div className="icon-stats">
+          <span title="Script quality"><Glyph name="book" size={16} /> {quality.total}</span>
+          <span title="Runtime"><Glyph name="clock" size={16} /> {film.runtime}′</span>
+        </div>
+      </Panel>
+
+      <NleTimeline
+        runtime={film.runtime}
+        tracks={tracks}
+        playhead={slot?.start}
+        sequence={`${film.title} · script`}
+        markers={[{ at: film.runtime * 0.25, label: 'Act II' }, { at: film.runtime * 0.75, label: 'Act III' }]}
+      />
 
       {scene && (
         <SceneSheet
@@ -119,6 +168,7 @@ export function ScriptEditor() {
       )}
       {toast.node}
 
+      <div className="nle-status">
       <ActionBar>
         <button className="bar-stat" onClick={() => setTab('check')}>
           <span className="kicker">Quality</span><strong>{quality.total}</strong>
@@ -139,7 +189,8 @@ export function ScriptEditor() {
           {blockers.length ? blockers[0] : 'Lock script ›'}
         </button>
       </ActionBar>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -306,8 +357,8 @@ function RuntimeTopicBar({ film, unlocked, onApply }: { film: Film; unlocked: st
 }
 
 /** The script as one long film strip: scenes are frames you drag along it; empty film is filler. */
-function Timeline({ film, selected, onSelect, onApply }: {
-  film: Film; selected: string | null; onSelect: (id: string) => void; onApply: Apply;
+function Timeline({ film, selected, onSelect, onApply, bare }: {
+  film: Film; selected: string | null; onSelect: (id: string) => void; onApply: Apply; bare?: boolean;
 }) {
   const slots = layout(film);
   const ref = useRef<HTMLDivElement>(null);
@@ -319,12 +370,12 @@ function Timeline({ film, selected, onSelect, onApply }: {
   };
   const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
   return (
-    <div className="card strip-card">
-      <div className="strip-acts">
+    <div className={bare ? 'strip-bare' : 'card strip-card'}>
+      {!bare && <div className="strip-acts">
         <span style={{ width: '25%' }}>Act I</span>
         <span style={{ width: '50%' }}>Act II</span>
         <span style={{ width: '25%' }}>Act III</span>
-      </div>
+      </div>}
       <div className="filmstrip" ref={ref}>
         <div className="act-line" style={{ left: '25%' }} />
         <div className="act-line" style={{ left: '75%' }} />
@@ -372,9 +423,9 @@ function Timeline({ film, selected, onSelect, onApply }: {
           );
         })}
       </div>
-      <div className="ticks">
+      {!bare && <div className="ticks">
         {Array.from({ length: Math.floor(film.runtime / 10) + 1 }, (_, i) => i * 10).map((m) => <span key={m} style={{ left: pct(m) }}>{m}</span>)}
-      </div>
+      </div>}
     </div>
   );
 }

@@ -6,14 +6,15 @@ import { reducedMotion } from '../prefs';
 import { art } from '../art';
 import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../components/IsoSet';
 import { Bolt, Heart, Speech } from '../components/Icons';
-import { ActionBar, Sheet, Stat, Tabs, useToast } from '../components/ui';
+import { ActionBar, Sheet, Stat, useToast } from '../components/ui';
+import { Monitor, NleTimeline, Panel, timecode, type Track } from '../components/Nle';
 import { Details } from '../components/ui';
 import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
 import { actionById } from '../../engine/data/actions';
 import { describeBeat, money } from '../../engine/format';
-import { participants } from '../../engine/script';
+import { layout, participants } from '../../engine/script';
 import {
   METERS, chooseVersion, chosenTake, crewWeekCost, doWeek, predictMeters, setFit, shootWeekCost, shootingBlockers,
   tryAgain, weeksLeft, weeksUsed, wrapShooting, budgetLeftShooting, type ShootResult,
@@ -72,6 +73,7 @@ export function ShootingScreen() {
   const st = film.shooting!;
   const [tab, setTab] = useState<ShootTab>('week');
   const [flow, setFlow] = useState<Flow>(null);
+  const [sel, setSel] = useState<string | undefined>();
   const toast = useToast();
   const blockers = shootingBlockers(film);
   const kept = film.scenes.filter((s) => s.chosenTakeId).length;
@@ -95,46 +97,79 @@ export function ShootingScreen() {
     return true;
   };
 
-  return (
-    <div className="stack phase-screen">
-      <Tabs label="Shooting" value={tab} onChange={setTab} tabs={[
-        { id: 'week', label: 'This week' },
-        { id: 'scenes', label: 'Scenes', badge: `${kept}/${film.scenes.length}` },
-        { id: 'cast', label: 'Cast' },
-        { id: 'log', label: 'Log' },
-      ]} />
+  // The monitor shows the next scene to shoot (or the selected one) on the best set you own for it.
+  const slots = layout(film);
+  const slotOf = (id: string) => slots.find((x) => x.sceneId === id);
+  const nextScene = film.scenes.find((x) => x.id === sel) ?? film.scenes.find((x) => !x.chosenTakeId) ?? film.scenes[0];
+  const nextIdx = film.scenes.indexOf(nextScene);
+  const nextTake = nextScene && chosenTake(nextScene);
+  const sets = SETS.filter((x) => p.unlocks.sets.includes(x.id));
+  const stageSet = nextTake ? setById(nextTake.setId) : [...sets].sort((a, b) => setFit(b, nextScene) - setFit(a, nextScene))[0];
+  const tracks: Track[] = [{
+    id: 'V1', name: 'Footage', tall: true, clips: film.scenes.map((x, i) => {
+      const t = chosenTake(x);
+      const sl = slotOf(x.id);
+      return {
+        id: x.id, start: sl?.start ?? 0, len: sl?.minutes ?? 0, kind: t ? 'video' as const : 'empty' as const, tone: x.tone,
+        label: t ? `${i + 1} · ${sceneName(film, x)}` : `${i + 1} · not shot`, badge: t?.score,
+        selected: x.id === nextScene?.id, onClick: () => setSel(x.id), title: sceneName(film, x),
+      };
+    }),
+  }, {
+    id: 'A1', name: 'Takes', clips: film.scenes.filter((x) => (st.shoots[x.id] ?? 0) > 0).map((x) => ({
+      id: `n-${x.id}`, start: slotOf(x.id)?.start ?? 0, len: slotOf(x.id)?.minutes ?? 0, kind: 'sfx' as const,
+      label: `${st.shoots[x.id]} take${st.shoots[x.id] === 1 ? '' : 's'}`,
+    })),
+  }];
 
-      {tab === 'week' && (
-        <>
-          {result && <WeekResultCard r={result} onClose={() => setResult(null)} />}
-          <WeekStatus film={film} />
-          <div className="activity-grid">
-            <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot' })}>
-              <Medallion name="clapper" size={52} tone="ruby" /><strong>Shoot a scene</strong>
-              <span className="small">Record a take</span>
-            </button>
-            <button className="activity a-practice" onClick={() => setFlow({ kind: 'practice' })}>
-              <Medallion name="book" size={52} tone="gold" /><strong>Rehearse</strong>
-              <span className="small">Sharper pace and lines</span>
-            </button>
-            <button className="activity a-club" onClick={() => setFlow({ kind: 'club' })}>
-              <Medallion name="glass" size={52} tone="gold" /><strong>Club night</strong>
-              <span className="small">Cast bonds</span>
-            </button>
-            <button className="activity a-relax" onClick={() => setFlow({ kind: 'relax' })}>
-              <Medallion name="rest" size={52} tone="gold" /><strong>Day off</strong>
-              <span className="small">Rest the cast</span>
-            </button>
+  return (
+    <>
+      <Panel area="props" tabs={[{ id: 'week', label: 'This week' }, { id: 'log', label: 'Log' }]} tab={tab === 'log' ? 'log' : 'week'} onTab={(t) => setTab(t as ShootTab)}>
+        {tab !== 'log' ? (
+          <>
+            {result && <WeekResultCard r={result} onClose={() => setResult(null)} />}
+            <WeekStatus film={film} />
+            <div className="activity-grid">
+              <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot', sceneId: nextScene?.id })}>
+                <Medallion name="clapper" size={40} tone="ruby" /><strong>Shoot</strong>
+              </button>
+              <button className="activity a-practice" onClick={() => setFlow({ kind: 'practice' })}>
+                <Medallion name="book" size={40} tone="gold" /><strong>Rehearse</strong>
+              </button>
+              <button className="activity a-club" onClick={() => setFlow({ kind: 'club' })}>
+                <Medallion name="glass" size={40} tone="gold" /><strong>Club night</strong>
+              </button>
+              <button className="activity a-relax" onClick={() => setFlow({ kind: 'relax' })}>
+                <Medallion name="rest" size={40} tone="gold" /><strong>Day off</strong>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="stack">
+            {st.log.length === 0 ? <p className="muted">Nothing yet.</p> : [...st.log].reverse().map((l, i) => <p key={i} className="small"><span className="nle-tc">W{l.week}</span> {l.text}</p>)}
           </div>
-        </>
-      )}
-      {tab === 'scenes' && <ScenesStatus film={film} onShoot={(id) => setFlow({ kind: 'shoot', sceneId: id })} />}
-      {tab === 'cast' && <CastStatus film={film} />}
-      {tab === 'log' && (
-        <div className="card">
-          {st.log.length === 0 ? <p className="muted">Nothing yet.</p> : [...st.log].reverse().map((l, i) => <p key={i} className="small"><span className="muted">W{l.week}</span> {l.text}</p>)}
-        </div>
-      )}
+        )}
+      </Panel>
+
+      <Monitor
+        title={`Camera A: Scene ${nextIdx + 1}${stageSet ? ` · ${stageSet.name}` : ''}`}
+        current={timecode(slotOf(nextScene?.id ?? '')?.start ?? 0)}
+        duration={`${kept}/${film.scenes.length} kept`}
+        transport={<>
+          <button aria-label="Previous scene" onClick={() => setSel(film.scenes[(nextIdx - 1 + film.scenes.length) % film.scenes.length].id)}>⏮</button>
+          <button className="play rec" aria-label={`Shoot scene ${nextIdx + 1}`} title="Shoot this scene" onClick={() => setFlow({ kind: 'shoot', sceneId: nextScene?.id })}>●</button>
+          <button aria-label="Next scene" onClick={() => setSel(film.scenes[(nextIdx + 1) % film.scenes.length].id)}>⏭</button>
+        </>}
+      >
+        {stageSet && nextScene && <IsoSet set={stageSet} extras={Math.min(stageSet.extrasCapacity, 10)} height={300} studio lights={false} actors={stageCast(film, nextScene)} />}
+        <span className="caption-overlay">{nextTake ? `Kept: ${nextTake.version} cut · ${nextTake.score}` : `${sceneName(film, nextScene)} · not shot yet`}</span>
+      </Monitor>
+
+      <Panel area="side" title="Cast">
+        <CastStatus film={film} />
+      </Panel>
+
+      <NleTimeline runtime={film.runtime} tracks={tracks} playhead={slotOf(nextScene?.id ?? '')?.start ?? 0} sequence={`${film.title} · dailies`} />
 
       {flow?.kind === 'shoot' && !st.pending && <ShootFlow initialScene={flow.sceneId} onApply={apply} onClose={() => setFlow(null)} />}
       {flow?.kind === 'practice' && (
@@ -179,13 +214,15 @@ export function ShootingScreen() {
       )}
       {toast.node}
 
-      <ActionBar>
-        <span className="bar-stat"><span className="kicker">Takes kept</span><strong>{kept}/{film.scenes.length}</strong></span>
-        <button className="primary grow" disabled={blockers.length > 0} onClick={() => confirm('Wrap shooting? The filler is shot in one week, then you move to the edit.') && apply(wrapShooting(p))}>
-          {blockers.length ? blockers[0] : 'Wrap shooting ›'}
-        </button>
-      </ActionBar>
-    </div>
+      <div className="nle-status">
+        <ActionBar>
+          <span className="bar-stat"><span className="kicker">Takes kept</span><strong>{kept}/{film.scenes.length}</strong></span>
+          <button className="primary grow" disabled={blockers.length > 0} onClick={() => confirm('Wrap shooting? The filler is shot in one week, then you move to the edit.') && apply(wrapShooting(p))}>
+            {blockers.length ? blockers[0] : "That's a wrap ›"}
+          </button>
+        </ActionBar>
+      </div>
+    </>
   );
 }
 
@@ -236,18 +273,15 @@ function CastStatus({ film }: { film: Film }) {
   const st = film.shooting!;
   return (
     <>
-      <div className="list">
+      <div className="cast-mini">
         {film.roles.map((r) => (
-          <div key={r.id} className="list-row static">
-            {r.actor && <Face actor={r.actor} size={44} />}
-            <span className="list-main">
-              <strong>{r.actor?.name}</strong>
-              <span className="small muted">{r.name}</span>
+          <div key={r.id} className="cast-mini-row" title={`${r.actor?.name} as ${r.name}`}>
+            {r.actor && <Face actor={r.actor} size={36} />}
+            <span>
+              <strong className="small">{r.actor?.name}</strong>
+              <span className="bar fatigue" title={`Fatigue ${st.fatigue[r.id] ?? 0}%`}><span style={{ width: `${st.fatigue[r.id] ?? 0}%` }} /></span>
             </span>
-            <span className="list-side fatigue-side">
-              <span className="small muted">Fatigue {st.fatigue[r.id] ?? 0}%</span>
-              <span className="bar fatigue"><span style={{ width: `${st.fatigue[r.id] ?? 0}%` }} /></span>
-            </span>
+            <span className="small muted">{st.fatigue[r.id] ?? 0}%</span>
           </div>
         ))}
       </div>

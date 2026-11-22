@@ -3,7 +3,8 @@ import { gear, upgradeById, UNLOCKED_BY } from '../../engine/data/upgrades';
 import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { sceneName, stageCast } from './ShootingScreen';
-import { ActionBar, Sheet, Tabs, useToast } from '../components/ui';
+import { ActionBar, Sheet, useToast } from '../components/ui';
+import { Monitor, NleTimeline, Panel, timecode, type Track } from '../components/Nle';
 import { Details } from '../components/ui';
 import { Glyph } from '../components/GameIcons';
 import { MarketingCard, PosterStudio } from '../components/PosterStudio';
@@ -11,8 +12,7 @@ import { IsoSet } from '../components/IsoSet';
 import { setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
 import { describeBeat, money } from '../../engine/format';
-import { TUNING } from '../../engine/tuning';
-import { spent } from '../../engine/script';
+import { layout, spent } from '../../engine/script';
 import { METERS, chosenTake, weeksUsed } from '../../engine/shooting';
 import {
   MUSIC_TIERS, POLISH_TIERS, autoPolish, chooseTake, finishPost, isEmotional, postSummary, sceneScores, setCut, setMusic, setPolish,
@@ -35,7 +35,8 @@ export function PostScreen() {
   const film = p.activeFilm!;
   const level = p.directors[film.directorId]?.level ?? 1;
   const [tab, setTab] = useState<PostTab>('scenes');
-  const [open, setOpen] = useState<string | null>(null);
+  const [sel, setSel] = useState<string | undefined>(film.scenes.find((x) => !x.cut)?.id);
+  const [playing, setPlaying] = useState(false);
   const [watchAll, setWatchAll] = useState(false);
   const toast = useToast();
   const summary = postSummary(film, level);
@@ -49,74 +50,112 @@ export function PostScreen() {
   const finishWeek = weeksUsed(film) + summary.weeks;
   const lateBy = finishWeek - film.contract.deadlineWeeks;
   const after = budgetLeft - summary.cost;
-  const scene = film.scenes.find((s) => s.id === open);
+
+  const slots = layout(film);
+  const live = film.scenes.filter((x) => !x.cut);
+  const selScene = film.scenes.find((x) => x.id === sel) ?? live[0] ?? film.scenes[0];
+  const selIdx = film.scenes.indexOf(selScene);
+  const slotOf = (id: string) => slots.find((x) => x.sceneId === id);
+  const pick = (id: string) => { setSel(id); setPlaying(false); };
+  const step = (d: number) => { const n = film.scenes[(selIdx + d + film.scenes.length) % film.scenes.length]; if (n) pick(n.id); };
+  const clipsOf = (kind: 'vfx' | 'sfx') => film.scenes.filter((x) => !x.cut && x[kind] !== 'none').map((x) => ({
+    id: `${kind}-${x.id}`, start: slotOf(x.id)?.start ?? 0, len: slotOf(x.id)?.minutes ?? 0, kind: kind === 'vfx' ? 'fx' as const : 'sfx' as const,
+    label: `${kind === 'vfx' ? 'VFX' : 'SFX'} · ${x[kind]}`, selected: x.id === selScene?.id, onClick: () => pick(x.id),
+  }));
+  const tracks: Track[] = [
+    { id: 'V2', name: 'Effects', clips: clipsOf('vfx') },
+    {
+      id: 'V1', name: 'Video', tall: true, clips: film.scenes.map((x, i) => ({
+        id: x.id, start: slotOf(x.id)?.start ?? 0, len: slotOf(x.id)?.minutes ?? 0, kind: x.cut ? 'empty' as const : 'video' as const, tone: x.tone,
+        label: x.cut ? `${i + 1} · cut` : `${i + 1} · ${sceneName(film, x)}`, badge: x.cut ? undefined : scoreOf(x.id)?.total,
+        selected: x.id === selScene?.id, onClick: () => pick(x.id), title: sceneName(film, x),
+      })),
+    },
+    { id: 'A1', name: 'Music', clips: film.music === 'none' ? [] : [{ id: 'music', start: 0, len: film.runtime, kind: 'music', label: `♪ ${MUSIC_TEXT[film.music].split(':')[0]}` }] },
+    { id: 'A2', name: 'Sound FX', clips: clipsOf('sfx') },
+  ];
+  const take = selScene && chosenTake(selScene);
+  const set = take && setById(take.setId);
+  const firstBeat = selScene?.beats[0];
+  const roleName = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
 
   return (
-    <div className="stack phase-screen">
-      <Tabs label="Edit" value={tab} onChange={setTab} tabs={[
-        { id: 'scenes', label: 'Scenes' },
-        { id: 'sound', label: 'Music & FX' },
-        { id: 'poster', label: 'Poster' },
-        { id: 'marketing', label: 'Marketing' },
-      ]} />
+    <>
+      <Panel area="props" title={selScene ? `Properties · Scene ${selIdx + 1}` : 'Properties'}>
+        {selScene && <SceneEdit film={film} scene={selScene} index={selIdx} score={scoreOf(selScene.id)} onApply={apply} />}
+      </Panel>
 
-      {tab === 'scenes' && (
-        <>
-          <button className="wide" onClick={() => setWatchAll(true)}>▶ Watch the whole film</button>
-          <div className="list">
-            {film.scenes.map((s, i) => (
-              <button key={s.id} className={`list-row scene-row t-border-${s.tone} ${s.cut ? 'is-cut' : ''}`} onClick={() => setOpen(s.id)}>
-                <span className="scene-num">{i + 1}</span>
-                <span className="list-main">
-                  <strong>{sceneName(film, s)}</strong>
-                  {(s.cut || s.vfx !== 'none' || s.sfx !== 'none') && <span className="small muted">{s.cut ? 'Cut' : <>{s.vfx !== 'none' && <><Glyph name="sparkle" size={14} /> {s.vfx} </>}{s.sfx !== 'none' && <><Glyph name="speaker" size={14} /> {s.sfx}</>}</>}</span>}
-                </span>
-                {!s.cut && <span className="score-badge">{scoreOf(s.id)?.total ?? '—'}</span>}
-              </button>
-            ))}
-          </div>
-          <div className="icon-stats">
-            <span title="Best scene"><Glyph name="up" size={18} /> {summary.best}</span>
-            <span title="Worst scene" className={summary.worst < 50 ? 'bad' : ''}><Glyph name="down" size={18} /> {summary.worst}</span>
-            <span title="Filler minutes"><Glyph name="clock" size={18} /> {summary.fillerMinutes}′ filler</span>
-            {summary.overproduction > 0 && <span className="bad" title="Too much CGI for this genre"><Glyph name="sparkle" size={18} /> −{summary.overproduction} critics</span>}
-          </div>
-        </>
+      {playing && selScene && take ? (
+        <section className="nle-panel nle-monitor" style={{ gridArea: 'monitor' }}>
+          <Playback film={film} scene={selScene} score={scoreOf(selScene.id)} onClose={() => setPlaying(false)} />
+        </section>
+      ) : (
+        <Monitor
+          title={`Program: ${film.title}`}
+          current={timecode(slotOf(selScene?.id ?? '')?.start ?? 0)}
+          duration={timecode(film.runtime)}
+          transport={<>
+            <button aria-label="Previous scene" onClick={() => step(-1)}>⏮</button>
+            <button className="play" aria-label="Play this scene" disabled={!take || selScene?.cut} onClick={() => setPlaying(true)}>▶</button>
+            <button aria-label="Next scene" onClick={() => step(1)}>⏭</button>
+            <button aria-label="Watch the whole film" title="Watch the whole film" onClick={() => setWatchAll(true)}>🎞</button>
+          </>}
+        >
+          {set && selScene && !selScene.cut ? (
+            <>
+              <IsoSet set={set} extras={Math.min(set.extrasCapacity, 20)} height={300} studio={false} actors={stageCast(film, selScene)} />
+              <span className="caption-overlay">{firstBeat ? describeBeat(roleName(firstBeat.roleId), firstBeat.actionId, firstBeat.targetId ? roleName(firstBeat.targetId) : undefined) : sceneName(film, selScene)}</span>
+            </>
+          ) : <div className="slate"><strong>{selScene?.cut ? 'Scene cut' : 'No take'}</strong><span>Its minutes are filler now</span></div>}
+        </Monitor>
       )}
 
-      {tab === 'sound' && (
-        <>
-          <div className="card">
-            <h3>Music</h3>
+      <Panel area="side" tabs={[{ id: 'sound', label: 'Music & FX' }, { id: 'poster', label: 'Poster' }, { id: 'marketing', label: 'Marketing' }]} tab={tab === 'scenes' ? 'sound' : tab} onTab={(t) => setTab(t as PostTab)}>
+        {(tab === 'sound' || tab === 'scenes') && (
+          <>
+            <div className="section-label">Music</div>
             <div className="list">
               {MUSIC_TIERS.map((m) => {
                 const cost = postSummary({ ...film, music: m }, level).musicCost;
                 const locked = !gear(film.upgrades).music.includes(m);
                 return (
                   <button key={m} disabled={locked} className={`list-row pick ${film.music === m ? 'on' : ''} ${locked ? 'locked' : ''}`} onClick={() => apply(setMusic(film, m))}>
-                    <span className="list-main"><strong>{locked ? '🔒 ' : ''}{MUSIC_TEXT[m]}</strong><span className="small muted">{locked ? `Needs the ${upgradeById(UNLOCKED_BY[m]!)?.name} (Shop → Studio)` : `${money(cost)} · ${TUNING.post.music[m].days} days`}</span></span>
+                    <span className="list-main"><strong>{locked ? '🔒 ' : ''}{MUSIC_TEXT[m].split(':')[0]}</strong><span className="small muted">{locked ? `Needs the ${upgradeById(UNLOCKED_BY[m]!)?.name}` : money(cost)}</span></span>
                     {film.music === m && <span className="check">✓</span>}
                   </button>
                 );
               })}
             </div>
-          </div>
-          <AutoPolish film={film} budgetLeft={budgetLeft} level={level} onApply={apply} />
-          <div className="card small">
-            Music {money(summary.musicCost)} · VFX/SFX {money(summary.polishCost)} · crew {money(summary.crewCost)} = <strong>{money(summary.cost)}</strong> · {summary.weeks} wk
-          </div>
-        </>
-      )}
+            <AutoPolish film={film} budgetLeft={budgetLeft} level={level} onApply={apply} />
+            <div className="icon-stats">
+              <span title="Best scene"><Glyph name="up" size={16} /> {summary.best}</span>
+              <span title="Worst scene" className={summary.worst < 50 ? 'bad' : ''}><Glyph name="down" size={16} /> {summary.worst}</span>
+              <span title="Filler minutes"><Glyph name="clock" size={16} /> {summary.fillerMinutes}′</span>
+              {summary.overproduction > 0 && <span className="bad" title="Too much CGI for this genre"><Glyph name="sparkle" size={16} /> −{summary.overproduction}</span>}
+            </div>
+            <Details label="Costs">
+              <p className="small">Music {money(summary.musicCost)} · VFX/SFX {money(summary.polishCost)} · crew {money(summary.crewCost)} = <strong>{money(summary.cost)}</strong> · {summary.weeks} wk</p>
+            </Details>
+          </>
+        )}
+        {tab === 'poster' && <PosterStudio film={film} history={p.filmography} onApply={apply} />}
+        {tab === 'marketing' && <MarketingCard film={film} onApply={apply} />}
+      </Panel>
 
-      {tab === 'poster' && <PosterStudio film={film} history={p.filmography} onApply={apply} />}
-      {tab === 'marketing' && <MarketingCard film={film} onApply={apply} />}
+      <Panel area="bin" title={`Project: takes of scene ${selIdx + 1}`}>
+        <div className="bin-grid">
+          {[...(selScene?.takes ?? [])].sort((a, b) => b.score - a.score).map((t) => (
+            <button key={t.id} className={`bin-item ${selScene?.chosenTakeId === t.id ? 'on' : ''}`} onClick={() => apply(chooseTake(film, selScene!.id, t.id))}>
+              <span className="bin-thumb"><IsoSet set={setById(t.setId)} extras={0} height={70} studio={false} actors={[]} /><span className="bin-score">{t.score}</span></span>
+              <span className="bin-name">{t.version} cut</span>
+              <span className="bin-sub">{setById(t.setId).name}</span>
+            </button>
+          ))}
+        </div>
+      </Panel>
 
-      {scene && (
-        <Sheet wide title={`Scene ${film.scenes.indexOf(scene) + 1}`} kicker={sceneName(film, scene)} onClose={() => setOpen(null)}
-          footer={<button className="primary grow" onClick={() => setOpen(null)}>Done</button>}>
-          <SceneEdit film={film} scene={scene} index={film.scenes.indexOf(scene)} score={scoreOf(scene.id)} onApply={apply} />
-        </Sheet>
-      )}
+      <NleTimeline runtime={film.runtime} tracks={tracks} playhead={slotOf(selScene?.id ?? '')?.start ?? 0} sequence={`${film.title} · final cut`} />
+
       {watchAll && (
         <Sheet wide title={film.title} kicker="Final cut" onClose={() => setWatchAll(false)}>
           <FilmPlayer film={film} onClose={() => setWatchAll(false)} />
@@ -124,13 +163,15 @@ export function PostScreen() {
       )}
       {toast.node}
 
-      <ActionBar>
-        <span className="bar-stat"><span className="kicker">Final cut</span><strong>{summary.cutQuality}</strong></span>
-        <span className="bar-stat"><span className="kicker">Budget after</span><strong className={after < 0 ? 'bad' : ''}>{money(after)}</strong></span>
-        <span className="bar-stat"><span className="kicker">Done week</span><strong className={lateBy > 0 ? 'bad' : ''}>{finishWeek}/{film.contract.deadlineWeeks}</strong></span>
-        <button className="primary grow" onClick={() => confirm('Lock the final cut and go to the premiere?') && apply(finishPost(film, level))}>Premiere ›</button>
-      </ActionBar>
-    </div>
+      <div className="nle-status">
+        <ActionBar>
+          <span className="bar-stat"><span className="kicker">Final cut</span><strong>{summary.cutQuality}</strong></span>
+          <span className="bar-stat"><span className="kicker">Budget after</span><strong className={after < 0 ? 'bad' : ''}>{money(after)}</strong></span>
+          <span className="bar-stat"><span className="kicker">Done week</span><strong className={lateBy > 0 ? 'bad' : ''}>{finishWeek}/{film.contract.deadlineWeeks}</strong></span>
+          <button className="primary grow" onClick={() => confirm('Lock the final cut and go to the premiere?') && apply(finishPost(film, level))}>Export to premiere ›</button>
+        </ActionBar>
+      </div>
+    </>
   );
 }
 
@@ -162,7 +203,7 @@ function SceneEdit({
           );
         })}
       </div>
-      {!gear(film.upgrades).polish.includes('premium') && <p className="small muted">Bigger effects need the {upgradeById(gear(film.upgrades).polish.includes('pro') ? 'post2' : 'post1')?.name} (Shop → Studio).</p>}
+      {!gear(film.upgrades).polish.includes('premium') && <p className="small muted">Bigger effects need the {upgradeById(gear(film.upgrades).polish.includes('pro') ? 'post2' : 'post1')?.name} (Shop → Team).</p>}
     </>
   );
   return (

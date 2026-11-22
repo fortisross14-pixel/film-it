@@ -112,7 +112,7 @@ export function MarketingCard({ film, onApply }: { film: Film; onApply: (r: Mark
           );
         })}
       </div>
-      {!gear(film.upgrades).marketing.includes('push') && <p className="small muted">Pushing a film needs the Marketing department (Shop → Studio).</p>}
+      {!gear(film.upgrades).marketing.includes('push') && <p className="small muted">Pushing a film needs the Marketing department (Shop → Team).</p>}
     </div>
   );
 }
