@@ -36,7 +36,7 @@ export function ActionBubbles({ label, icon = 'plus', actions, closeOnPick = fal
             <button
               key={a.id}
               role="menuitem"
-              className={`bubble ${a.highlight ? 'hot' : ''}`}
+              className={`ab-item ${a.highlight ? 'hot' : ''}`}
               style={{ ['--i' as string]: i }}
               onClick={() => { a.onPick(); if (closeOnPick) setOpen(false); }}
             >

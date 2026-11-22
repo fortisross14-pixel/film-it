@@ -54,15 +54,15 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 .bubble-trigger .bt-dot { position: absolute; top: 4px; right: 6px; width: 10px; height: 10px; border-radius: 50%; background: #e05a48; box-shadow: 0 0 0 3px rgba(224, 90, 72, 0.3); animation: dot-pulse 1.6s ease-in-out infinite; }
 .bubble-scrim { position: fixed; inset: 0; z-index: 40; background: radial-gradient(circle at 50% 60%, rgba(30, 18, 10, 0.15), rgba(30, 18, 10, 0.45)); backdrop-filter: blur(1.5px); animation: fade-in 0.2s ease both; }
 .bubble-cloud { position: relative; z-index: 41; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 18px; max-width: 560px; padding: 4px; }
-.bubble {
+.ab-item {
   position: relative; display: grid; justify-items: center; gap: 6px; padding: 0; min-height: 0;
   background: none; border: 0; box-shadow: none; cursor: pointer;
   animation: bubble-in 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; animation-delay: calc(var(--i, 0) * 45ms);
 }
-.bubble .medallion { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
-.bubble:hover .medallion, .bubble:focus-visible .medallion { transform: scale(1.12) translateY(-2px); }
+.ab-item .medallion { transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.ab-item:hover .medallion, .ab-item:focus-visible .medallion { transform: scale(1.12) translateY(-2px); }
 .bubble-label { background: #fffaf0; border: 1px solid #d9c6a8; border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; font-weight: 800; color: var(--text); box-shadow: 0 3px 8px rgba(40, 20, 5, 0.18); white-space: nowrap; }
-.bubble.hot .medallion { animation: hot-pulse 1.4s ease-in-out infinite; }
+.ab-item.hot .medallion { animation: hot-pulse 1.4s ease-in-out infinite; }
 .bubble-badge { position: absolute; top: -6px; right: -12px; background: var(--primary); color: #fff; font-size: 0.6rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 999px; }
 .bubble-empty { color: #fff5e6; font-weight: 700; }
 @keyframes bubble-in { from { opacity: 0; transform: translateY(46px) scale(0.3); } to { opacity: 1; transform: none; } }
@@ -163,10 +163,10 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 @media (max-width: 720px) { .grade-stamp { width: 132px; height: 132px; } .grade-stamp .gs-letter { font-size: 4.2rem; } .grade-stamp .gs-word { bottom: 18px; font-size: 0.62rem; } .grade-stamp .gs-top { top: 16px; font-size: 0.5rem; } }
 
 /* ---------- Reduced motion: keep the look, drop the movement ---------- */
-[data-motion='reduce'] .bubble, [data-motion='reduce'] .deal, [data-motion='reduce'] .contract-card, [data-motion='reduce'] .cast-card,
+[data-motion='reduce'] .ab-item, [data-motion='reduce'] .deal, [data-motion='reduce'] .contract-card, [data-motion='reduce'] .cast-card,
 [data-motion='reduce'] .talent-pack, [data-motion='reduce'] .cards > .actor-card, [data-motion='reduce'] .goal-tile,
 [data-motion='reduce'] .spotlight, [data-motion='reduce'] .flash, [data-motion='reduce'] .poster-glow, [data-motion='reduce'] .results-col.slammed,
-[data-motion='reduce'] .stamp-dust i, [data-motion='reduce'] .bubble.hot .medallion, [data-motion='reduce'] .bt-dot,
+[data-motion='reduce'] .stamp-dust i, [data-motion='reduce'] .ab-item.hot .medallion, [data-motion='reduce'] .bt-dot,
 [data-motion='reduce'] .actor-card::before, [data-motion='reduce'] .cast-card::before { animation: none !important; }
 [data-motion='reduce'] .flash { display: none; }
 [data-motion='reduce'] .grade-stamp { animation: fade-in 0.3s ease both; }
@@ -236,9 +236,9 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 
 /* Bubbles: lighter pill chips that pop close to the button */
 .bubble-cloud { gap: 8px; max-width: 520px; }
-.bubble { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border-radius: 999px; background: #fffaf0; border: 1px solid #d9c6a8; box-shadow: 0 3px 10px rgba(40, 20, 5, 0.18); animation-duration: 0.22s; }
-.bubble .bubble-label { background: none; border: 0; box-shadow: none; padding: 0; font-size: 0.9rem; }
-.bubble.hot { border-color: var(--primary); }
+.ab-item { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border-radius: 999px; background: #fffaf0; border: 1px solid #d9c6a8; box-shadow: 0 3px 10px rgba(40, 20, 5, 0.18); animation-duration: 0.22s; }
+.ab-item .bubble-label { background: none; border: 0; box-shadow: none; padding: 0; font-size: 0.9rem; }
+.ab-item.hot { border-color: var(--primary); }
 .bubble-badge { top: -8px; right: -6px; }
 @keyframes bubble-in { from { opacity: 0; transform: translateY(10px) scale(0.8); } to { opacity: 1; transform: none; } }
 
@@ -246,7 +246,7 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 @media (hover: none) {
   .contract-card:hover, .cast-card:hover, .talent-pack:hover, .paper .actor-card:hover, .career-slot:hover { transform: none; box-shadow: inherit; }
   .contract-card:hover::after, .cast-card:hover::after, .talent-pack:hover::after, .paper .actor-card:hover::after { opacity: 0; animation: none; }
-  .bubble:hover .medallion { transform: none; }
+  .ab-item:hover .medallion { transform: none; }
   button.primary:hover:not(:disabled) { filter: none; }
 }
 
@@ -259,8 +259,8 @@ button.primary:active:not(:disabled) { transform: translateY(2px); box-shadow: i
 .big-cta { font-size: 1.2rem; padding: 12px 36px; }
 
 /* Bubbles: the button itself is always the tap target, and it does not shrink or move while pressed. */
-.bubble > * { pointer-events: none; }
-.bubble:active:not(:disabled), .bubble-trigger:active:not(:disabled) { transform: none; }
+.ab-item > * { pointer-events: none; }
+.ab-item:active:not(:disabled), .bubble-trigger:active:not(:disabled) { transform: none; }
 /* Same for every card-like button: taps on its picture or label always press the card. */
 .contract-card > *, .cast-card > *, .career-slot > *, .activity > *, .topic-chip > *, button.list-row > *, .role-token.add > * { pointer-events: none; }
 .title-screen .slot.bare { background: none; border: 0; box-shadow: none; display: grid; place-items: center; }

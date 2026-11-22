@@ -162,7 +162,7 @@
 .nle .role-token .rt-sub { color: var(--nle-muted); }
 .nle .bubble-trigger { background: var(--nle-panel3); border-color: #4a4a52; color: var(--nle-text); box-shadow: none; }
 .nle .bubble-trigger.primary { background: var(--nle-blue); border-color: #1d6fc2; color: #fff; }
-.nle .bubble { background: #2c2c30; border-color: #4a4a52; }
+.nle .ab-item { background: #2c2c30; border-color: #4a4a52; }
 .nle .bubble-label { color: var(--nle-text); }
 .nle .topic-chip { background: var(--nle-panel3); border-color: #45454c; color: var(--nle-text); }
 .nle .topic-chip.on { background: var(--nle-blue); border-color: #1d6fc2; color: #fff; }
@@ -281,3 +281,33 @@
 .nle .set-pick { background: var(--nle-panel2); border-color: var(--nle-line); color: var(--nle-text); }
 .nle .set-pick.selected { border-color: var(--nle-blue); box-shadow: 0 0 0 1px var(--nle-blue); }
 .nle details.fold > summary { color: var(--nle-blue2); }
+
+/* ---------- Editor style for icons and the action bubbles (a dropdown, not floating coins) ---------- */
+.nle .medallion { background: #2e2e33; border: 1px solid #4a4a52; color: #e4e4e8; box-shadow: none; }
+.nle .medallion.m-ruby { background: #5a1f1c; border-color: #8a2a24; color: #ffd6d1; }
+.nle .medallion.m-dark { background: #1a1a1d; border-color: #3a3a40; color: var(--nle-blue2); }
+.nle .medallion.m-muted { background: #26262a; color: var(--nle-muted); }
+.nle .bubbles { flex-direction: column-reverse; align-items: stretch; gap: 4px; margin-top: 8px; }
+.nle .bubble-scrim { background: transparent; backdrop-filter: none; }
+.nle .bubble-trigger { justify-content: flex-start; border-radius: 6px; padding: 6px 12px 6px 6px; font-size: 13px; font-weight: 600; background: var(--nle-panel3); border: 1px solid #45454c; color: var(--nle-text); box-shadow: none; }
+.nle .bubble-trigger .bt-icon { width: 24px; height: 24px; background: #3a3a40; color: #fff; }
+.nle .bubble-trigger.primary { background: var(--nle-blue); border-color: #1d6fc2; color: #fff; }
+.nle .bubble-trigger.primary .bt-icon { background: rgba(255,255,255,0.2); }
+.nle .bubble-cloud {
+  display: grid; grid-template-columns: 1fr; gap: 1px; width: 100%; max-width: none; padding: 4px;
+  background: #2a2a2e; border: 1px solid #000; border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.nle .ab-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: 4px;
+  background: transparent; box-shadow: none; text-align: left; animation: fade-in 0.12s ease both;
+}
+.nle .ab-item:hover, .nle .ab-item:focus-visible { background: var(--nle-blue); }
+.nle .ab-item .medallion { width: 24px !important; height: 24px !important; }
+.nle .ab-item .medallion .glyph { width: 14px; height: 14px; }
+.nle .ab-item .bubble-label { font-size: 13px; font-weight: 500; color: var(--nle-text); }
+.nle .ab-item:hover .bubble-label { color: #fff; }
+.nle .ab-item.hot { box-shadow: inset 3px 0 0 #ff6b5e; }
+.nle .ab-item.hot .medallion { animation: none; }
+.nle .bubble-badge { position: static; margin-left: auto; background: #5a1f1c; color: #ffb3aa; font-size: 10px; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 3px; }
+.nle .bubble-empty { color: var(--nle-muted); padding: 6px 8px; }
+.nle .bt-dot { top: 50%; right: 10px; transform: translateY(-50%); }
