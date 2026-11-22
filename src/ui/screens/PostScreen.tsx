@@ -67,16 +67,17 @@ export function PostScreen() {
                 <span className="scene-num">{i + 1}</span>
                 <span className="list-main">
                   <strong>{sceneName(film, s)}</strong>
-                  <span className="small muted">{s.cut ? 'Cut' : `${chosenTake(s)?.version ?? '—'} cut · VFX ${s.vfx} · SFX ${s.sfx}`}</span>
+                  {(s.cut || s.vfx !== 'none' || s.sfx !== 'none') && <span className="small muted">{s.cut ? 'Cut' : [s.vfx !== 'none' && `✨ ${s.vfx}`, s.sfx !== 'none' && `🔊 ${s.sfx}`].filter(Boolean).join('  ')}</span>}
                 </span>
                 {!s.cut && <span className="score-badge">{scoreOf(s.id)?.total ?? '—'}</span>}
               </button>
             ))}
           </div>
-          <div className="card small">
-            Best scene {summary.best} · worst <span className={summary.worst < 50 ? 'bad' : ''}>{summary.worst}</span> · filler {summary.fillerMinutes} min
-            {summary.overproduction > 0 && <p className="bad">Too much CGI for this genre (−{summary.overproduction} critics)</p>}
-            <p className="muted">Critics love great peaks; audiences punish weak scenes.</p>
+          <div className="icon-stats">
+            <span title="Best scene">▲ {summary.best}</span>
+            <span title="Worst scene" className={summary.worst < 50 ? 'bad' : ''}>▼ {summary.worst}</span>
+            <span title="Filler minutes">⏱ {summary.fillerMinutes}′ filler</span>
+            {summary.overproduction > 0 && <span className="bad" title="Too much CGI for this genre">✨ −{summary.overproduction} critics</span>}
           </div>
         </>
       )}
@@ -137,7 +138,6 @@ function AutoPolish({ film, budgetLeft, level, onApply }: { film: Film; budgetLe
   return (
     <div className="card">
       <h3>Auto-polish</h3>
-      <p className="small muted">Picks music and VFX/SFX for the best value.</p>
       <input type="range" min={0} max={max} step={50} value={Math.min(amount, max)} onChange={(e) => setAmount(Number(e.target.value))} className="wide" aria-label="Auto-polish budget" />
       <button className="wide" disabled={amount <= 0} onClick={() => onApply({ ok: true, film: autoPolish(film, amount, level) })}>Spend up to {money(amount)}</button>
     </div>

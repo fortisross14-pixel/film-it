@@ -15,6 +15,7 @@ export const criticsScore = (rating: number) => `${Math.round(rating)}%`;
 
 /** $K → "$25M" / "$750K". */
 export function money(k: number): string {
+  if (Math.abs(k) >= 1_000_000) return `$${Number((k / 1_000_000).toFixed(1))}B`;
   if (Math.abs(k) >= 1000) {
     const m = k / 1000;
     return `$${m >= 100 ? Math.round(m) : Number(m.toFixed(1))}M`;

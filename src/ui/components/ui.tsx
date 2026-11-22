@@ -90,6 +90,17 @@ export function useToast() {
   return { show: setText, node };
 }
 
+/** A small "?" that reveals a rule on tap: rules stay one tap away instead of on every screen. */
+export function Hint({ children, label = 'How this works' }: { children: ReactNode; label?: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="hint">
+      <button type="button" className="hint-btn" aria-label={label} aria-expanded={open} onClick={(e) => { e.stopPropagation(); setOpen(!open); }}>?</button>
+      {open && <span className="hint-pop" role="note" onClick={() => setOpen(false)}>{children}</span>}
+    </span>
+  );
+}
+
 /** A 1–5 difficulty meter that cannot be mistaken for a star rating. */
 export function Difficulty({ n }: { n: number }) {
   const word = ['Easy', 'Easy', 'Medium', 'Tough', 'Hard', 'Brutal'][n] ?? 'Medium';

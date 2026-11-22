@@ -2,9 +2,9 @@ import type { Contract } from '../../engine/types';
 import { ARCHETYPE_NAMES } from '../../engine/contracts';
 import { genreName } from '../../engine/data/genres';
 import { describeBonus, describeHardReq, money } from '../../engine/format';
-import { Calendar, Clapper, Coins, Box } from './Icons';
+import { Calendar, Clapper, Coins } from './Icons';
 import { TUNING } from '../../engine/tuning';
-import { Difficulty } from './ui';
+import { Difficulty, Hint } from './ui';
 
 const WEIGHT_LABELS = { boxOffice: 'Box office', public: 'Audience', critics: 'Critics', awards: 'Awards' } as const;
 const strictLabel = (s: number) => (s > 1.2 ? 'strict' : s < 0.9 ? 'lenient' : 'normal');
@@ -33,10 +33,10 @@ export function ContractDetails({ c }: { c: Contract }) {
       </div>
       <ContractFacts c={c} />
       <div className="reward-row">
-        <span><Coins size={18} /> Fee {money(c.rewards.fee)} at a C, ×{TUNING.rewards.gradeMult.A} at an A, plus bonuses for box office, ratings and awards</span>
-        <span><Box size={18} /> B: {TUNING.talentPacks.casting.name} · A: {TUNING.talentPacks.star.name}</span>
+        <span><Coins size={18} /> {money(c.rewards.fee)}<Hint>The fee at a C; ×{TUNING.rewards.gradeMult.A} for an A, plus bonuses for box office, ratings and awards. A B earns a {TUNING.talentPacks.casting.name}, an A a {TUNING.talentPacks.star.name}.</Hint></span>
+        <span className="muted">Level {c.level}</span>
       </div>
-      <p className="small muted">Level {c.level} brief. A +{TUNING.ladder.climb.A} levels · B +{TUNING.ladder.climb.B} · C stays · D {TUNING.ladder.climb.D} · F ends the career.</p>
+
       <section>
         <div className="section-label">Graded on</div>
         <div className="weights">

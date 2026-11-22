@@ -26,9 +26,6 @@ const genreFit = (d: DirectorDef, c: Contract): { text: string; tone?: 'good' | 
   d.genreAffinity.some((g) => genreCloseness(g, c.genre) === 1) ? { text: 'Your genre', tone: 'good' } :
   d.genreAffinity.some((g) => genreCloseness(g, c.genre) > 0) ? { text: 'Close genre' } : { text: 'Off genre', tone: 'bad' };
 
-const TAG_TEXT: Record<NonNullable<Contract['tag']>, string> = {
-  match: 'Your level', safe: 'Safer · a level down', stretch: 'Stretch · a level up', teaser: 'Locked',
-};
 
 export function CareerScreen() {
   const p = useProfile();
@@ -67,24 +64,28 @@ function ContractList({ d }: { d: DirectorDef }) {
         <h2>Pick a contract</h2>
         <LevelBar level={c.level} />
       </div>
-      <div className="list">
+      <div className="contract-grid">
         {p.contractBoard.map((x) => {
           const fit = genreFit(d, x);
+          const badge = x.sequelOf ? `Sequel #${x.sequelOf.number}` : x.tag === 'stretch' ? '▲ Stretch' : x.tag === 'safe' ? '▼ Safer' : undefined;
           return (
-            <button key={x.id} className={`list-row contract-row2 ${x.locked ? 'locked' : ''}`} onClick={() => setOpen(x)}>
-              <Poster title={x.title ?? contractGenre(x)} genre={x.genre} seed={x.id} width={56} showTitle={false} />
-              <span className="list-main">
-                <span className="kicker">{x.sequelOf ? `Sequel #${x.sequelOf.number} · ` : ''}Level {x.level} · {x.tag ? TAG_TEXT[x.tag] : ''}</span>
-                <strong>{x.locked ? `🔒 ${x.studio.name}` : x.title}</strong>
-                {x.locked ? <span className="small muted">Climb to level {x.level} for {x.studio.name} and {money(x.budget)} budgets.</span> : <ContractFacts c={x} />}
+            <button key={x.id} className={`contract-card ${x.locked ? 'locked' : ''}`} onClick={() => setOpen(x)}>
+              <span className="cc-poster">
+                <Poster title={x.title ?? contractGenre(x)} genre={x.genre} seed={x.id} width={200} showTitle={!x.locked} />
+                {badge && <span className="cc-badge">{badge}</span>}
+                {x.locked && <span className="cc-lock">🔒 Level {x.level}</span>}
+                {!x.locked && fit.tone === 'good' && <span className="cc-fit" title={fit.text}>★</span>}
               </span>
-              {!x.locked && (
-                <span className="list-side">
-                  <span className="price"><Coins size={16} /> {money(x.rewards.fee)}</span>
-                  <Difficulty n={x.difficulty} />
-                  <span className={`small ${fit.tone ?? 'muted'}`}>{fit.text}</span>
-                </span>
-              )}
+              <span className="cc-body">
+                <span className="cc-genre">{contractGenre(x)}</span>
+                {x.locked ? <span className="small muted">{x.studio.name} · {money(x.budget)}</span> : <ContractFacts c={x} />}
+                {!x.locked && (
+                  <span className="cc-foot">
+                    <span className="price"><Coins size={16} /> {money(x.rewards.fee)}</span>
+                    <Difficulty n={x.difficulty} />
+                  </span>
+                )}
+              </span>
             </button>
           );
         })}
@@ -101,7 +102,7 @@ function ContractList({ d }: { d: DirectorDef }) {
             }}>Accept ▶</button>
           </>}
         >
-          {open.locked && <p className="small">This is what the studios offer at level {open.level}. You are at level {c.level}: an A climbs two levels, a B one.</p>}
+          {open.locked && <p className="small">🔒 Reach level {open.level} to take briefs like this.</p>}
           <div className="contract-hero">
             <Poster title={open.title ?? contractGenre(open)} genre={open.genre} seed={open.id} width={120} />
             <div className="stack">

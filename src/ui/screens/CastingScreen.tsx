@@ -39,19 +39,16 @@ export function CastingScreen() {
           <span className="small muted">cast pay {money(payroll(film))}</span>
         </div>
         <span className="bar"><span style={{ width: `${Math.max(0, Math.min(100, (left / film.contract.budget) * 100))}%` }} /></span>
-        <p className="small muted">Keep about half for shooting and editing.</p>
       </div>
 
-      <div className="list">
+      <div className="cast-grid">
         {film.roles.map((r) => (
-          <button key={r.id} className="list-row role-row2" onClick={() => setRoleId(r.id)}>
-            {r.actor ? <Face actor={r.actor} size={48} /> : <span className="face-empty big">?</span>}
-            <span className="list-main">
-              <strong>{r.name}</strong>
-              <span className="small muted">{ROLE_TYPE_NAMES[r.type]} · {r.billing} · {st[r.id]} min</span>
-            </span>
+          <button key={r.id} className={`cast-card ${r.actor ? `filled r-${r.actor.rarity}` : ''}`} onClick={() => setRoleId(r.id)}>
+            {r.actor ? <Face actor={r.actor} size={84} /> : <span className="face-empty huge">?</span>}
+            <strong>{r.name}</strong>
+            <span className="small muted">{ROLE_TYPE_NAMES[r.type]} · {st[r.id]}′</span>
             {r.actor
-              ? <span className="list-side"><span className="small">{r.actor.name}</span><strong>{money(rolePay(film, r, r.actor))}</strong></span>
+              ? <span className="cc-actor"><span>{r.actor.name}</span><strong>{money(rolePay(film, r, r.actor))}</strong></span>
               : <span className="chip-cta">Cast ›</span>}
           </button>
         ))}

@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { useGame, useProfile } from '../store';
 import { Shell, type NavItem } from '../components/Shell';
 import { Box, Clapper, Coins, Home, People, Popcorn, Ticket, Tomato, Trophy } from '../components/Icons';
-import { Sheet, Stat, Tabs } from '../components/ui';
+import { Hint, Sheet, Stat, Tabs } from '../components/ui';
 import { ActorCard, RARITY_LABEL } from '../components/ActorCard';
 import { DIRECTORS, directorById } from '../../engine/data/directors';
 import { GENRES, genreName } from '../../engine/data/genres';
@@ -80,7 +80,7 @@ function CareersArea({ onShop }: { onShop: () => void }) {
             const r = enterCareer(p, c.id);
             if (r.ok) update(() => r.profile);
           }}>
-            <span className="kicker">Level {c.level}/{L.maxLevel} · Film {Math.min(L.maxFilms, c.films + 1)}/{L.maxFilms}</span>
+            <span className="kicker">Film {Math.min(L.maxFilms, c.films + 1)}/{L.maxFilms}</span>
             <strong className="slot-name">{careerName(c)}</strong>
             <span className="small muted">{directorById(c.directorId).name}</span>
             <LevelBar level={c.level} />
@@ -93,7 +93,6 @@ function CareersArea({ onShop }: { onShop: () => void }) {
           <button key={`free${i}`} className="card career-slot empty" onClick={() => setPicking(true)}>
             <span className="plus">＋</span>
             <strong>New career</strong>
-            <span className="small muted">Slot {running.length + i + 1} of {TUNING.career.maxCareers}</span>
           </button>
         ))}
       </div>
@@ -108,30 +107,42 @@ function GoalCard() {
   const col = collection(p);
   const L = TUNING.ladder;
   const best = bestLevel(p);
+  const locked = GENRES.filter((g) => !p.unlocks.genres.includes(g.id));
+  const tiles: [string, string, number, number][] = [
+    ['⭐', 'Stars', col.stars[0], col.stars[1]],
+    ['🎬', 'Directors', col.directors[0], col.directors[1]],
+    ['🏛', 'Sets', col.sets[0], col.sets[1]],
+    ['🎛', 'Upgrades', col.upgrades[0], col.upgrades[1]],
+  ];
   return (
     <div className="card goal-card">
-      <div className="section-label">The goal</div>
-      <p>
-        Take a director from a micro-budget indie at <strong>level 1</strong> to the big studios' blockbusters at <strong>level {L.maxLevel}</strong> within {L.maxFilms} films.
-        An A climbs two levels, a B one, a C holds, a D drops one, and <strong>one F ends the career</strong>.
-        Each film pays the studio; a B earns a {TUNING.talentPacks.casting.name}, an A a {TUNING.talentPacks.star.name}.
-        What you own sets how good a film can get: better directors write and shoot better, better sets look better, rarer actors act better and sell tickets, and studio upgrades open bigger effects and music. Each career, you can aim higher.
-      </p>
-      <div className="stat-row">
-        <Stat label="Best level" value={`${best}/${L.maxLevel}`} tone={best >= L.maxLevel ? 'good' : undefined} />
-        <Stat label="Named stars" value={`${col.stars[0]}/${col.stars[1]}`} />
-        <Stat label="Directors" value={`${col.directors[0]}/${col.directors[1]}`} />
-        <Stat label="Sets" value={`${col.sets[0]}/${col.sets[1]}`} />
-        <Stat label="Upgrades" value={`${col.upgrades[0]}/${col.upgrades[1]}`} />
-        <Stat label="Genres" value={`${col.genres[0]}/${col.genres[1]}`} />
+      <div className="goal-top">
+        <div>
+          <div className="section-label">
+            Goal: level {L.maxLevel} in {L.maxFilms} films
+            <Hint>
+              A +2 levels · B +1 · C +1 · D holds · <strong>F ends the career</strong>. A B earns a {TUNING.talentPacks.casting.name}, an A a {TUNING.talentPacks.star.name}.
+              What you own sets how good a film can be: buy better directors, sets, actors and upgrades, then aim higher.
+            </Hint>
+          </div>
+          <LevelBar level={best} />
+          <span className="small muted"> best level {best}</span>
+        </div>
       </div>
-      <div className="genre-track">
-        {GENRES.map((g) => {
-          const open = p.unlocks.genres.includes(g.id);
-          const at = genreUnlockLevel(g.id);
-          return <span key={g.id} className={`tag ${open ? 'good' : 'locked'}`}>{open ? g.name : `🔒 ${g.name} · level ${at}`}</span>;
-        })}
+      <div className="goal-tiles">
+        {tiles.map(([icon, label, have, all]) => (
+          <span key={label} className="goal-tile" title={label}>
+            <span className="gt-icon" aria-hidden="true">{icon}</span>
+            <strong>{have}<span className="muted">/{all}</span></strong>
+            <span className="gt-label">{label}</span>
+          </span>
+        ))}
       </div>
+      {locked.length > 0 && (
+        <div className="genre-track">
+          {locked.map((g) => <span key={g.id} className="tag locked">🔒 {g.name} · lv {genreUnlockLevel(g.id)}</span>)}
+        </div>
+      )}
     </div>
   );
 }
@@ -204,8 +215,7 @@ function TalentArea() {
   const count = (r: Rarity) => p.actorPool.filter((a) => a.rarity === r).length;
   return (
     <div className="stack">
-      <h2>Talent packs</h2>
-      <p className="small muted">Every pack adds 3 actors to your roster for every career. Rarer actors act better and sell more tickets. Your agency decides what packs can hold: commons and uncommons at first, rare and epic unknowns with the Talent agency, legendary actors and named stars with the Star agency.</p>
+      <h2>Talent packs<Hint>3 actors per pack, yours for every career. Rarer actors act better and sell tickets. Agencies (Shop → Studio) open rarer cards: Talent agency for rare and epic, Star agency for legendary and named stars.</Hint></h2>
       <div className="slot-grid">
         {PACK_IDS.map((id) => {
           const def = packDef(id);
@@ -223,10 +233,7 @@ function TalentArea() {
                 {def.cards} actors · {!forSale && 'once unlocked: '}{Object.entries(odds).map(([r, o]) => `${RARITY_LABEL[r as Rarity]} ${Math.round((o as number) * 100)}%`).join(' · ')}
                 {def.guaranteed && <> · at least one {RARITY_LABEL[def.guaranteed].toLowerCase()}</>}
               </p>
-              <p className="small muted">
-                Earned with {id === 'star' ? 'an A' : 'a B'}.{!forSale && def.requires ? ` Needs the ${upgradeById(def.requires)?.name} (Shop → Studio); until then an A earns a ${TUNING.talentPacks.casting.name}.` : ''}
-                {id === 'casting' && !p.unlocks.upgrades.includes('agency2') && ` Better odds with the ${upgradeById(p.unlocks.upgrades.includes('agency1') ? 'agency2' : 'agency1')?.name}.`}
-              </p>
+              <p className="small muted">{id === 'star' ? 'Grade A' : 'Grade B'} earns one{!forSale && def.requires ? ` · 🔒 ${upgradeById(def.requires)?.name}` : ''}</p>
               <div className="row">
                 {have > 0 && <button className="primary" onClick={() => {
                   const r = openTalentPack(p, id);
@@ -278,7 +285,6 @@ function ShopArea() {
   return (
     <div className="stack">
       <h2>Shop</h2>
-      <p className="small muted">Bought once, yours for every career. Talent packs are under Actors.</p>
       <Tabs tabs={[{ id: 'studio', label: 'Studio' }, { id: 'directors', label: 'Directors' }, { id: 'sets', label: 'Sets' }, { id: 'topics', label: 'Topics' }]} value={tab} onChange={setTab} />
       {tab === 'studio' && <UpgradeShop />}
       {tab === 'directors' && <DirectorShop />}
@@ -370,7 +376,6 @@ function DirectorSheet({ d, p, onClose, onBuy }: { d: DirectorDef; p: Profile; o
         <Stat label="Best script" value={d.masterGenre ? `${d.ceiling.script} (100 in ${genreName(d.masterGenre)})` : d.ceiling.script} />
         <Stat label="Best takes" value={d.masterGenre ? `${d.ceiling.shooting} (100 in ${genreName(d.masterGenre)})` : d.ceiling.shooting} />
       </div>
-      <p className="small muted">Skill gets a film to these ceilings; a better director raises them.</p>
       {lockedGenre && <p className="small muted">{genreName(lockedGenre)} briefs appear once a career reaches level {genreUnlockLevel(lockedGenre)}.</p>}
       {!owned && p.money < cost && <p className="small bad">You need {money(cost - p.money)} more.</p>}
     </Sheet>
@@ -410,21 +415,19 @@ function Leaderboard() {
           const c = s.career;
           const status = s.running ? 'Running' : c.status === 'fired' ? 'Fired' : c.status === 'wrapped' ? 'Complete' : 'Retired';
           return (
-            <div key={c.id} className="list-row static">
+            <div key={c.id} className="list-row static lb-row" title={`${legacyTitle(c)} · ${status}`}>
               <span className={`rank rank-${i + 1}`}>{i + 1}</span>
               <span className="list-main">
-                <span className="kicker">{directorById(c.directorId).name} · {s.running ? `level ${c.level}` : legacyTitle(c)}</span>
-                <strong>{careerName(c)}</strong>
-                <span className="lb-stats small">
-                  <span className={key === 'critics' ? 'on' : ''}><Tomato size={14} /> {criticsScore(s.critics)}</span>
-                  <span className={key === 'audience' ? 'on' : ''}><Popcorn size={14} /> {audienceScore(s.audience)}</span>
-                  <span className={key === 'awards' ? 'on' : ''}><Trophy size={14} /> {s.wins} won · {s.nominations} nom.</span>
-                  <span className={key === 'boxOffice' ? 'on' : ''}><Ticket size={14} /> {money(s.boxOffice)}</span>
-                  <span className={key === 'level' ? 'on' : ''}>Top level {s.topLevel}</span>
-                </span>
-                <span className="small muted">{s.films} film{s.films === 1 ? '' : 's'}{c.grades.length ? ` · ${c.grades.join(' ')}` : ''} · earned {money(s.earnings)}{s.best ? ` · best: ${s.best.title}` : ''}</span>
+                <strong>{careerName(c)}{s.running && <span className="tag lb-live">live</span>}</strong>
+                <span className="small muted">{directorById(c.directorId).name} · {s.films} films · {c.grades.join('')}</span>
               </span>
-              <span className={`tag ${c.status === 'fired' ? 'bad' : c.status === 'wrapped' ? 'good' : ''}`}>{status}</span>
+              <span className="lb-value">
+                {key === 'critics' && <><Tomato size={18} /> {criticsScore(s.critics)}</>}
+                {key === 'audience' && <><Popcorn size={18} /> {audienceScore(s.audience)}</>}
+                {key === 'awards' && <><Trophy size={18} /> {s.wins}<span className="muted small"> / {s.nominations}</span></>}
+                {key === 'boxOffice' && <><Ticket size={18} /> {money(s.boxOffice)}</>}
+                {key === 'level' && <>Lv {s.topLevel}</>}
+              </span>
             </div>
           );
         })}

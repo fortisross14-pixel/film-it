@@ -7,7 +7,7 @@ import { AXES, TONES, toneById } from '../../engine/data/tones';
 import { TOPICS } from '../../engine/data/topics';
 import { genreName } from '../../engine/data/genres';
 import { describeBeat, describeHardReq, money, ROLE_TYPE_NAMES } from '../../engine/format';
-import { ActionBar, Sheet, Tabs, useToast } from '../components/ui';
+import { ActionBar, Hint, Sheet, Tabs, useToast } from '../components/ui';
 import { TUNING } from '../../engine/tuning';
 import {
   DURATIONS, ROLE_TYPES, addBeat, addRole, addScene, availableActions, canAddRole, checkRequirements, fillerShare,
@@ -206,73 +206,79 @@ export function Requirements({ reqs }: { reqs: ReturnType<typeof checkRequiremen
           </li>
         ))}
       </ul>
-      <p className="small muted">Each missed requirement caps the grade one letter.</p>
     </div>
   );
 }
 
+const ROLE_ICON: Record<RoleType, string> = { main: '🦸', villain: '😈', coVillain: '🦹', romanticInterest: '💘', comicRelief: '🤡', supporting: '🧑' };
+
+/** Characters as tokens: the ones in the film, then the ones you can add (roles the brief needs are flagged). */
 function CharactersPanel({ film, onApply }: { film: Film; onApply: Apply }) {
   const st = screenTime(film);
+  const needed = new Set<RoleType>(['main', ...film.contract.hardReqs.flatMap((r) => (r.kind === 'role' ? [r.roleType] : []))]);
+  const have = new Set(film.roles.map((r) => r.type));
   return (
     <div className="card">
-      <h3>Characters</h3>
-      {film.roles.length === 0 && <p className="small muted">Who is in your film? Start with the hero.</p>}
-      <div className="chars">
+      <div className="role-tokens">
         {film.roles.map((r) => (
-          <div key={r.id} className="char">
-            <span className="tag">{ROLE_TYPE_NAMES[r.type]}</span>
-            <input defaultValue={r.name} onBlur={(e) => e.target.value !== r.name && onApply(renameRole(film, r.id, e.target.value))} />
-            <span className={`small ${st[r.id] ? 'muted' : 'bad'}`}>{st[r.id] ?? 0} min</span>
+          <div key={r.id} className="role-token on">
+            <span className="rt-icon" aria-hidden="true">{ROLE_ICON[r.type]}</span>
+            <input aria-label={`${ROLE_TYPE_NAMES[r.type]} name`} defaultValue={r.name} onBlur={(e) => e.target.value !== r.name && onApply(renameRole(film, r.id, e.target.value))} />
+            <span className={`rt-sub ${st[r.id] ? '' : 'bad'}`}>{ROLE_TYPE_NAMES[r.type]} · {st[r.id] ?? 0}′</span>
             <button
-              className="danger icon"
+              className="rt-x"
               aria-label={`Remove ${r.name}`}
               onClick={() => {
                 if (st[r.id] && !confirm(`Remove ${r.name}? Their actions are removed from every scene.`)) return;
                 onApply(removeRole(film, r.id));
               }}
-            >
-              ✕
-            </button>
+            >✕</button>
           </div>
         ))}
-      </div>
-      <div className="row wrap">
-        {ROLE_TYPES.map((t: RoleType) => (
-          <button key={t} disabled={!canAddRole(film, t)} onClick={() => onApply(addRole(film, t))}>+ {ROLE_TYPE_NAMES[t]}</button>
+        {ROLE_TYPES.filter((t) => canAddRole(film, t)).map((t: RoleType) => (
+          <button key={t} className={`role-token add ${needed.has(t) && !have.has(t) ? 'needed' : ''}`} onClick={() => onApply(addRole(film, t))}>
+            <span className="rt-icon" aria-hidden="true">{ROLE_ICON[t]}</span>
+            <strong>+ {ROLE_TYPE_NAMES[t]}</strong>
+            {needed.has(t) && !have.has(t) && <span className="rt-need">needed</span>}
+          </button>
         ))}
       </div>
     </div>
   );
 }
 
+const fitStars = (fit: number) => (fit >= 85 ? '★★★' : fit >= 65 ? '★★' : fit >= 45 ? '★' : '');
+
 function RuntimeTopicBar({ film, unlocked, onApply }: { film: Film; unlocked: string[]; onApply: Apply }) {
   const [rt, setRt] = useState(String(film.runtime));
   const commit = (v: number) => setRt(String(onApply(setRuntime(film, v)) ? v : film.runtime));
+  const ok = Math.abs(film.runtime - film.contract.runtime) <= film.contract.runtimeTolerance;
+  const pick = (id?: string) => {
+    const r = setTopic(film, id, unlocked);
+    if (r.ok && r.removedBeats && !confirm(`${r.removedBeats} topic action(s) will be removed. Continue?`)) return;
+    onApply(r);
+  };
+  const topics = [...TOPICS.filter((t) => unlocked.includes(t.id))].sort((a, b) => b.genreFit[film.contract.genre] - a.genreFit[film.contract.genre]);
   return (
     <div className="card stack">
-      <label className="row">
-        <span className="field-label">Runtime</span>
-        <button onClick={() => commit(film.runtime - 5)}>−5</button>
-        <input className="num" value={rt} onChange={(e) => setRt(e.target.value)} onBlur={() => commit(Number(rt))} onKeyDown={(e) => e.key === 'Enter' && commit(Number(rt))} />
-        <button onClick={() => commit(film.runtime + 5)}>+5</button>
-        <span className="muted small">brief {film.contract.runtime}±{film.contract.runtimeTolerance}</span>
-      </label>
-      <label className="row">
-        <span className="field-label">Topic</span>
-        <select
-          value={film.topicId ?? ''}
-          onChange={(e) => {
-            const r = setTopic(film, e.target.value || undefined, unlocked);
-            if (r.ok && r.removedBeats && !confirm(`${r.removedBeats} topic action(s) will be removed. Continue?`)) return;
-            onApply(r);
-          }}
-        >
-          <option value="">— none —</option>
-          {TOPICS.filter((t) => unlocked.includes(t.id)).map((t) => (
-            <option key={t.id} value={t.id}>{t.name} (fit {t.genreFit[film.contract.genre]})</option>
+      <div className="runtime-row">
+        <span className="field-label">⏱ Runtime</span>
+        <button aria-label="5 minutes shorter" onClick={() => commit(film.runtime - 5)}>−</button>
+        <input className="num" aria-label="Runtime in minutes" value={rt} onChange={(e) => setRt(e.target.value)} onBlur={() => commit(Number(rt))} onKeyDown={(e) => e.key === 'Enter' && commit(Number(rt))} />
+        <button aria-label="5 minutes longer" onClick={() => commit(film.runtime + 5)}>+</button>
+        <span className={`tag ${ok ? 'good' : 'bad'}`}>🎯 {film.contract.runtime}′</span>
+      </div>
+      <div>
+        <span className="field-label">Topic<Hint>A topic that suits the genre lifts the script; ★ shows how well it fits {film.contract.genre}. Topic packs add new actions and sets.</Hint></span>
+        <div className="topic-chips">
+          <button className={`topic-chip ${!film.topicId ? 'on' : ''}`} onClick={() => pick(undefined)}>None</button>
+          {topics.map((t) => (
+            <button key={t.id} className={`topic-chip ${film.topicId === t.id ? 'on' : ''}`} onClick={() => pick(t.id)}>
+              {t.name}<span className="tc-fit">{fitStars(t.genreFit[film.contract.genre])}</span>
+            </button>
           ))}
-        </select>
-      </label>
+        </div>
+      </div>
     </div>
   );
 }

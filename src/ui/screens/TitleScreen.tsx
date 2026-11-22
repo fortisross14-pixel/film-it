@@ -48,7 +48,6 @@ export function TitleScreen() {
           ) : (
             <form onSubmit={(e) => { e.preventDefault(); open(newProfile(name.trim() || 'My')); }}>
               <div className="slot-title">Found your studio</div>
-              <p className="small muted">Direct up to three careers at a time. Each one has ten films to climb from a micro-budget indie to the big blockbusters, and one flop ends it. What you earn and unlock stays for good.</p>
               <input autoFocus placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
               <button className="primary" type="submit">Start ▶</button>
             </form>

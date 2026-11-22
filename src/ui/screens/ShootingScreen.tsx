@@ -73,7 +73,6 @@ export function ShootingScreen() {
       {tab === 'week' && (
         <>
           <WeekStatus film={film} />
-          <h3 className="center">What do you do this week?</h3>
           <div className="activity-grid">
             <button className="activity a-shoot" onClick={() => setFlow({ kind: 'shoot' })}>
               <span className="a-icon">🎬</span><strong>Shoot a scene</strong>
@@ -92,7 +91,6 @@ export function ShootingScreen() {
               <span className="small">Rest the cast</span>
             </button>
           </div>
-          <p className="small muted center">Every week costs {money(crewWeekCost(film))} in crew.</p>
         </>
       )}
       {tab === 'scenes' && <ScenesStatus film={film} onShoot={(id) => setFlow({ kind: 'shoot', sceneId: id })} />}
@@ -106,7 +104,6 @@ export function ShootingScreen() {
       {flow?.kind === 'shoot' && !st.pending && <ShootFlow initialScene={flow.sceneId} onApply={apply} onClose={() => setFlow(null)} />}
       {flow?.kind === 'practice' && (
         <Sheet title="Rehearse" kicker={`1 week · ${money(crewWeekCost(film))}`} onClose={() => setFlow(null)}>
-          <p className="small muted">The cast drills one scene: better pace and dialogue when you shoot it. Tiring.</p>
           <div className="list">
             {film.scenes.map((s, i) => {
               const pr = st.practice[s.id];
@@ -132,8 +129,8 @@ export function ShootingScreen() {
           </>}
         >
           {flow.kind === 'club'
-            ? <p>The cast goes out together. <strong>Bond rises</strong> (more chemistry on set), and they get <strong>a little tired</strong>.</p>
-            : <p>Everyone rests. <strong>Fatigue drops</strong> and the next shoot gets a fresh boost, but <strong>rehearsed lines fade</strong> a little.</p>}
+            ? <p className="effect-line"><span className="good">❤ Bond ▲</span> <span className="bad">😓 Fatigue ▲</span></p>
+            : <p className="effect-line"><span className="good">😌 Fatigue ▼</span> <span className="good">⚡ Next shoot ▲</span> <span className="bad">💬 Rehearsals ▼</span></p>}
           <div className="stat-row">
             <Stat label="Bond" value={st.bond} />
             <Stat label="Avg. fatigue" value={`${avgFatigue(film)}%`} tone={avgFatigue(film) > 50 ? 'bad' : undefined} />
@@ -169,11 +166,11 @@ function WeekStatus({ film }: { film: Film }) {
   return (
     <div className="card week-status">
       <Calendar film={film} />
-      <div className="stat-row">
-        <Stat label="Takes kept" value={`${kept}/${film.scenes.length}`} tone={kept === film.scenes.length ? 'good' : undefined} />
-        <Stat label="Cast fatigue" value={`${fat}%`} tone={fat > 50 ? 'bad' : undefined} />
-        <Stat label="Bond" value={st.bond} />
-        {st.fresh > 0 && <Stat label="Rested" value="✓" tone="good" />}
+      <div className="icon-stats">
+        <span title="Takes kept" className={kept === film.scenes.length ? 'good' : ''}>🎞 {kept}/{film.scenes.length}</span>
+        <span title="Cast fatigue" className={fat > 50 ? 'bad' : ''}>😓 {fat}%</span>
+        <span title="Cast bond">❤ {st.bond}</span>
+        {st.fresh > 0 && <span title="Rested" className="good">😌</span>}
       </div>
     </div>
   );
@@ -304,15 +301,13 @@ export function Calendar({ film }: { film: Film }) {
   return (
     <div className="calendar">
       <div className="row between wrap">
-        <strong>Week {used} of {film.contract.deadlineWeeks}</strong>
-        <span className="small">{weeksLeft(film) >= 0 ? `${weeksLeft(film)} left (shoot + edit)` : <span className="bad">{-weeksLeft(film)} weeks late</span>}</span>
-        <span className="small">Budget <strong className={budgetLeftShooting(film) < 0 ? 'bad' : ''}>{money(budgetLeftShooting(film))}</strong></span>
+        <strong className="cal-week">📅 Week {used}<span className="muted">/{film.contract.deadlineWeeks}</span>{weeksLeft(film) < 0 && <span className="bad"> · {-weeksLeft(film)} late</span>}</strong>
+        <strong className={budgetLeftShooting(film) < 0 ? 'bad' : ''}>💰 {money(budgetLeftShooting(film))}</strong>
       </div>
-      <div className="weeks">
-        {Array.from({ length: total }, (_, i) => (
-          <span key={i} className={`wk ${i < used ? 'used' : ''} ${i >= film.contract.deadlineWeeks ? 'late' : ''}`} />
-        ))}
-      </div>
+      <span className="cal-bar" aria-hidden="true">
+        <span className="cal-used" style={{ width: `${Math.min(100, (used / total) * 100)}%` }} />
+        {total > film.contract.deadlineWeeks && <span className="cal-late" style={{ left: `${(film.contract.deadlineWeeks / total) * 100}%` }} />}
+      </span>
     </div>
   );
 }
