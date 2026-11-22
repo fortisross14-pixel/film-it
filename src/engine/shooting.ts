@@ -19,6 +19,7 @@ import { actionById } from './data/actions';
 import { setById, DEFAULT_ACTION_FIT } from './data/sets';
 import { directorById } from './data/directors';
 import { affinityBonus, specialtyScale } from './director';
+import { shootCeiling, underCeiling } from './ceilings';
 import { withRng } from './profile';
 import { budgetScale, genreTarget, participants, sceneProfile, spent } from './script';
 
@@ -164,10 +165,11 @@ export function predictMeters(film: Film, scene: Scene, set: FilmSet, focus: Met
   const directorAdd = affinityBonus(director, film.contract.genre) + cine * T().cinematographerBase;
   const fresh = 1 + st.fresh;
 
+  const ceiling = shootCeiling(director, set, film.contract.genre);
   const shape = (base: number, m: Meter) => {
     const focusMult = m === focus ? T().focusBoost : T().focusOther;
     const freshMult = m === 'dialogue' ? 1 : fresh;
-    return softCap((base + directorAdd + retake) * fatigueMult * starMult * sceneMult * setMult * focusMult * freshMult);
+    return underCeiling(softCap((base + directorAdd + retake) * fatigueMult * starMult * sceneMult * setMult * focusMult * freshMult), ceiling);
   };
   pace = shape(pace, 'pace');
   chemistry = shape(chemistry, 'chemistry');
@@ -182,6 +184,7 @@ export function predictMeters(film: Film, scene: Scene, set: FilmSet, focus: Met
       { label: `Scene fits ${film.contract.genre}`, value: pct(sceneMult) },
       { label: `Set fit (${tFit})`, value: pct(setMult) },
       { label: 'Director', value: `${directorAdd >= 0 ? '+' : ''}${Math.round(directorAdd)}` },
+      { label: `Ceiling (${set.tier} set, director)`, value: `${ceiling}` },
       ...(retake ? [{ label: `Retake learning`, value: `+${Math.round(retake)}` }] : []),
       ...(st.fresh ? [{ label: 'Rested cast', value: pct(fresh) }] : []),
     ],

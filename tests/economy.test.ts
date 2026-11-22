@@ -1,6 +1,6 @@
 // Economy simulation: what a first career earns, against shop prices.
 // The report runs with  SIM=1 npx vitest run tests/economy.test.ts --reporter=verbose ; the guards at the end always run.
-import { playCareer, playStudio, veteranStudio } from './sim/bots';
+import { midStudio, playCareer, playStudio, veteranStudio, type CareerLog } from './sim/bots';
 import { TUNING } from '../src/engine/tuning';
 import { DIRECTORS } from '../src/engine/data/directors';
 import { SETS } from '../src/engine/data/sets';
@@ -75,4 +75,65 @@ sim('awards across the first careers', () => {
       }
     }
   }, 600_000);
+});
+
+sim('film quality by equipment', () => {
+  it('report', () => {
+    const stages = { starter: undefined, mid: midStudio, everything: veteranStudio };
+    for (const bot of ['careful', 'average'] as const) {
+      for (const [name, start] of Object.entries(stages)) {
+        const logs = Array.from({ length: 16 }, (_, i) => playStudio((i + 1) * 7777, bot, 1, 10, start).byCareer[0]).flat();
+        const g = (x: string) => Math.round((100 * logs.filter((l) => l.grade === x).length) / logs.length);
+        const crit = logs.map((l) => l.critics), aud = logs.map((l) => l.audience);
+        const acclaim = logs.filter((l) => l.critics >= 90 && l.audience >= 80).length;
+        console.log(`${bot.padEnd(8)} ${name.padEnd(10)} films ${String(logs.length).padStart(3)} critics p50/p90/max ${q(crit, 0.5)}/${q(crit, 0.9)}/${Math.max(...crit)}  audience ${(q(aud, 0.5) / 10).toFixed(1)}/${(q(aud, 0.9) / 10).toFixed(1)}/${(Math.max(...aud) / 10).toFixed(1)}  A ${g('A')}% B ${g('B')}% C ${g('C')}% D ${g('D')}% F ${g('F')}%  acclaimed ${acclaim}  level ${(logs.reduce((a, l) => a + l.level, 0) / logs.length).toFixed(1)}`);
+      }
+    }
+  }, 600_000);
+});
+
+sim('progression over 25 careers', () => {
+  it('report', () => {
+    for (const bot of ['careful', 'average'] as const) {
+      const runs = Array.from({ length: 6 }, (_, i) => playStudio((i + 1) * 92821, bot, 25, 10).history);
+      console.log(`--- ${bot} (6 studios) ---`);
+      for (const k of [0, 1, 2, 4, 7, 9, 12, 14, 17, 19, 22, 24]) {
+        const films = runs.flatMap((r) => r[k].films);
+        const crit = films.map((l) => l.critics), aud = films.map((l) => l.audience);
+        const acclaimed = films.filter((l) => l.critics >= 90 && l.audience >= 80).length;
+        const wins = films.reduce((a, l) => a + l.winList.filter((w) => !w.startsWith('Festival')).length, 0);
+        const noms = films.reduce((a, l) => a + l.awards.filter((w) => !w.startsWith('Festival')).length, 0);
+        const g = (x: string) => Math.round((100 * films.filter((l) => l.grade === x).length) / films.length);
+        console.log(`${bot} career ${String(k + 1).padStart(2)}: owned ${Math.round(100 * q(runs.map((r) => r[k].owned), 0.5))}%  earned ${q(runs.map((r) => r[k].earned), 0.5)}  films/career ${(films.length / runs.length).toFixed(1)}  critics p50/max ${q(crit, 0.5)}/${Math.max(...crit)}  audience ${(q(aud, 0.5) / 10).toFixed(1)}/${(Math.max(...aud) / 10).toFixed(1)}  A ${g('A')}% B ${g('B')}% C ${g('C')}%  acclaimed/career ${(acclaimed / runs.length).toFixed(1)}  noms ${(noms / runs.length).toFixed(1)} wins ${(wins / runs.length).toFixed(1)}  top level ${q(films.map((l) => l.level), 0.9)}`);
+      }
+    }
+  }, 900_000);
+});
+
+// Progression guards (always run): unlocks must matter, careers must get better, and the
+// shop should last about 20 careers for a skilled player and about 25 for an average one.
+describe('progression across careers', () => {
+  const med = (v: number[]) => q(v, 0.5);
+  const critics = (runs: CareerLog[][], k: number) => med(runs.flatMap((r) => r[k].films.map((l) => l.critics)));
+  const acclaimed = (runs: CareerLog[][], k: number) => runs.flatMap((r) => r[k].films).filter((l) => l.critics >= 90 && l.audience >= 80).length / runs.length;
+  const owned = (runs: CareerLog[][], k: number) => med(runs.map((r) => r[k].owned));
+
+  it('a skilled player: modest first careers, better every few careers, acclaim around career 20', () => {
+    const runs = Array.from({ length: 4 }, (_, i) => playStudio((i + 1) * 92821, 'careful', 20, 10).history);
+    expect(critics(runs, 0)).toBeLessThanOrEqual(72);
+    expect(acclaimed(runs, 0)).toBe(0);
+    expect(runs.flatMap((r) => [...r[0].films, ...r[1].films]).every((l) => l.awards.every((a) => a.startsWith('Festival')))).toBe(true);
+    expect(critics(runs, 4)).toBeGreaterThan(critics(runs, 0));
+    expect(critics(runs, 19)).toBeGreaterThan(critics(runs, 9));
+    expect(acclaimed(runs, 19)).toBeGreaterThanOrEqual(2);
+    expect(owned(runs, 9)).toBeLessThan(0.7);
+    expect(owned(runs, 19)).toBeGreaterThanOrEqual(0.9);
+  }, 120_000);
+
+  it('an average player unlocks most of the shop by career 25', () => {
+    const runs = Array.from({ length: 3 }, (_, i) => playStudio((i + 1) * 92821, 'average', 25, 10).history);
+    expect(owned(runs, 14)).toBeLessThan(0.7);
+    expect(owned(runs, 24)).toBeGreaterThanOrEqual(0.75);
+    expect(critics(runs, 24)).toBeGreaterThan(critics(runs, 0) + 10);
+  }, 120_000);
 });

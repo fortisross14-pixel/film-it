@@ -35,7 +35,7 @@ export const TUNING = {
     } satisfies Record<Archetype, number>,
     leadStarPowerMin: [35, 45, 55, 65, 72], // by budget tier
     /** Director's fee at a C grade, $K: base + perLevel × level, × (1 + perDifficulty × (difficulty − 1)). */
-    feeBase: 10,
+    feeBase: 18,
     feePerLevel: 4,
     feePerDifficulty: 0.15,
   },
@@ -75,7 +75,7 @@ export const TUNING = {
   ladder: {
     maxLevel: 10,
     maxFilms: 10,
-    climb: { A: 2, B: 1, C: 0, D: -1, F: 0 } satisfies Record<Grade, number>,
+    climb: { A: 2, B: 1, C: 1, D: 0, F: 0 } satisfies Record<Grade, number>,
     /** Index = level − 1. */
     studioTier: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
     budgetTier: [0, 0, 1, 1, 2, 2, 3, 3, 4, 4],
@@ -97,20 +97,20 @@ export const TUNING = {
     startRoster: { common: 16, uncommon: 10 } satisfies Partial<Record<Rarity, number>>,
     /** Fresh faces who turn up when the roster runs dry in a casting session. */
     freshFaceOdds: { common: 0.7, uncommon: 0.3 } satisfies Partial<Record<Rarity, number>>,
-    /** Star power range by rarity. */
+    /** Star power range by rarity. Rarity is the biggest single lever on a film: keep the bands apart. */
     starPower: {
-      common: [10, 40],
-      uncommon: [25, 55],
-      rare: [40, 70],
-      epic: [60, 88],
-      legendary: [82, 100],
+      common: [8, 32],
+      uncommon: [22, 48],
+      rare: [38, 64],
+      epic: [58, 84],
+      legendary: [80, 100],
     } satisfies Record<Rarity, [number, number]>,
     acting: {
-      common: [25, 62],
-      uncommon: [35, 70],
-      rare: [45, 80],
-      epic: [55, 90],
-      legendary: [68, 98],
+      common: [22, 52],
+      uncommon: [32, 62],
+      rare: [46, 74],
+      epic: [62, 88],
+      legendary: [80, 99],
     } satisfies Record<Rarity, [number, number]>,
     /** How many of the named stars (in FAMOUS order, alternating) are legendary; the rest are epic. */
     legendaryFamous: 12,
@@ -119,7 +119,7 @@ export const TUNING = {
     duplicateActing: 2,
     /** Chance a common/uncommon/rare card is a hidden gem (low star, high acting). */
     hiddenGemChance: 0.12,
-    hiddenGemActing: [78, 95] as [number, number],
+    hiddenGemActing: [64, 84] as [number, number],
     traitChance: 0.35,
   },
 
@@ -143,6 +143,14 @@ export const TUNING = {
   /** Which pack a grade earns (an A earns a Star pack once you have the Talent agency, else a Casting call). */
   packForGrade: { A: 'star', B: 'casting' } as Partial<Record<Grade, TalentPackId>>,
 
+  /** Equipment ceilings: a set's tier caps the takes shot on it (averaged with the director's shooting ceiling). */
+  gear: {
+    setCeiling: { basic: 72, advanced: 86, premium: 100 },
+  },
+
+  /** The Showman ('crowd' specialty): buzz and audience. */
+  crowd: { buzz: 15, publicBonus: 4 },
+
   directors: {
     maxLevel: 10,
     /** Genre affinity effect on every phase's quality (points). */
@@ -150,11 +158,11 @@ export const TUNING = {
     affinityClose: 0,
     affinityFar: -4,
     /** Genre masters: bonus in their genre, small bonus everywhere else. */
-    masterGenreBonus: 8,
-    masterOtherBonus: 2,
+    masterGenreBonus: 12,
+    masterOtherBonus: 4,
     /** Specialty bonus grows per level: base × (1 + perLevel × (level - 1)). */
     specialtyPerLevel: 0.08,
-    writerQualityBonus: 6,
+    writerQualityBonus: 10,
     writerCostDiscount: 0.12,
     /** Budget Master: crew, set rental and writing cost less. */
     budgetDiscount: 0.2,
@@ -162,7 +170,7 @@ export const TUNING = {
     scheduleFatigueCut: 0.3,
     schedulePostDaysCut: 0.3,
     /** Festival Darling: critics bonus, lower festival bar. */
-    festivalCritics: 4,
+    festivalCritics: 6,
     festivalThresholdCut: 5,
   },
 
@@ -221,9 +229,9 @@ export const TUNING = {
     redrawFeeMin: 15,
     /** Rarity weights per billing tier (lead draws lean to stars). */
     rarityWeights: {
-      lead: { common: 1, uncommon: 1.5, rare: 2, epic: 3, legendary: 3 },
-      second: { common: 1.5, uncommon: 2, rare: 2, epic: 2, legendary: 1 },
-      support: { common: 3, uncommon: 2.5, rare: 2, epic: 1, legendary: 0.5 },
+      lead: { common: 1, uncommon: 2, rare: 4, epic: 8, legendary: 14 },
+      second: { common: 1, uncommon: 2, rare: 3, epic: 5, legendary: 6 },
+      support: { common: 2, uncommon: 2, rare: 2, epic: 2, legendary: 1.5 },
       minor: { common: 4, uncommon: 3, rare: 2, epic: 0.5, legendary: 0.2 },
     },
     scoutGemWeight: 2.5,
@@ -232,10 +240,12 @@ export const TUNING = {
      *  and every draw holds at least one affordable card. */
     affordShare: { lead: 0.35, second: 0.2, support: 0.12, minor: 0.06 },
     overBudgetDrawWeight: 0.25,
-    /** Pay: baseFee = feeAt30 × (starPower/30)^feeExponent × billing mult, floor feeMin. */
-    feeAt30: 150,
-    feeExponent: 3.6,
-    feeMin: 25,
+    /** Pay: baseFee = budget × (min + (starPower/100)^exp × (max − min)) × billing mult, floor feeMin. */
+    feeShareMin: 0.004,
+    feeShareMax: 0.16,
+    feeShareExponent: 2.4,
+    feeReferenceBudget: 25_000,
+    feeMin: 10,
     billingFeeMult: { lead: 1, second: 0.7, support: 0.45, minor: 0.3 },
     /** Per-minute rate as a share of base fee. */
     perMinuteShare: 0.012,
@@ -278,7 +288,7 @@ export const TUNING = {
     /** Learning curve: + per previous shoot of the scene, capped. */
     retakeBonus: 6,
     retakeBonusCap: 2,
-    cinematographerBase: 8,
+    cinematographerBase: 12,
     cinematographerRetake: 1.5,
     /** Multipliers. */
     starBubbleBase: 0.85,
@@ -345,7 +355,7 @@ export const TUNING = {
     overproductionCap: 30,
     /** The Editor: cheaper and stronger polish. */
     editorDiscount: 0.25,
-    editorBoost: 0.25,
+    editorBoost: 0.5,
     /** Cutting a scene returns its minutes to filler; keep at least this many. */
     minScenesAfterCut: 2,
   },
@@ -408,8 +418,14 @@ export const TUNING = {
     expectedAwardPoints: { blockbuster: 1, award: 3, crowd: 1, indie: 3, tightship: 1.5 },
     /** Rating curve: rating = center + (raw - center) × spread + lift. Spreads good from bad. */
     ratingCenter: 50,
-    ratingSpread: 1.2,
-    ratingLift: 14,
+    ratingSpread: 1.32,
+    ratingLift: 23,
+    /** Above the knee ratings ease toward 100: 100 − (100 − knee) × e^(−(x − knee) / scale). */
+    ratingKnee: 88,
+    ratingTopScale: 22,
+    /** The audience leans on stars and spectacle: an earlier knee keeps a star-studded film from an automatic 10. */
+    publicKnee: 74,
+    publicTopScale: 44,
     /** Award drivers. */
     directorCutWeight: 0.7,
     scriptAwardThreshold: 95,

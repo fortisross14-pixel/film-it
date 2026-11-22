@@ -43,10 +43,10 @@ export const TOPICS: Topic[] = [
 
 export const TOPIC_PACKS: TopicPack[] = [
   { id: 'starter', name: 'Starter', topicIds: ['urbanProfessional', 'romantic', 'smallTown', 'crime'], cost: 0 },
-  { id: 'epic', name: 'Epic', topicIds: ['medieval', 'ancientRome', 'pirates'], cost: 300 },
-  { id: 'future', name: 'Future', topicIds: ['spaceTravel', 'cyberpunk', 'postApocalyptic'], cost: 300 },
-  { id: 'fight', name: 'Fight', topicIds: ['martialArts', 'boxing', 'military'], cost: 250 },
-  { id: 'prestige', name: 'Prestige', topicIds: ['periodDrama', 'biopic', 'courtroom'], cost: 350 },
+  { id: 'epic', name: 'Epic', topicIds: ['medieval', 'ancientRome', 'pirates'], cost: 350 },
+  { id: 'future', name: 'Future', topicIds: ['spaceTravel', 'cyberpunk', 'postApocalyptic'], cost: 350 },
+  { id: 'fight', name: 'Fight', topicIds: ['martialArts', 'boxing', 'military'], cost: 280 },
+  { id: 'prestige', name: 'Prestige', topicIds: ['periodDrama', 'biopic', 'courtroom'], cost: 410 },
 ];
 
 export const topicById = (id: string): Topic => {

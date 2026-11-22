@@ -67,7 +67,10 @@ export type AgeBracket = 'young' | 'adult' | 'veteran';
 
 export type ActorTrait = 'method' | 'diva' | 'charming' | 'oneTake';
 
-export type Specialty = 'script' | 'casting' | 'shooting' | 'post' | 'genre' | 'budget' | 'schedule' | 'festival';
+export type Specialty = 'script' | 'casting' | 'shooting' | 'post' | 'genre' | 'budget' | 'schedule' | 'festival' | 'crowd';
+
+/** Equipment tier: what you start with, what you buy early, what you buy late. */
+export type GearTier = 'basic' | 'advanced' | 'premium';
 
 // ---------- Content (static catalogue) ----------
 
@@ -136,6 +139,8 @@ export interface FilmSet {
   /** Fit for specific actions (e.g. the Colosseum for arena battles). Missing = stunt/default fit. */
   actionFit?: Record<string, number>;
   dayCost: number; // $K per shooting day
+  /** basic (the 3 starters), advanced (bought basics), premium (topic and showpiece sets): caps the takes shot on it. */
+  tier: GearTier;
   /** How the set is unlocked. */
   unlock: { kind: 'start' } | { kind: 'topic'; topicId: string } | { kind: 'buy'; cost: number };
 }
@@ -147,6 +152,13 @@ export interface DirectorDef {
   specialties: Specialty[];
   /** Genre masters: their one strong genre. */
   masterGenre?: GenreId;
+  /** basic (starters), advanced (specialists and styles), premium (masters). */
+  tier: GearTier;
+  /**
+   * The best script and the best takes this director can get out of a film (0–100). Skill gets
+   * you to the ceiling; better directors raise it. Genre masters reach 100 in their genre.
+   */
+  ceiling: { script: number; shooting: number };
   unlock:
     | { kind: 'start' }
     | { kind: 'buy'; cost: number };

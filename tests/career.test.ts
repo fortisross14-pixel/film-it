@@ -75,7 +75,7 @@ describe('careers', () => {
   });
 
   it('climbs the ladder with the grade', () => {
-    expect([levelAfter(1, 'A'), levelAfter(1, 'B'), levelAfter(4, 'C'), levelAfter(4, 'D'), levelAfter(1, 'D'), levelAfter(9, 'A')]).toEqual([3, 2, 4, 3, 1, 10]);
+    expect([levelAfter(1, 'A'), levelAfter(1, 'B'), levelAfter(4, 'C'), levelAfter(4, 'D'), levelAfter(1, 'D'), levelAfter(9, 'A')]).toEqual([3, 2, 5, 4, 1, 10]); // A +2, B +1, C +1, D holds
     let p = okC(startCareer(newProfile('T', 7), 'starterB', 1));
     let r = recordFilm(p, mk('A', 'star'), 100, 0);
     expect(r.outcome).toMatchObject({ fired: false, wrapped: false, levelFrom: 1, levelTo: 3, genresOpened: ['horror'], pack: 'star' });
@@ -86,7 +86,7 @@ describe('careers', () => {
     expect(p.contractBoard.map((c) => c.tag)).toEqual(['match', 'match', 'stretch', 'teaser']);
     expect(p.contractBoard.map((c) => c.level)).toEqual([3, 3, 4, 5]);
     r = recordFilm(p, mk('D'), 10, 0);
-    expect(r.profile.career).toMatchObject({ level: 2, topLevel: 3 });
+    expect(r.profile.career).toMatchObject({ level: 3, topLevel: 3 });
     expect(r.profile.contractBoard.map((c) => c.tag)).toEqual(['match', 'match', 'safe', 'teaser']);
   });
 

@@ -202,7 +202,7 @@ describe('progression', () => {
     if (!r.ok) return;
     expect(r.profile.unlocks.topics).toContain('spaceTravel');
     expect(r.profile.unlocks.sets).toContain('spaceshipBridge');
-    expect(r.profile.money).toBe(700);
+    expect(r.profile.money).toBe(1000 - TOPIC_PACKS.find((t) => t.id === 'future')!.cost);
     expect(buyTopicPack(r.profile, 'future').ok).toBe(false);
     expect(buyTopicPack({ ...p, money: 0 }, 'epic').ok).toBe(false);
   });

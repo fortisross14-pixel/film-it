@@ -83,8 +83,14 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const fxGenre = Math.max(TUNING.post.vfxWeight[film.contract.genre], TUNING.post.sfxWeight[film.contract.genre]);
   const publicWeights = { ...T.publicWeights, fx: fxGenre < T.fxPublicMinWeight ? 1 : T.publicWeights.fx * fxGenre };
   const charming = film.roles.filter((r) => r.actor?.traits.includes('charming')).length;
-  const curve = (raw: number) => T.ratingCenter + (raw - T.ratingCenter) * T.ratingSpread + T.ratingLift;
-  const publicRating = Math.round(clamp(curve(rate(factors, publicWeights)) - boredom * T.boredomPublic + charming * 2 + noise()));
+  // Spread good films from bad, then ease toward 100 above the knee: masterpieces are rare.
+  const top = (x: number, knee: number, scale: number) => (x <= knee ? x : 100 - (100 - knee) * Math.exp(-(x - knee) / scale));
+  const curve = (raw: number, audience = false) => {
+    const x = T.ratingCenter + (raw - T.ratingCenter) * T.ratingSpread + T.ratingLift;
+    return audience ? top(x, T.publicKnee, T.publicTopScale) : top(x, T.ratingKnee, T.ratingTopScale);
+  };
+  const showman = specialtyScale(directorById(film.directorId), 'crowd', 1);
+  const publicRating = Math.round(clamp(curve(rate(factors, publicWeights), true) - boredom * T.boredomPublic + charming * 2 + showman * TUNING.crowd.publicBonus + noise()));
   const darling = specialtyScale(directorById(film.directorId), 'festival', 1);
   const criticsRating = Math.round(clamp(curve(rate(factors, T.criticsWeights)) - boredom * T.boredomCritics - post.overproduction + noise()
     + darling * TUNING.directors.festivalCritics + fx.critics));
@@ -96,7 +102,7 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
   const poster = posterScore(film, history);
   const pe = posterEffect(poster.total);
   const level = marketingLevel(film);
-  const buzz = Math.round(clamp(T.buzzBase + topStar * T.buzzStar + hype * T.buzzTopic + charming * T.buzzCharming + pe.buzz + fx.buzz));
+  const buzz = Math.round(clamp(T.buzzBase + topStar * T.buzzStar + hype * T.buzzTopic + charming * T.buzzCharming + pe.buzz + fx.buzz + showman * TUNING.crowd.buzz));
 
   // Box office: opening from market × buzz (× a little critics), legs from the public.
   const c = film.contract;

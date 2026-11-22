@@ -2,7 +2,8 @@
 import type { ActionDef, Beat, Contract, Meter, Profile, RoleType, Tone } from '../../src/engine/types';
 import { newProfile, startFilm } from '../../src/engine/profile';
 import { retireCareer, startCareer } from '../../src/engine/career';
-import { buyDirector, buySet, buyTalentPack, buyTopicPack, directorCost, openTalentPack } from '../../src/engine/progression';
+import { buyDirector, buySet, buyTalentPack, buyTopicPack, buyUpgrade, directorCost, grantTalentPack, openTalentPack, packForSale } from '../../src/engine/progression';
+import type { UpgradeId } from '../../src/engine/data/upgrades';
 import { DIRECTORS } from '../../src/engine/data/directors';
 import { TOPIC_PACKS } from '../../src/engine/data/topics';
 import {
@@ -56,7 +57,7 @@ export function writeScript(p: Profile, bot: Bot): Profile {
   let f = p.activeFilm!;
   const c = f.contract;
   for (const t of rolesFor(c)) f = ok(addRole(f, t), 'role').film;
-  if (bot === 'careful') {
+  if (bot !== 'naive') {
     const topic = [...TOPICS].filter((t) => p.unlocks.topics.includes(t.id)).sort((a, b) => b.genreFit[c.genre] - a.genreFit[c.genre])[0];
     f = ok(setTopic(f, topic.id, p.unlocks.topics), 'topic').film;
   }
@@ -166,12 +167,12 @@ export function shoot(p: Profile, bot: Bot): Profile {
     const set = bot !== 'naive' ? [...sets].sort((a, b) => setFit(b, s) - setFit(a, s))[0] : sets[0];
     const w = TUNING.shooting.toneWeights[s.tone];
     const focus = (Object.keys(w) as Meter[]).sort((a, b) => w[b] - w[a])[0];
-    for (let attempt = 0; attempt < (bot === 'careful' ? 2 : 1); attempt++) {
+    for (let attempt = 0; attempt < (bot === 'careful' ? 3 : bot === 'average' ? 2 : 1); attempt++) {
       p = ok(doWeek(p, { kind: 'shoot', sceneId: s.id, setId: set.id, focus }), 'shoot').profile;
       const best = [...p.activeFilm!.shooting!.pending!.versions].sort((a, b) => b.score - a.score)[0];
       p = ok(chooseVersion(p, best.id), 'choose').profile;
       const remaining = p.activeFilm!.scenes.filter((x) => !x.chosenTakeId).length;
-      if (best.score >= 62 || weeksLeft(p.activeFilm!) < remaining + 4) break;
+      if (best.score >= (bot === 'careful' ? 72 : 62) || weeksLeft(p.activeFilm!) < remaining + 4) break;
     }
     void predictMeters;
   }
@@ -181,14 +182,18 @@ export function shoot(p: Profile, bot: Bot): Profile {
 export function post(p: Profile, bot: Bot): Profile {
   let f = p.activeFilm!;
   const level = p.directors[f.directorId]?.level ?? 1;
-  if (bot === 'average') f = ok(setMusic(f, 'library'), 'music').film;
+  if (bot === 'average') {
+    f = ok(setMusic(f, 'library'), 'music').film;
+    const leftAfter = f.contract.budget - spent(f) - postSummary(f, level).musicCost;
+    if (leftAfter > 0) f = autoPolish(f, leftAfter * 0.25, level);
+  }
   if (bot === 'careful') {
     const left = f.contract.budget - spent(f);
     const music = gear(f.upgrades).music;
     const best = music.includes('star') && left > f.contract.budget * 0.4 ? 'star' : music.includes('composer') && left > f.contract.budget * 0.25 ? 'composer' : 'library';
     f = ok(setMusic(f, best), 'music').film;
     const leftAfter = f.contract.budget - spent(f) - postSummary(f, level).musicCost;
-    if (leftAfter > 0) f = autoPolish(f, leftAfter * 0.3, level);
+    if (leftAfter > 0) f = autoPolish(f, leftAfter * 0.6, level);
     // Poster: suitable style, fitting font, stars billed big, superstar faces.
     for (let i = 0; i < 2; i++) {
       const style = POSTER_STYLES.find((s) => s.id === posterOf(f).style)!;
@@ -219,7 +224,7 @@ export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog
   const d = directorById(p.career!.directorId);
   const board = p.contractBoard.filter((c) => !c.locked);
   const pickScore = (c: Contract) => (c.sequelOf ? 50 : 0) + Math.max(0, ...(d.genreAffinity.length ? d.genreAffinity.map((g) => genreCloseness(g, c.genre)) : [0.5])) * 10 - c.difficulty;
-  const contract = bot === 'careful' ? board.sort((a, b) => pickScore(b) - pickScore(a))[0] : board[0];
+  const contract = bot !== 'naive' ? board.sort((a, b) => pickScore(b) - pickScore(a))[0] : board[0];
   p = ok(startFilm(p, contract.id), 'start').profile;
   p = writeScript(p, bot);
   p = cast(p, bot);
@@ -263,30 +268,80 @@ export function playCareer(seed: number, bot: Bot, n = 6, directorId = 'starterA
   return { profile: p, logs };
 }
 
-/** Spend like a player between careers: a couple of packs, then the cheapest sets and topics, a director when affordable. */
+/**
+ * What a player buys, in order. Between careers the bot buys the next item on the list it can
+ * afford; when the next item is too expensive it saves for it (stops), apart from talent packs,
+ * which it always tops up (2 a career). Order: cheap essentials, then the mid game, then the big ticket items.
+ */
+export const SHOPPING_LIST: { kind: 'upgrade' | 'set' | 'topic' | 'director'; id: string }[] = [
+  { kind: 'upgrade', id: 'agency1' },
+  { kind: 'set', id: 'diner' }, { kind: 'set', id: 'office' }, { kind: 'set', id: 'cityStreet' },
+  { kind: 'upgrade', id: 'post1' }, { kind: 'upgrade', id: 'composer' },
+  { kind: 'set', id: 'bar' }, { kind: 'set', id: 'suburbanHouse' }, { kind: 'set', id: 'hospital' }, { kind: 'set', id: 'rooftop' }, { kind: 'set', id: 'forest' },
+  { kind: 'director', id: 'writer' },
+  { kind: 'topic', id: 'fight' }, { kind: 'topic', id: 'prestige' },
+  { kind: 'director', id: 'cinematographer' },
+  { kind: 'topic', id: 'epic' }, { kind: 'topic', id: 'future' },
+  { kind: 'upgrade', id: 'marketing' },
+  { kind: 'director', id: 'festivalDarling' },
+  { kind: 'set', id: 'mansion' },
+  { kind: 'upgrade', id: 'agency2' },
+  { kind: 'director', id: 'editor' },
+  { kind: 'upgrade', id: 'post2' },
+  { kind: 'set', id: 'chromaStage' },
+  { kind: 'upgrade', id: 'starComposer' },
+  { kind: 'director', id: 'scout' }, { kind: 'director', id: 'budgetMaster' }, { kind: 'director', id: 'clockwork' },
+  { kind: 'director', id: 'masterComedy' }, { kind: 'director', id: 'masterScifi' }, { kind: 'director', id: 'masterHorror' }, { kind: 'director', id: 'masterFantasy' },
+  { kind: 'director', id: 'auteur' }, { kind: 'director', id: 'showman' },
+];
+
+const owns = (p: Profile, it: (typeof SHOPPING_LIST)[0]) =>
+  it.kind === 'upgrade' ? p.unlocks.upgrades.includes(it.id) : it.kind === 'set' ? p.unlocks.sets.includes(it.id)
+  : it.kind === 'topic' ? p.unlocks.packs.includes(it.id) : p.unlocks.directors.includes(it.id);
+const buyIt = (p: Profile, it: (typeof SHOPPING_LIST)[0]) =>
+  it.kind === 'upgrade' ? buyUpgrade(p, it.id as UpgradeId) : it.kind === 'set' ? buySet(p, it.id) : it.kind === 'topic' ? buyTopicPack(p, it.id) : buyDirector(p, it.id);
+
 export function shop(p: Profile): Profile {
-  const tryBuy = (r: { ok: true; profile: Profile } | { ok: false; reason: string }) => (r.ok ? r.profile : p);
-  const dir = DIRECTORS.filter((d) => !p.unlocks.directors.includes(d.id)).sort((a, b) => directorCost(a) - directorCost(b))[0];
-  if (dir && p.money >= directorCost(dir)) return tryBuy(buyDirector(p, dir.id));
-  for (let i = 0; i < 2; i++) p = tryBuy(buyTalentPack(p, 'casting'));
-  const goods = [
-    ...SETS.filter((x) => x.unlock.kind === 'buy' && !p.unlocks.sets.includes(x.id)).map((x) => ({ cost: (x.unlock as { cost: number }).cost, buy: (q: Profile) => buySet(q, x.id) })),
-    ...TOPIC_PACKS.filter((x) => x.cost && !p.unlocks.packs.includes(x.id)).map((x) => ({ cost: x.cost, buy: (q: Profile) => buyTopicPack(q, x.id) })),
-  ].sort((a, b) => a.cost - b.cost);
-  for (const g of goods) if (p.money >= g.cost) p = tryBuy(g.buy(p));
+  const pack = packForSale(p, 'star') ? 'star' : 'casting';
+  { const r = buyTalentPack(p, pack); if (r.ok) p = r.profile; }
+  for (const it of SHOPPING_LIST) {
+    if (owns(p, it)) continue;
+    const r = buyIt(p, it);
+    if (!r.ok) break; // save up for it
+    p = r.profile;
+  }
   for (const id of ['casting', 'star'] as const) while (p.talentPacks[id] > 0) p = ok(openTalentPack(p, id), 'open pack').profile;
   return p;
 }
+
+/** Share of the shop (by price) the studio owns. */
+export function ownedShare(p: Profile): number {
+  const items = SHOPPING_LIST.map((it) => {
+    const cost = it.kind === 'upgrade' ? UPGRADES.find((u) => u.id === it.id)!.cost
+      : it.kind === 'set' ? (SETS.find((x) => x.id === it.id)!.unlock as { cost: number }).cost
+      : it.kind === 'topic' ? TOPIC_PACKS.find((x) => x.id === it.id)!.cost : directorCost(DIRECTORS.find((d) => d.id === it.id)!);
+    return { cost, owned: owns(p, it) };
+  });
+  return items.filter((i) => i.owned).reduce((a, i) => a + i.cost, 0) / items.reduce((a, i) => a + i.cost, 0);
+}
+
+/** The owned director with the highest ceilings. */
+export function bestDirector(p: Profile, busy: string[] = []): string {
+  return DIRECTORS.filter((d) => p.unlocks.directors.includes(d.id) && !busy.includes(d.id))
+    .sort((a, b) => b.ceiling.script + b.ceiling.shooting - (a.ceiling.script + a.ceiling.shooting))[0].id;
+}
+
+export interface CareerLog { films: FilmLog[]; earned: number; owned: number; money: number }
 
 /** Several careers one after another on the same studio, shopping in between. */
 export function playStudio(seed: number, bot: Bot, careers = 3, films = 10, start?: (p: Profile) => Profile) {
   let p = newProfile('Sim', seed);
   if (start) p = start(p);
   const byCareer: FilmLog[][] = [];
+  const history: CareerLog[] = [];
   for (let k = 0; k < careers; k++) {
-    const owned = DIRECTORS.filter((d) => p.unlocks.directors.includes(d.id));
-    const directorId = owned.length > 2 ? owned[owned.length - 1].id : k % 2 ? 'starterB' : 'starterA';
-    p = ok(startCareer(p, directorId, 0), 'career').profile;
+    const directorId = bestDirector(p);
+    p = ok(startCareer(p, directorId === 'starterA' && k % 2 ? 'starterB' : directorId, 0), 'career').profile;
     const logs: FilmLog[] = [];
     for (let i = 0; i < films && p.career; i++) {
       const r = playFilm(p, bot);
@@ -295,9 +350,11 @@ export function playStudio(seed: number, bot: Bot, careers = 3, films = 10, star
     }
     if (p.career) p = ok(retireCareer(p, 0), 'retire').profile;
     byCareer.push(logs);
+    const earned = p.careers[p.careers.length - 1].earnings;
     p = shop(p);
+    history.push({ films: logs, earned, owned: ownedShare(p), money: p.money });
   }
-  return { profile: p, byCareer };
+  return { profile: p, byCareer, history };
 }
 
 /** A studio with everything unlocked and every named star on the roster. */
@@ -312,4 +369,20 @@ export function veteranStudio(p: Profile): Profile {
     },
     actorPool: assignPortraits([...p.actorPool, ...stars]),
   };
+}
+
+/** A mid-game studio: Talent agency with a dozen packs opened, the bought basic sets, post house, composer, the specialists. */
+export function midStudio(p: Profile): Profile {
+  let q: Profile = {
+    ...p,
+    unlocks: {
+      ...p.unlocks,
+      directors: [...p.unlocks.directors, 'writer', 'cinematographer', 'editor'],
+      sets: SETS.filter((x) => x.tier !== 'premium').map((x) => x.id),
+      upgrades: ['agency1', 'post1', 'composer'],
+    },
+  };
+  for (let i = 0; i < 12; i++) q = grantTalentPack(q, 'casting');
+  while (q.talentPacks.casting > 0) q = ok(openTalentPack(q, 'casting'), 'open').profile;
+  return q;
 }

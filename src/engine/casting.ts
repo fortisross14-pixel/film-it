@@ -60,22 +60,27 @@ export function actorFit(film: Film, role: Role, actor: Actor): number {
 
 // ---------------- Pay ----------------
 
-export function baseFee(actor: Actor, billing: Billing): number {
+/**
+ * Base fee: actors ask for a share of the film's budget that rises steeply with star power
+ * (a legend leads for about a sixth of any budget, an unknown for under 1%). So a star is
+ * always worth casting if the film can carry the share, and never a trap on a small film.
+ */
+export function baseFee(actor: Actor, billing: Billing, budget: number = C().feeReferenceBudget): number {
   const T = C();
-  const raw = T.feeAt30 * Math.pow(actor.starPower / 30, T.feeExponent) * T.billingFeeMult[billing];
+  const share = T.feeShareMin + Math.pow(actor.starPower / 100, T.feeShareExponent) * (T.feeShareMax - T.feeShareMin);
   const diva = actor.traits.includes('diva') ? T.divaFeeMult : 1;
-  return Math.round(Math.max(T.feeMin, raw) * diva);
+  return Math.round(Math.max(T.feeMin, budget * share * T.billingFeeMult[billing]) * diva);
 }
 
 /** Pay = base fee + screen-time minutes × per-minute rate (rate scales with star power). */
-export function actorPay(actor: Actor, role: Role, minutes: number): { base: number; perMinute: number; total: number } {
-  const base = baseFee(actor, role.billing);
+export function actorPay(actor: Actor, role: Role, minutes: number, budget?: number): { base: number; perMinute: number; total: number } {
+  const base = baseFee(actor, role.billing, budget);
   const perMinute = Math.round(base * C().perMinuteShare * 10) / 10;
   return { base, perMinute, total: Math.round(base + perMinute * minutes) };
 }
 
 export function rolePay(film: Film, role: Role, actor: Actor): number {
-  return Math.round(actorPay(actor, role, screenTime(film)[role.id] ?? 0).total * loyaltyMult(actor, film.directorId));
+  return Math.round(actorPay(actor, role, screenTime(film)[role.id] ?? 0, film.contract.budget).total * loyaltyMult(actor, film.directorId));
 }
 
 /** Payroll of everyone cast so far (signed pay, or the current estimate before signing). */

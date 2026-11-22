@@ -63,7 +63,9 @@ describe('skill needs & fit', () => {
 
 describe('pay', () => {
   it('scales with star power, billing and screen time', () => {
-    expect(baseFee(actor({ starPower: 90 }), 'lead')).toBeGreaterThan(baseFee(actor({ starPower: 30 }), 'lead') * 50);
+    expect(baseFee(actor({ starPower: 90 }), 'lead')).toBeGreaterThan(baseFee(actor({ starPower: 30 }), 'lead') * 8);
+    // A share of the budget: the same star costs ten times more on a film ten times bigger.
+    expect(baseFee(actor({ starPower: 90 }), 'lead', 100_000) / baseFee(actor({ starPower: 90 }), 'lead', 10_000)).toBeCloseTo(10, 2);
     expect(baseFee(actor({ starPower: 60 }), 'minor')).toBeLessThan(baseFee(actor({ starPower: 60 }), 'lead'));
     expect(baseFee(actor({ starPower: 60, traits: ['diva'] }), 'lead')).toBeGreaterThan(baseFee(actor({ starPower: 60 }), 'lead'));
     const role = { id: 'r', name: 'R', type: 'main' as const, billing: 'lead' as const };
@@ -150,7 +152,7 @@ describe('finish', () => {
     expect(f.phase).toBe('shooting');
     expect(f.ledger.filter((e) => e.label.startsWith('Cast:'))).toHaveLength(2);
     const st = screenTime(f);
-    expect(f.roles[0].pay).toBe(actorPay(f.roles[0].actor!, f.roles[0], st.role1).total);
+    expect(f.roles[0].pay).toBe(actorPay(f.roles[0].actor!, f.roles[0], st.role1, f.contract.budget).total);
     expect(budgetLeft(f)).toBe(before);
     expect(f.castingScore).toBeGreaterThan(0);
   });

@@ -12,6 +12,7 @@ import { GENRE_PROFILE, TONES, toneById } from './data/tones';
 import { topicById } from './data/topics';
 import { ratingIndex } from './data/genres';
 import { affinityBonus, specialtyScale } from './director';
+import { scriptCeiling, underCeiling } from './ceilings';
 import { ROLE_TYPE_NAMES } from './format';
 
 export type EditResult = { ok: true; film: Film } | { ok: false; reason: string };
@@ -392,6 +393,8 @@ export interface QualityBreakdown {
   coherence: number;
   pacing: number;
   directorBonus: number;
+  /** The best script this director can write in this genre. */
+  ceiling: number;
   profile: AxisVector;
   total: number;
   notes: string[];
@@ -505,11 +508,12 @@ export function scriptQuality(film: Film, director?: DirectorDef, level = 1): Qu
   const base = fit * W.fit + depth * W.depth + structure * W.structure + characters * W.characters + coherence * W.coherence + pacing * W.pacing;
   // An unfinished script (fewer than the minimum scenes) is scaled down.
   const completeness = Math.min(1, scenes.length / T.minScenes);
-  const total = scenes.length ? clamp(Math.round((base + directorBonus) * completeness)) : 0;
+  const ceiling = scriptCeiling(director, film.contract.genre);
+  const total = scenes.length ? Math.round(underCeiling(clamp((base + directorBonus) * completeness), ceiling)) : 0;
   const r = Math.round;
   return {
     fit: r(fit), depth: r(depth), structure: r(structure), characters: r(characters), coherence: r(coherence), pacing: r(pacing),
-    directorBonus: r(directorBonus), profile, total, notes,
+    directorBonus: r(directorBonus), ceiling, profile, total, notes,
   };
 }
 

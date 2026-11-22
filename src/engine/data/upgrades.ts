@@ -16,13 +16,13 @@ export interface UpgradeDef {
 }
 
 export const UPGRADES: UpgradeDef[] = [
-  { id: 'agency1', name: 'Talent agency', kind: 'Actors', cost: 400, text: 'Talent packs can hold rare and epic actors, and Star packs go on sale.' },
-  { id: 'agency2', name: 'Star agency', kind: 'Actors', cost: 3000, requires: 'agency1', text: 'Talent packs can hold legendary actors and the named stars.' },
-  { id: 'post1', name: 'Post house', kind: 'Post', cost: 600, text: 'Pro visual effects and sound.' },
-  { id: 'post2', name: 'VFX studio', kind: 'Post', cost: 2500, requires: 'post1', text: 'Premium, blockbuster-grade visual effects and sound.' },
-  { id: 'composer', name: 'Composer contract', kind: 'Music', cost: 500, text: 'An original score instead of library music: lifts emotional scenes.' },
-  { id: 'starComposer', name: 'Star composer', kind: 'Music', cost: 2000, requires: 'composer', text: 'A famous composer: a big lift, and a shot at Best Score.' },
-  { id: 'marketing', name: 'Marketing department', kind: 'Marketing', cost: 1200, text: 'Ask the studio to push a film harder: bigger opening, better award chances.' },
+  { id: 'agency1', name: 'Talent agency', kind: 'Actors', cost: 350, text: 'Talent packs can hold rare and epic actors, and Star packs go on sale.' },
+  { id: 'agency2', name: 'Star agency', kind: 'Actors', cost: 1750, requires: 'agency1', text: 'Talent packs can hold legendary actors and the named stars.' },
+  { id: 'post1', name: 'Post house', kind: 'Post', cost: 450, text: 'Pro visual effects and sound.' },
+  { id: 'post2', name: 'VFX studio', kind: 'Post', cost: 1600, requires: 'post1', text: 'Premium, blockbuster-grade visual effects and sound.' },
+  { id: 'composer', name: 'Composer contract', kind: 'Music', cost: 400, text: 'An original score instead of library music: lifts emotional scenes.' },
+  { id: 'starComposer', name: 'Star composer', kind: 'Music', cost: 1150, requires: 'composer', text: 'A famous composer: a big lift, and a shot at Best Score.' },
+  { id: 'marketing', name: 'Marketing department', kind: 'Marketing', cost: 800, text: 'Ask the studio to push a film harder: bigger opening, better award chances.' },
 ];
 
 export const upgradeById = (id: string) => UPGRADES.find((u) => u.id === id);
