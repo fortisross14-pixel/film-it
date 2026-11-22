@@ -1,5 +1,5 @@
 // Economy simulation: what a first career earns, against shop prices.
-// Run with  SIM=1 npx vitest run tests/economy.sim.test.ts
+// The report runs with  SIM=1 npx vitest run tests/economy.test.ts --reporter=verbose ; the guards at the end always run.
 import { playCareer } from './sim/bots';
 import { TUNING } from '../src/engine/tuning';
 import { DIRECTORS } from '../src/engine/data/directors';
