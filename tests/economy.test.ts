@@ -1,6 +1,6 @@
 // Economy simulation: what a first career earns, against shop prices.
 // The report runs with  SIM=1 npx vitest run tests/economy.test.ts --reporter=verbose ; the guards at the end always run.
-import { playCareer } from './sim/bots';
+import { playCareer, playStudio, veteranStudio } from './sim/bots';
 import { TUNING } from '../src/engine/tuning';
 import { DIRECTORS } from '../src/engine/data/directors';
 import { SETS } from '../src/engine/data/sets';
@@ -50,4 +50,29 @@ describe('first-career economy', () => {
   it('an average first career buys a couple of casting calls', () => {
     expect(q(firstCareers('average'), 0.5)).toBeGreaterThanOrEqual(2 * TUNING.talentPacks.casting.price);
   }, 120_000);
+});
+
+sim('awards across the first careers', () => {
+  it('report', () => {
+    for (const bot of ['careful', 'average'] as const) {
+      const N = 24;
+      const runs = Array.from({ length: N }, (_, i) => playStudio((i + 1) * 104729, bot, 3, 10).byCareer);
+      const vet = Array.from({ length: N }, (_, i) => playStudio((i + 1) * 15485863, bot, 1, 10, veteranStudio).byCareer);
+      for (let k = 0; k < 4; k++) {
+        const src = k < 3 ? runs : vet;
+        const logs = src.flatMap((r) => r[k < 3 ? k : 0] ?? []);
+        const early = logs.filter((l) => l.film <= 5), late = logs.filter((l) => l.film > 5);
+        const rate = (ls: typeof logs, f: (l: (typeof logs)[0]) => number) => (ls.length ? (ls.reduce((a, l) => a + f(l), 0) / ls.length).toFixed(2) : '-');
+        const fest = (l: (typeof logs)[0]) => l.awards.filter((a) => a.startsWith('Festival')).length;
+        const main = (l: (typeof logs)[0]) => l.awards.filter((a) => !a.startsWith('Festival')).length;
+        const mainWins = (l: (typeof logs)[0]) => l.winList.filter((a) => !a.startsWith('Festival')).length;
+        const festWins = (l: (typeof logs)[0]) => l.winList.filter((a) => a.startsWith('Festival')).length;
+        const lvl = rate(logs, (l) => l.level);
+        console.log(`${bot} ${k < 3 ? `career ${k + 1}` : 'veteran'}: ${logs.length} films, avg level ${lvl} | per film, films 1-5: fest ${rate(early, fest)} (won ${rate(early, festWins)}) main noms ${rate(early, main)} wins ${rate(early, mainWins)} | films 6-10: fest ${rate(late, fest)} (won ${rate(late, festWins)}) main noms ${rate(late, main)} wins ${rate(late, mainWins)} | careers with any main win ${src.filter((r) => (r[k < 3 ? k : 0] ?? []).some((l) => mainWins(l) > 0)).length}/${N}`);
+        const cats: Record<string, number> = {};
+        for (const l of logs) for (const w of l.winList) { const k = w.replace(/:.*/, ''); cats[k] = (cats[k] ?? 0) + 1; }
+        console.log('   wins by category', JSON.stringify(cats));
+      }
+    }
+  }, 600_000);
 });

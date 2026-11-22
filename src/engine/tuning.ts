@@ -376,14 +376,20 @@ export const TUNING = {
     /** Awards. */
     festivalBudgetMax: 12_000,
     festivalNomCritics: 75,
-    festivalNomChance: 0.6,
+    festivalNomChance: 0.3,
     bigFilmFestivalChance: 0.3,
-    festivalWinCritics: 88,
+    festivalWinCritics: 92,
     bigFilmFestivalCritics: 85,
     nominationBase: 0.15,
     nominationPerPoint: 1 / 15,
-    rivalRange: [78, 98] as [number, number],
-    winNoise: 8,
+    rivalRange: [86, 99] as [number, number],
+    /**
+     * Award prestige by career level (index = level − 1): multiplies the main-ceremony nomination
+     * chance, and the awards weight in the studio's grade (the rest goes to critics). Small films
+     * don't get Oscars-style attention; the big contracts do.
+     */
+    awardPrestige: [0, 0, 0, 0.1, 0.2, 0.3, 0.45, 0.6, 0.8, 1],
+    winNoise: 5,
     /** Award points: nomination / win; festival counts the same. Expected points per archetype. */
     nominationPoints: 1,
     winPoints: 2.5,
@@ -394,12 +400,14 @@ export const TUNING = {
     ratingLift: 14,
     /** Award drivers. */
     directorCutWeight: 0.7,
-    scriptAwardThreshold: 92,
+    scriptAwardThreshold: 95,
     directorAwardThreshold: 80,
-    scoreAwardThreshold: 80,
-    fxAwardThreshold: 85,
+    scoreAwardThreshold: 87,
+    fxAwardThreshold: 90,
+    /** Visual effects and sound awards: share of the driver that comes from the critics rating. */
+    craftCriticsWeight: 0.35,
     fxAwardPerPoint: 3,
-    soundAwardThreshold: 90,
+    soundAwardThreshold: 92,
     soundAwardPerPoint: 2,
     pictureAwardThreshold: 80,
     leadAwardThreshold: 78,

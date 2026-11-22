@@ -103,7 +103,7 @@ describe('sequels', () => {
 describe('rival films in award season', () => {
   it('nominations list rival films by rival directors and a winner', () => {
     const f = postProfile('drama', 8000).activeFilm!;
-    const strong: Film = { ...f, scriptQuality: 100, scenes: f.scenes.map((s) => ({ ...s, duration: 'long' as const, takes: s.takes.map((t) => ({ ...t, score: 100, meters: { pace: 100, chemistry: 100, dialogue: 100 } })) })) };
+    const strong: Film = { ...f, contract: { ...f.contract, level: 10 }, scriptQuality: 100, scenes: f.scenes.map((s) => ({ ...s, duration: 'long' as const, takes: s.takes.map((t) => ({ ...t, score: 100, meters: { pace: 100, chemistry: 100, dialogue: 100 } })) })) };
     let found = false;
     for (let seed = 1; seed <= 20 && !found; seed++) {
       const r = computeResults(createRng(seed), strong);

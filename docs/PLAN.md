@@ -333,6 +333,31 @@ the naive bot is fired early. Balance is still deferred.
 - **Leaderboard** (`rankings.ts`, Hall of fame → Directors): every director with a film, running or finished, ranked by
   average critics, average audience, awards (wins, then nominations), total box office or top level.
 
+## Awards pass (done)
+
+Goal from the owner: the first couple of careers don't really win awards; a nomination here and there toward
+the end of a career, when the contracts get bigger. Measured with `playStudio` in `tests/economy.test.ts`
+(3 careers in a row on one studio with shopping in between, plus a fully equipped "veteran" studio; 24 runs each).
+
+- **Award prestige by level** (`premiere.awardPrestige`): the main ceremony's nomination chance × 0 at levels 1–3,
+  0.1 at 4 … 1 at 10. The awards share of the studio's grade weights moves to critics by the same factor
+  (`contracts.levelWeights`), so award and indie briefs stay fair before awards are reachable.
+- **Tougher rivals** (86–99, was 78–98), less luck in the result (±5, was ±8).
+- **Craft awards need more:** Script 95, Score 87, Visual Effects 90 and Sound 92, where effects and sound
+  now also count the critics rating (35%) so money alone doesn't win them.
+- **Festivals:** 30% chance for a well-reviewed small film (was 60%); a festival win needs critics 92 (was 88).
+
+| Careful bot, per career | Before | After |
+|---|---|---|
+| Films 1–5: ceremony nominations per film | 0.21 | 0.00 |
+| Films 6–10: ceremony nominations per film | 0.42 | 0.26 (about 1–2 per career) |
+| First careers with a ceremony win | 3/12 | 3/24 |
+| Festival nominations per early film | 0.48 | 0.24 |
+
+Side effect: grades went up for award and indie briefs (careful A/B 80%, average now mostly C instead of half D).
+Open: awards don't yet scale with what you've unlocked. In the sim, a fully equipped studio wins about as often as a
+second career (4–9 of 24 careers), and the action profile's effects-heavy films win more than others.
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

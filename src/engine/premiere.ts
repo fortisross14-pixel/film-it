@@ -128,7 +128,8 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
 
     awardDrivers[name] = Math.round(driver);
     if (driver < threshold) return;
-    const p = clamp(T.nominationBase + TUNING.marketing.nominationBonus[level] + (driver - threshold) * T.nominationPerPoint, 0.1, 0.95);
+    const prestige = T.awardPrestige[Math.max(1, Math.min(10, c.level ?? 10)) - 1];
+    const p = clamp(T.nominationBase + TUNING.marketing.nominationBonus[level] + (driver - threshold) * T.nominationPerPoint, 0.1, 0.95) * prestige;
     if (!rng.chance(p)) return;
     nominations.push(name);
     const rivals = rng.shuffle(season).slice(0, TUNING.rivals.nomineesPerCategory - 1).map((r) => ({ ...r, score: rng.int(T.rivalRange[0], T.rivalRange[1]) }));
@@ -162,8 +163,10 @@ export function computeResults(rng: Rng, film: Film, history: FilmRecord[] = [])
     contest('Best Score', avg(emo.map((s) => s.total)), T.scoreAwardThreshold);
   }
   const live = sceneScores(film);
-  if (TUNING.post.vfxWeight[c.genre] >= 0.5) contest('Best Visual Effects', clamp(live.reduce((a, s) => a + s.vfx, 0) * T.fxAwardPerPoint), T.fxAwardThreshold);
-  contest('Best Sound', clamp(live.reduce((a, s) => a + s.sfx, 0) * T.soundAwardPerPoint), T.soundAwardThreshold);
+  // Craft awards: the craft itself, but voters also need to rate the film.
+  const craft = (points: number) => clamp(points) * (1 - T.craftCriticsWeight) + criticsRating * T.craftCriticsWeight;
+  if (TUNING.post.vfxWeight[c.genre] >= 0.5) contest('Best Visual Effects', craft(live.reduce((a, s) => a + s.vfx, 0) * T.fxAwardPerPoint), T.fxAwardThreshold);
+  contest('Best Sound', craft(live.reduce((a, s) => a + s.sfx, 0) * T.soundAwardPerPoint), T.soundAwardThreshold);
 
   return {
     buzz, publicRating, criticsRating, factors, boredom: Math.round(fillerShare * 100), overproduction: post.overproduction,

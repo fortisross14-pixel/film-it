@@ -34,6 +34,14 @@ function pickBudgetTier(rng: Rng, archetype: Archetype, levelTier: number): numb
 
 const clampLevel = (level: number) => Math.max(1, Math.min(TUNING.ladder.maxLevel, Math.round(level)));
 
+/** The archetype's grade weights, with the awards share moved to critics where awards are out of reach. */
+export function levelWeights(archetype: Archetype, level: number): Contract['weights'] {
+  const w = TUNING.weights[archetype];
+  const prestige = TUNING.premiere.awardPrestige[clampLevel(level) - 1];
+  const awards = w.awards * prestige;
+  return { ...w, awards, critics: w.critics + (w.awards - awards) };
+}
+
 /** Director's fee at a C for a brief of this level and difficulty, $K. */
 export function feeFor(level: number, difficulty: number): number {
   const T = TUNING.contracts;
@@ -134,7 +142,7 @@ export function generateContract(rng: Rng, levelArg: number, opts: GenerateOptio
     rating,
     hardReqs,
     bonusGoals,
-    weights: { ...TUNING.weights[archetype] },
+    weights: levelWeights(archetype, level),
     delivery: { ...TUNING.delivery[archetype] },
     boxOfficeTarget,
     marketing: roundTo(budget * TUNING.marketing.shareOfBudget, 100),

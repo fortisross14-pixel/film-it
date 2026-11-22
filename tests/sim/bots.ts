@@ -1,8 +1,10 @@
 // Bot players for the balance simulation: they play whole films through the real engine.
 import type { ActionDef, Beat, Contract, Meter, Profile, RoleType, Tone } from '../../src/engine/types';
 import { newProfile, startFilm } from '../../src/engine/profile';
-import { startCareer } from '../../src/engine/career';
-import { openTalentPack } from '../../src/engine/progression';
+import { retireCareer, startCareer } from '../../src/engine/career';
+import { buyDirector, buySet, buyTalentPack, buyTopicPack, directorCost, openTalentPack } from '../../src/engine/progression';
+import { DIRECTORS } from '../../src/engine/data/directors';
+import { TOPIC_PACKS } from '../../src/engine/data/topics';
 import {
   addBeat, addRole, addScene, availableActions, checkRequirements, finishScript, genreTarget, layout, placeScene, setTopic,
 } from '../../src/engine/script';
@@ -15,6 +17,9 @@ import { directorById } from '../../src/engine/data/directors';
 import { genreCloseness } from '../../src/engine/data/genres';
 import { SETS } from '../../src/engine/data/sets';
 import { TOPICS } from '../../src/engine/data/topics';
+import { FAMOUS, generateStar } from '../../src/engine/data/actors';
+import { assignPortraits } from '../../src/engine/portraits';
+import { createRng } from '../../src/engine/rng';
 import { TUNING } from '../../src/engine/tuning';
 import { spent } from '../../src/engine/script';
 
@@ -203,7 +208,7 @@ export interface FilmLog {
   bot: Bot; genre: string; archetype: string; budget: number; grade: string; score: number; satisfaction: number;
   audience: number; critics: number; boRatio: number; spentRatio: number; weeksLate: number; noms: number; wins: number;
   script: number; casting: number; cut: number; poster: number; money: number; pay: { fee: number; boxOffice: number; rating: number; awards: number }; level: number; sequel: boolean;
-  components: Record<string, number>; missed: number; factors: Record<string, number>; missedList: string[]; awards: string[]; costs?: Record<string, number>;
+  components: Record<string, number>; missed: number; factors: Record<string, number>; missedList: string[]; awards: string[]; winList: string[]; film: number; costs?: Record<string, number>;
 }
 
 /** Play one film from the current board; returns the new profile and a log line. */
@@ -227,7 +232,7 @@ export function playFilm(p: Profile, bot: Bot): { profile: Profile; log: FilmLog
     noms: f.results!.nominations.length, wins: f.results!.wins.length, script: f.scriptQuality ?? 0, casting: f.castingScore ?? 0,
     cut: postSummary(f).cutQuality, poster: f.results!.posterScore ?? 0, money: rep.rewards.total, pay: { fee: rep.rewards.fee, boxOffice: rep.rewards.boxOfficeBonus, rating: rep.rewards.ratingBonus, awards: rep.rewards.awardBonus },
     level: f.contract.level, sequel: !!f.franchise, components: rep.components, missed: rep.missedReqs.length,
-    factors: f.results!.factors, missedList: rep.missedReqs, awards: f.results!.nominations,
+    factors: f.results!.factors, missedList: rep.missedReqs, awards: f.results!.nominations, winList: f.results!.wins, film: (p.career?.films ?? 0) + 1,
     costs: f.ledger.reduce<Record<string, number>>((m, e) => {
       const k = e.label.replace(/^Week \d+: /, '').replace(/:.*$/, '').replace(/ —.*$/, '');
       m[k] = (m[k] ?? 0) + e.amount;
@@ -253,4 +258,55 @@ export function playCareer(seed: number, bot: Bot, n = 6, directorId = 'starterA
     logs.push(r.log);
   }
   return { profile: p, logs };
+}
+
+/** Spend like a player between careers: a couple of packs, then the cheapest sets and topics, a director when affordable. */
+export function shop(p: Profile): Profile {
+  const tryBuy = (r: { ok: true; profile: Profile } | { ok: false; reason: string }) => (r.ok ? r.profile : p);
+  const dir = DIRECTORS.filter((d) => !p.unlocks.directors.includes(d.id)).sort((a, b) => directorCost(a) - directorCost(b))[0];
+  if (dir && p.money >= directorCost(dir)) return tryBuy(buyDirector(p, dir.id));
+  for (let i = 0; i < 2; i++) p = tryBuy(buyTalentPack(p, 'casting'));
+  const goods = [
+    ...SETS.filter((x) => x.unlock.kind === 'buy' && !p.unlocks.sets.includes(x.id)).map((x) => ({ cost: (x.unlock as { cost: number }).cost, buy: (q: Profile) => buySet(q, x.id) })),
+    ...TOPIC_PACKS.filter((x) => x.cost && !p.unlocks.packs.includes(x.id)).map((x) => ({ cost: x.cost, buy: (q: Profile) => buyTopicPack(q, x.id) })),
+  ].sort((a, b) => a.cost - b.cost);
+  for (const g of goods) if (p.money >= g.cost) p = tryBuy(g.buy(p));
+  for (const id of ['casting', 'star'] as const) while (p.talentPacks[id] > 0) p = ok(openTalentPack(p, id), 'open pack').profile;
+  return p;
+}
+
+/** Several careers one after another on the same studio, shopping in between. */
+export function playStudio(seed: number, bot: Bot, careers = 3, films = 10, start?: (p: Profile) => Profile) {
+  let p = newProfile('Sim', seed);
+  if (start) p = start(p);
+  const byCareer: FilmLog[][] = [];
+  for (let k = 0; k < careers; k++) {
+    const owned = DIRECTORS.filter((d) => p.unlocks.directors.includes(d.id));
+    const directorId = owned.length > 2 ? owned[owned.length - 1].id : k % 2 ? 'starterB' : 'starterA';
+    p = ok(startCareer(p, directorId, 0), 'career').profile;
+    const logs: FilmLog[] = [];
+    for (let i = 0; i < films && p.career; i++) {
+      const r = playFilm(p, bot);
+      p = r.profile;
+      logs.push(r.log);
+    }
+    if (p.career) p = ok(retireCareer(p, 0), 'retire').profile;
+    byCareer.push(logs);
+    p = shop(p);
+  }
+  return { profile: p, byCareer };
+}
+
+/** A studio with everything unlocked and every named star on the roster. */
+export function veteranStudio(p: Profile): Profile {
+  const rng = createRng(p.seed);
+  const stars = FAMOUS.map((f) => generateStar(rng, f));
+  return {
+    ...p,
+    unlocks: {
+      directors: DIRECTORS.map((d) => d.id), sets: SETS.map((s) => s.id), topics: TOPICS.map((t) => t.id),
+      packs: TOPIC_PACKS.map((t) => t.id), genres: [...p.unlocks.genres, 'horror', 'scifi', 'fantasy'],
+    },
+    actorPool: assignPortraits([...p.actorPool, ...stars]),
+  };
 }

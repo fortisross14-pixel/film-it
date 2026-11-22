@@ -1,3 +1,4 @@
+import { levelWeights } from '../src/engine/contracts';
 import { postProfile } from './helpers';
 import type { Film, FilmResults, Profile } from '../src/engine/types';
 import { finishPost } from '../src/engine/post';
@@ -144,6 +145,24 @@ describe('premiere & delivery', () => {
     const strong: Film = { ...f, scriptQuality: 100, scenes: f.scenes.map((s) => ({ ...s, duration: 'long' as const, takes: s.takes.map((t) => ({ ...t, score: 100, meters: { pace: 100, chemistry: 100, dialogue: 100 } })) })) };
     let festivals = 0;
     for (let seed = 1; seed <= 20; seed++) if (computeResults(createRng(seed), strong).nominations.some((n) => n.startsWith('Festival'))) festivals++;
-    expect(festivals).toBeGreaterThan(10);
+    expect(festivals).toBeGreaterThan(2);
+  });
+
+  it('the big ceremony only notices bigger contracts', () => {
+    const f = premiereProfile('drama', 8000).activeFilm!;
+    const strong = (level: number): Film => ({ ...f, contract: { ...f.contract, level }, scriptQuality: 100, scenes: f.scenes.map((s) => ({ ...s, duration: 'long' as const, takes: s.takes.map((t) => ({ ...t, score: 100, meters: { pace: 100, chemistry: 100, dialogue: 100 } })) })) });
+    const main = (level: number) => Array.from({ length: 30 }, (_, i) => computeResults(createRng(i + 1), strong(level)).nominations.filter((n) => !n.startsWith('Festival')).length).reduce((a, b) => a + b, 0);
+    expect(main(1)).toBe(0);
+    expect(main(3)).toBe(0);
+    expect(main(10)).toBeGreaterThan(main(5));
+    expect(main(10)).toBeGreaterThan(0);
+  });
+
+  it('at low levels the studio grades critics instead of awards', () => {
+    const lo = levelWeights('award', 1), hi = levelWeights('award', 10);
+    expect(lo.awards).toBe(0);
+    expect(hi).toEqual(TUNING.weights.award);
+    expect(lo.critics).toBeCloseTo(TUNING.weights.award.critics + TUNING.weights.award.awards);
+    expect(Object.values(lo).reduce((a, b) => a + b, 0)).toBeCloseTo(1);
   });
 });
