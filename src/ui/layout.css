@@ -280,3 +280,8 @@
 .lb-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 2px 0; }
 .lb-stats > span { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); }
 .lb-stats > span.on { color: var(--text); font-weight: 800; }
+
+/* ---- Upgrades, records ---- */
+.record-value { font-family: var(--display); font-size: 1.2rem; font-weight: 700; white-space: nowrap; }
+.record-badge { font-weight: 800; color: var(--accent-text); background: #fbefcf; border: 1px solid var(--accent); border-radius: 8px; padding: 6px 10px; }
+.list-row.locked:disabled { opacity: 0.75; }

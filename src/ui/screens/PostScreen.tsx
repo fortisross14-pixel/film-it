@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { gear, upgradeById, UNLOCKED_BY } from '../../engine/data/upgrades';
 import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { sceneName, stageCast } from './ShootingScreen';
@@ -87,9 +88,10 @@ export function PostScreen() {
             <div className="list">
               {MUSIC_TIERS.map((m) => {
                 const cost = postSummary({ ...film, music: m }, level).musicCost;
+                const locked = !gear(film.upgrades).music.includes(m);
                 return (
-                  <button key={m} className={`list-row pick ${film.music === m ? 'on' : ''}`} onClick={() => apply(setMusic(film, m))}>
-                    <span className="list-main"><strong>{MUSIC_TEXT[m]}</strong><span className="small muted">{money(cost)} · {TUNING.post.music[m].days} days</span></span>
+                  <button key={m} disabled={locked} className={`list-row pick ${film.music === m ? 'on' : ''} ${locked ? 'locked' : ''}`} onClick={() => apply(setMusic(film, m))}>
+                    <span className="list-main"><strong>{locked ? '🔒 ' : ''}{MUSIC_TEXT[m]}</strong><span className="small muted">{locked ? `Needs the ${upgradeById(UNLOCKED_BY[m]!)?.name} (Shop → Studio)` : `${money(cost)} · ${TUNING.post.music[m].days} days`}</span></span>
                     {film.music === m && <span className="check">✓</span>}
                   </button>
                 );
@@ -151,10 +153,14 @@ function SceneEdit({
     <>
       <div className="section-label">{kind === 'vfx' ? 'Visual effects' : 'Sound effects'}</div>
       <div className="seg">
-        {POLISH_TIERS.map((t: PolishTier) => (
-          <button key={t} disabled={scene.cut} className={scene[kind] === t ? 'on' : ''} onClick={() => onApply(setPolish(film, scene.id, kind, t))}>{t}</button>
-        ))}
+        {POLISH_TIERS.map((t: PolishTier) => {
+          const locked = !gear(film.upgrades).polish.includes(t);
+          return (
+            <button key={t} disabled={scene.cut || locked} title={locked ? `Needs the ${upgradeById(UNLOCKED_BY[t]!)?.name}` : undefined} className={scene[kind] === t ? 'on' : ''} onClick={() => onApply(setPolish(film, scene.id, kind, t))}>{locked ? `🔒 ${t}` : t}</button>
+          );
+        })}
       </div>
+      {!gear(film.upgrades).polish.includes('premium') && <p className="small muted">Bigger effects need the {upgradeById(gear(film.upgrades).polish.includes('pro') ? 'post2' : 'post1')?.name} (Shop → Studio).</p>}
     </>
   );
   return (

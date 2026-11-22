@@ -1,4 +1,5 @@
 import type { Film, MarketingLevel, PosterSize } from '../../engine/types';
+import { gear } from '../../engine/data/upgrades';
 import { FilmPoster, FONT_FAMILY } from './Poster';
 import { Face } from './Face';
 import { Popcorn, Ticket } from './Icons';
@@ -102,12 +103,16 @@ export function MarketingCard({ film, onApply }: { film: Film; onApply: (r: Mark
       <p className="small"><Ticket size={16} /> Box office target <strong>{money(effectiveBoxOfficeTarget(film))}</strong>{level !== 'standard' && <span className="muted"> (was {money(film.contract.boxOfficeTarget)})</span>}</p>
       <p className="small muted">{LEVEL_TEXT[level].what}</p>
       <div className="row">
-        {(['cut', 'standard', 'push'] as const).filter((l) => l !== level).map((l) => (
-          <button key={l} className={l === 'push' ? 'primary' : ''} onClick={() => onApply(requestMarketing(film, l))}>
-            {l === 'push' ? 'Ask for more' : l === 'cut' ? 'Ask to reduce' : 'Back to standard'} · 1 week
-          </button>
-        ))}
+        {(['cut', 'standard', 'push'] as const).filter((l) => l !== level).map((l) => {
+          const locked = !gear(film.upgrades).marketing.includes(l);
+          return (
+            <button key={l} disabled={locked} className={l === 'push' ? 'primary' : ''} onClick={() => onApply(requestMarketing(film, l))}>
+              {locked ? '🔒 ' : ''}{l === 'push' ? 'Ask for more' : l === 'cut' ? 'Ask to reduce' : 'Back to standard'} · 1 week
+            </button>
+          );
+        })}
       </div>
+      {!gear(film.upgrades).marketing.includes('push') && <p className="small muted">Pushing a film needs the Marketing department (Shop → Studio).</p>}
       <p className="small muted">Think you have a hit? Push it. Off track? Reduce it and the studio will be more lenient.</p>
     </div>
   );

@@ -150,6 +150,7 @@ function CheckPanel({ film, quality, reqs, cost }: { film: Film; quality: Return
           </div>
         ))}
         {quality.directorBonus !== 0 && <p className="small">Director {quality.directorBonus > 0 ? '+' : ''}{quality.directorBonus}</p>}
+        {quality.ceiling < 100 && <p className="small muted">Your director's best script in this genre: {quality.ceiling}. A better director raises it.</p>}
         {quality.notes.length > 0 && <ul className="reqs small muted">{quality.notes.slice(0, 4).map((n) => <li key={n}>{n}</li>)}</ul>}
       </div>
       <div className="card">

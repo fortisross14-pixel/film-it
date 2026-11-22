@@ -6,6 +6,9 @@ import { toneById } from '../../../engine/data/tones';
 import type { Tone } from '../../../engine/types';
 import { buySet } from '../../../engine/progression';
 import { topicById } from '../../../engine/data/topics';
+import { setCeiling } from '../../../engine/ceilings';
+
+const SET_TIER = { basic: 'Basic', advanced: 'Advanced', premium: 'Premium' } as const;
 import { money } from '../../../engine/format';
 import { IsoSet } from '../../components/IsoSet';
 
@@ -33,6 +36,7 @@ export function SetCatalogueTab() {
               </div>
               <IsoSet set={s} extras={Math.min(s.extrasCapacity, 30)} height={130} />
               <p className="small">Best: {best.join(', ')}{special.length > 0 && <> · {special.join(', ')}</>}</p>
+              <p className="small muted">{SET_TIER[s.tier]} set · takes up to {setCeiling(s)}</p>
               {!unlocked && u.kind === 'topic' && <p className="small">🔒 Comes with the {topicById(u.topicId).name} topic</p>}
               {!unlocked && u.kind === 'buy' && (
                 <button

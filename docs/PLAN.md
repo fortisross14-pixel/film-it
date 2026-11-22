@@ -358,6 +358,44 @@ Side effect: grades went up for award and indie briefs (careful A/B 80%, average
 Open: awards don't yet scale with what you've unlocked. In the sim, a fully equipped studio wins about as often as a
 second career (4–9 of 24 careers), and the action profile's effects-heavy films win more than others.
 
+## Unlocks that matter (done)
+
+Owner goal: better directors, sets and legendary actors must make clearly better films. Career 5 beats career 1,
+career 10 beats career 5, around career 20 some films reach universal acclaim (critics 90%+, audience 8.0+), and
+around career 25 a career is a couple of good indies, then masterpieces. Skilled players unlock pretty much
+everything in about 20 careers, average players in about 25.
+
+- **Ceilings** (`ceilings.ts`): skill gets a film to the ceiling, equipment raises it. Script quality is scaled by the
+  director's script ceiling; take meters by the average of the director's shooting ceiling and the set's tier.
+  Directors: basic 72/72, advanced 80–96 (each strongest in its phase), genre masters 88 and 100 in their genre,
+  and two new legends, **The Auteur** and **The Showman** (100/100). Sets: basic 72, advanced 86, premium 100.
+- **Studio upgrades** (`data/upgrades.ts`, Shop → Studio): Talent agency (rare/epic unknowns, Star packs), Star agency
+  (legendary actors, named stars), Post house (pro effects and sound), VFX studio (premium), Composer, Star composer,
+  Marketing department (the push campaign). A new studio has basic effects, library music and no push.
+  Films remember the gear they started with.
+- **Actors:** wider rarity bands (acting common 22–52 … legendary 80–99). Pay is a share of the film's budget that
+  rises with star power, so a star is never a trap on a small film. Lead draws strongly favour your rarest actors.
+- **Ratings:** spread, then ease toward 100 above a knee (critics 88, audience earlier), so masterpieces stay rare.
+- **Ladder:** a C now climbs one level and a D holds, so average players reach bigger contracts too.
+- **Prices:** shop about $19M in all. Base fee $18K + $4K × level.
+- **Records** (`records.ts`): best critics, audience, box office, awards per film; career box office, wins, critics
+  average. Hall of fame → Records, and "New record!" on the verdict.
+
+Measured with `playStudio` (one studio, 25 careers in a row, a bot that shops between careers; `tests/economy.test.ts`):
+
+| Careful (skilled) bot | Shop owned | Critics typical / best | Audience | Acclaimed films per career |
+|---|---|---|---|---|
+| Career 1 | 2% | 66% / 76% | 6.3 | 0 |
+| Career 5 | 16% | 75% / 89% | 7.9 | 0 |
+| Career 10 | 45% | 82% / 93% | 8.2 | 0.5 |
+| Career 20 | 100% | 90% / 100% | 8.5 | about 5–6 |
+| Career 25 | 100% | 90% / 100% | 8.4 | about 5–6 |
+
+The average bot owns about 83% by career 25 and makes 80% / 7.6 films with everything. Guards in `tests/economy.test.ts`
+check the first-career money rules and the progression milestones on every `npm test`.
+
+Open: the careful bot tops out at about 5–6 acclaimed films a career with everything; a skilled human should get closer to 8.
+
 ## Still open
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor

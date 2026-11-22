@@ -11,6 +11,7 @@ import { effectiveBoxOfficeTarget } from '../../engine/marketing';
 import { TUNING } from '../../engine/tuning';
 import type { Film, Grade, GradeComponent } from '../../engine/types';
 import { careerName, levelAfter } from '../../engine/career';
+import { RECORD_LABEL, newRecords } from '../../engine/records';
 import { genreName } from '../../engine/data/genres';
 
 const STAGES = ['Red carpet', 'Audience', 'Critics', 'Box office', 'Awards', 'Studio verdict'];
@@ -224,6 +225,9 @@ function VerdictRewards({ film }: { film: Film }) {
         <tr><td><strong>The studio earns</strong></td><td><strong>{money(rep.rewards.total)}</strong></td></tr>
       </tbody>
     </table>
+    {newRecords(p, film).length > 0 && (
+      <p className="record-badge">🏅 New record: {newRecords(p, film).map((k) => RECORD_LABEL[k].toLowerCase()).join(', ')}!</p>
+    )}
     <div className="reward-row">
       {pack && <span>🎁 {TUNING.talentPacks[pack].name}</span>}
       {c && <span>{to > from ? `Level ${from} → ${to} ▲` : to < from ? `Level ${from} → ${to} ▼` : `Stays at level ${from}`}</span>}

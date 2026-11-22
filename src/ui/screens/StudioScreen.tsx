@@ -12,10 +12,13 @@ import { ActorCard, RARITY_LABEL } from '../components/ActorCard';
 import { DIRECTORS, directorById } from '../../engine/data/directors';
 import { GENRES, genreName } from '../../engine/data/genres';
 import {
-  bestLevel, buyDirector, buyTalentPack, collection, directorCost, genreUnlockLevel, openTalentPack, packDef, packForSale, type PackCard,
+  bestLevel, buyDirector, buyTalentPack, buyUpgrade, collection, directorCost, genreUnlockLevel, openTalentPack, packDef, packForSale, packOdds,
+  upgradeForSale, type PackCard,
 } from '../../engine/progression';
 import { careerName, enterCareer, legacyTitle, runningCareers, startCareer } from '../../engine/career';
 import { RANK_LABEL, rankDirectors, type RankKey } from '../../engine/rankings';
+import { records } from '../../engine/records';
+import { UPGRADES, upgradeById } from '../../engine/data/upgrades';
 import { audienceScore, criticsScore } from '../../engine/format';
 import { money } from '../../engine/format';
 import { TUNING } from '../../engine/tuning';
@@ -111,13 +114,15 @@ function GoalCard() {
       <p>
         Take a director from a micro-budget indie at <strong>level 1</strong> to the big studios' blockbusters at <strong>level {L.maxLevel}</strong> within {L.maxFilms} films.
         An A climbs two levels, a B one, a C holds, a D drops one, and <strong>one F ends the career</strong>.
-        Each film pays the studio; a B earns a {TUNING.talentPacks.casting.name}, an A a {TUNING.talentPacks.star.name}. Then try again with better actors, sets and directors.
+        Each film pays the studio; a B earns a {TUNING.talentPacks.casting.name}, an A a {TUNING.talentPacks.star.name}.
+        What you own sets how good a film can get: better directors write and shoot better, better sets look better, rarer actors act better and sell tickets, and studio upgrades open bigger effects and music. Each career, you can aim higher.
       </p>
       <div className="stat-row">
         <Stat label="Best level" value={`${best}/${L.maxLevel}`} tone={best >= L.maxLevel ? 'good' : undefined} />
         <Stat label="Named stars" value={`${col.stars[0]}/${col.stars[1]}`} />
         <Stat label="Directors" value={`${col.directors[0]}/${col.directors[1]}`} />
         <Stat label="Sets" value={`${col.sets[0]}/${col.sets[1]}`} />
+        <Stat label="Upgrades" value={`${col.upgrades[0]}/${col.upgrades[1]}`} />
         <Stat label="Genres" value={`${col.genres[0]}/${col.genres[1]}`} />
       </div>
       <div className="genre-track">
@@ -182,6 +187,8 @@ function NewCareerSheet({ onClose, onShop }: { onClose: () => void; onShop: () =
   );
 }
 
+export const TIER_TEXT = { basic: 'Basic', advanced: 'Advanced', premium: 'Master' } as const;
+
 const directorLine = (d: DirectorDef) =>
   [d.genreAffinity.length ? d.genreAffinity.map(genreName).join(', ') : 'Any genre', ...d.specialties.map((s) => SPECIALTY_TEXT[s])].join(' · ');
 
@@ -198,13 +205,14 @@ function TalentArea() {
   return (
     <div className="stack">
       <h2>Talent packs</h2>
-      <p className="small muted">Every pack adds 3 actors to your roster for every career: rare unknowns, or named stars (always epic or legendary) if you are lucky. A star you already have gets more famous instead.</p>
+      <p className="small muted">Every pack adds 3 actors to your roster for every career. Rarer actors act better and sell more tickets. Your agency decides what packs can hold: commons and uncommons at first, rare and epic unknowns with the Talent agency, legendary actors and named stars with the Star agency.</p>
       <div className="slot-grid">
         {PACK_IDS.map((id) => {
           const def = packDef(id);
           const have = p.talentPacks[id] ?? 0;
           const forSale = packForSale(p, id);
-          const at = (def as { unlockAtLevel?: number }).unlockAtLevel;
+          // A pack you can't get yet shows what it holds once its agency is in place.
+          const odds = forSale ? packOdds(p, id) : def.odds[1];
           return (
             <div key={id} className={`card talent-pack tp-${id}`}>
               <div className="row between">
@@ -212,10 +220,13 @@ function TalentArea() {
                 {have > 0 && <span className="tag good">{have} to open</span>}
               </div>
               <p className="small">
-                {def.cards} actors · {Object.entries(def.odds).map(([r, o]) => `${RARITY_LABEL[r as Rarity]} ${Math.round((o as number) * 100)}%`).join(' · ')}
-                {(def as { guaranteed?: Rarity }).guaranteed && <> · at least one {RARITY_LABEL[(def as { guaranteed: Rarity }).guaranteed].toLowerCase()}</>}
+                {def.cards} actors · {!forSale && 'once unlocked: '}{Object.entries(odds).map(([r, o]) => `${RARITY_LABEL[r as Rarity]} ${Math.round((o as number) * 100)}%`).join(' · ')}
+                {def.guaranteed && <> · at least one {RARITY_LABEL[def.guaranteed].toLowerCase()}</>}
               </p>
-              <p className="small muted">Earned with {id === 'star' ? 'an A' : 'a B'}.{!forSale && at ? ` For sale once a career reaches level ${at}.` : ''}</p>
+              <p className="small muted">
+                Earned with {id === 'star' ? 'an A' : 'a B'}.{!forSale && def.requires ? ` Needs the ${upgradeById(def.requires)?.name} (Shop → Studio); until then an A earns a ${TUNING.talentPacks.casting.name}.` : ''}
+                {id === 'casting' && !p.unlocks.upgrades.includes('agency2') && ` Better odds with the ${upgradeById(p.unlocks.upgrades.includes('agency1') ? 'agency2' : 'agency1')?.name}.`}
+              </p>
               <div className="row">
                 {have > 0 && <button className="primary" onClick={() => {
                   const r = openTalentPack(p, id);
@@ -263,15 +274,47 @@ function TalentArea() {
 // ---------------- Shop ----------------
 
 function ShopArea() {
-  const [tab, setTab] = useState<'directors' | 'sets' | 'topics'>('directors');
+  const [tab, setTab] = useState<'studio' | 'directors' | 'sets' | 'topics'>('studio');
   return (
     <div className="stack">
       <h2>Shop</h2>
       <p className="small muted">Bought once, yours for every career. Talent packs are under Actors.</p>
-      <Tabs tabs={[{ id: 'directors', label: 'Directors' }, { id: 'sets', label: 'Sets' }, { id: 'topics', label: 'Topics' }]} value={tab} onChange={setTab} />
+      <Tabs tabs={[{ id: 'studio', label: 'Studio' }, { id: 'directors', label: 'Directors' }, { id: 'sets', label: 'Sets' }, { id: 'topics', label: 'Topics' }]} value={tab} onChange={setTab} />
+      {tab === 'studio' && <UpgradeShop />}
       {tab === 'directors' && <DirectorShop />}
       {tab === 'topics' && <TopicPacksTab />}
       {tab === 'sets' && <SetCatalogueTab />}
+    </div>
+  );
+}
+
+function UpgradeShop() {
+  const p = useProfile();
+  const { update } = useGame();
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <div className="list">
+      {UPGRADES.map((u) => {
+        const owned = p.unlocks.upgrades.includes(u.id);
+        const sale = upgradeForSale(p, u.id);
+        return (
+          <div key={u.id} className={`list-row static ${owned ? '' : 'locked'}`}>
+            <span className="list-main">
+              <span className="kicker">{u.kind}</span>
+              <strong>{u.name}</strong>
+              <span className="small muted">{u.text}</span>
+              {!owned && u.requires && !p.unlocks.upgrades.includes(u.requires) && <span className="small muted">Needs {upgradeById(u.requires)!.name} first</span>}
+            </span>
+            {owned ? <span className="tag good">Owned</span> : (
+              <button className="primary" disabled={!sale.ok || p.money < u.cost} onClick={() => {
+                const r = buyUpgrade(p, u.id);
+                if (r.ok) { update(() => r.profile); setMsg(null); } else setMsg(r.reason);
+              }}>{money(u.cost)}</button>
+            )}
+          </div>
+        );
+      })}
+      {msg && <p className="bad">{msg}</p>}
     </div>
   );
 }
@@ -291,6 +334,7 @@ function DirectorShop() {
               <span className="list-main">
                 <strong>{d.name}</strong>
                 <span className="small muted">{directorLine(d)}</span>
+                <span className="small muted">{TIER_TEXT[d.tier]} · script up to {d.ceiling.script} · shooting up to {d.ceiling.shooting}{d.masterGenre ? ` (100 in ${genreName(d.masterGenre)})` : ''}</span>
               </span>
               {owned ? <span className="tag">Owned</span> : <span className="price"><Coins size={16} /> {money(directorCost(d))}</span>}
             </button>
@@ -322,7 +366,11 @@ function DirectorSheet({ d, p, onClose, onBuy }: { d: DirectorDef; p: Profile; o
         <Stat label="Genres" value={d.genreAffinity.length ? d.genreAffinity.map(genreName).join(', ') : 'Any'} />
         {d.specialties.length > 0 && <Stat label="Strengths" value={d.specialties.map((s) => SPECIALTY_TEXT[s]).join(', ')} />}
         {(stats?.films ?? 0) > 0 && <Stat label="Films" value={stats!.films} />}
+        <Stat label="Tier" value={TIER_TEXT[d.tier]} />
+        <Stat label="Best script" value={d.masterGenre ? `${d.ceiling.script} (100 in ${genreName(d.masterGenre)})` : d.ceiling.script} />
+        <Stat label="Best takes" value={d.masterGenre ? `${d.ceiling.shooting} (100 in ${genreName(d.masterGenre)})` : d.ceiling.shooting} />
       </div>
+      <p className="small muted">Skill gets a film to these ceilings; a better director raises them.</p>
       {lockedGenre && <p className="small muted">{genreName(lockedGenre)} briefs appear once a career reaches level {genreUnlockLevel(lockedGenre)}.</p>}
       {!owned && p.money < cost && <p className="small bad">You need {money(cost - p.money)} more.</p>}
     </Sheet>
@@ -333,12 +381,13 @@ function DirectorSheet({ d, p, onClose, onBuy }: { d: DirectorDef; p: Profile; o
 
 function HallArea() {
   const p = useProfile();
-  const [tab, setTab] = useState<'directors' | 'films' | 'trophies'>('directors');
+  const [tab, setTab] = useState<'directors' | 'records' | 'films' | 'trophies'>('directors');
   return (
     <div className="stack">
       <h2>Hall of fame</h2>
-      <Tabs tabs={[{ id: 'directors', label: 'Directors' }, { id: 'films', label: 'Films', badge: p.filmography.length || undefined }, { id: 'trophies', label: 'Trophies' }]} value={tab} onChange={setTab} />
+      <Tabs tabs={[{ id: 'directors', label: 'Directors' }, { id: 'records', label: 'Records' }, { id: 'films', label: 'Films', badge: p.filmography.length || undefined }, { id: 'trophies', label: 'Trophies' }]} value={tab} onChange={setTab} />
       {tab === 'directors' && <Leaderboard />}
+      {tab === 'records' && <Records />}
       {tab === 'films' && <FilmographyTab />}
       {tab === 'trophies' && <TrophyRoomTab />}
     </div>
@@ -380,6 +429,27 @@ function Leaderboard() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function Records() {
+  const p = useProfile();
+  const list = records(p);
+  if (!list.length) return <p className="muted empty">Your records show up here after your first film.</p>;
+  const show = (k: string, v: number) => (k === 'critics' || k === 'careerCritics' ? criticsScore(v) : k === 'audience' ? audienceScore(v) : k === 'boxOffice' || k === 'careerBoxOffice' ? money(v) : k === 'awards' ? '' : String(v));
+  return (
+    <div className="list">
+      {list.map((r) => (
+        <div key={r.key} className="list-row static">
+          <span className="list-main">
+            <span className="kicker">{r.label}</span>
+            <strong>{r.holder}</strong>
+            {r.detail && <span className="small muted">{r.detail}</span>}
+          </span>
+          <span className="record-value">{show(r.key, r.value)}</span>
+        </div>
+      ))}
     </div>
   );
 }
