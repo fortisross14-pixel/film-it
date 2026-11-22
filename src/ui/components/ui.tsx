@@ -5,6 +5,7 @@
 // - Toast: a short message after an action (replaces inline paragraphs of feedback).
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useReview } from '../review';
 
 export function Sheet({ title, kicker, onClose, footer, children, wide }: {
   title: ReactNode; kicker?: ReactNode; onClose?: () => void; footer?: ReactNode; children: ReactNode; wide?: boolean;
@@ -57,6 +58,15 @@ export function Tabs<T extends string>({ tabs, value, onChange, label }: { tabs:
 
 /** The screen's main action(s), pinned to the bottom of the viewport. */
 export function ActionBar({ children }: { children: ReactNode }) {
+  const review = useReview();
+  if (review.readOnly) {
+    return (
+      <div className="action-bar review-bar">
+        <span className="review-note">🔒 Locked · reviewing only</span>
+        {review.back && <button className="primary grow" onClick={review.back}>Back to {review.phaseLabel} ›</button>}
+      </div>
+    );
+  }
   return <div className="action-bar">{children}</div>;
 }
 

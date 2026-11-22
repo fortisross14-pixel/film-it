@@ -1,7 +1,7 @@
 // Shooting phase: a weekly loop. Each week the director picks one activity:
 //   practice a scene · club meetup · relax · shoot a scene.
 // A shoot is a bubble minigame: for a few seconds bubbles add to three meters
-// (pace, chemistry, dialogue). It yields 3 versions — best in pace, best in
+// (pace, chemistry, dialogue). It yields one take (older saves have 3 versions — best in pace, best in
 // chemistry, and a rough one — and you pick one or try again another week.
 //
 // What moves the bubbles: focus, the actors (star power → more bubbles, skills
@@ -290,7 +290,8 @@ export function doWeek(p: Profile, action: WeekAction): ShootResult {
       const { profile, value } = withRng(p, (rng) => {
         const meters = {} as MeterMap;
         for (const m of METERS) meters[m] = Math.round(clamp(predicted[m] * (1 + (rng.next() * 2 - 1) * T().noise)));
-        const versions = (['pace', 'chemistry', 'rough'] as TakeVersion[]).map((version): Take => {
+        // One shoot gives one take: keep it, or shoot again another week.
+        const versions = (['take'] as TakeVersion[]).map((version): Take => {
           const shape = T().versionShape[version];
           const vm = {} as MeterMap;
           for (const m of METERS) vm[m] = Math.round(clamp(meters[m] * shape[m] * (1 + (rng.next() * 2 - 1) * T().noise / 2)));
@@ -359,7 +360,7 @@ export const chosenTake = (scene: Scene) => scene.takes.find((t) => t.id === sce
 
 export function shootingBlockers(film: Film): string[] {
   const out: string[] = [];
-  if (film.shooting?.pending) out.push('Pick a version for the last shoot');
+  if (film.shooting?.pending) out.push('Keep the last take or shoot again');
   film.scenes.forEach((s, i) => {
     if (!s.chosenTakeId) out.push(`Shoot scene ${i + 1}`);
   });

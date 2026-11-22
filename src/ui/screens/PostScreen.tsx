@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { LOCKED_MSG, useReview } from '../review';
 import { gear, upgradeById, UNLOCKED_BY } from '../../engine/data/upgrades';
 import type { Film, MusicTier, PolishTier, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
@@ -27,6 +28,9 @@ const MUSIC_TEXT: Record<MusicTier, string> = {
 };
 const BEAT_MS = 1400;
 
+/** "Take 2" (or the old version name for takes from older saves). */
+const takeLabel = (scene: Scene, t: Scene['takes'][number]) => (t.version === 'take' ? `Take ${scene.takes.indexOf(t) + 1}` : `${t.version} cut`);
+
 type PostTab = 'scenes' | 'sound' | 'poster' | 'marketing';
 
 export function PostScreen() {
@@ -42,7 +46,9 @@ export function PostScreen() {
   const summary = postSummary(film, level);
   const budgetLeft = film.contract.budget - spent(film);
   const scoreOf = (id: string) => summary.scores.find((s) => s.sceneId === id);
+  const review = useReview();
   const apply = (r: PostResult) => {
+    if (review.readOnly) return toast.show(LOCKED_MSG), false;
     if (!r.ok) return toast.show(r.reason), false;
     update((q) => ({ ...q, activeFilm: r.film }));
     return true;
@@ -147,7 +153,7 @@ export function PostScreen() {
           {[...(selScene?.takes ?? [])].sort((a, b) => b.score - a.score).map((t) => (
             <button key={t.id} className={`bin-item ${selScene?.chosenTakeId === t.id ? 'on' : ''}`} onClick={() => apply(chooseTake(film, selScene!.id, t.id))}>
               <span className="bin-thumb"><IsoSet set={setById(t.setId)} extras={0} height={70} studio={false} actors={[]} /><span className="bin-score">{t.score}</span></span>
-              <span className="bin-name">{t.version} cut</span>
+              <span className="bin-name">{takeLabel(selScene!, t)}</span>
               <span className="bin-sub">{setById(t.setId).name}</span>
             </button>
           ))}
@@ -225,7 +231,7 @@ function SceneEdit({
             <select value={scene.chosenTakeId} onChange={(e) => onApply(chooseTake(film, scene.id, e.target.value))}>
               {[...scene.takes].sort((a, b) => b.score - a.score).map((t) => (
                 <option key={t.id} value={t.id}>
-                  {t.score} · {t.version} cut · {setById(t.setId).name}
+                  {t.score} · {takeLabel(scene, t)} · {setById(t.setId).name}
                 </option>
               ))}
             </select>

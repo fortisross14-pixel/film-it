@@ -311,3 +311,39 @@
 .nle .bubble-badge { position: static; margin-left: auto; background: #5a1f1c; color: #ffb3aa; font-size: 10px; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 3px; }
 .nle .bubble-empty { color: var(--nle-muted); padding: 6px 8px; }
 .nle .bt-dot { top: 50%; right: 10px; transform: translateY(-50%); }
+
+/* Shooting: conditions and takes as numbers */
+.cond-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
+.cond { display: grid; gap: 2px; padding: 8px 10px; border-radius: 6px; background: var(--nle-panel2, #27272a); border: 1px solid var(--nle-line, #38383d); }
+.cond .cond-k { font-size: 11px; color: var(--nle-muted, #8d8d94); text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cond strong { font-family: ui-monospace, Menlo, monospace; font-size: 20px; color: #fff; }
+.cond strong.good { color: #6fd39a; } .cond strong.bad { color: #ff8b80; } .cond strong.muted { color: #8d8d94; }
+.cond .cond-sub { font-size: 11px; color: var(--nle-muted, #8d8d94); }
+.take-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.take-table th { text-align: left; font-weight: 600; color: var(--nle-muted, #8d8d94); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 6px; border-bottom: 1px solid var(--nle-line, #38383d); }
+.take-table td { padding: 5px 6px; border-bottom: 1px solid #2c2c30; font-family: ui-monospace, Menlo, monospace; }
+.take-table td:nth-child(2) { font-family: inherit; }
+.take-table tr.kept td { color: #fff; background: rgba(45, 140, 235, 0.15); }
+.live-numbers { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; position: relative; z-index: 2; }
+.live-num { display: grid; justify-items: center; gap: 2px; min-width: 88px; padding: 8px 12px; border-radius: 8px; background: rgba(10, 10, 12, 0.75); border: 1px solid rgba(255, 255, 255, 0.12); color: #fff; }
+.live-num strong { font-family: ui-monospace, Menlo, monospace; font-size: 26px; }
+.live-num em { font-style: normal; font-size: 11px; color: #b8b8be; text-transform: uppercase; letter-spacing: 0.06em; }
+.take-result { display: grid; gap: 8px; max-width: 420px; margin: 0 auto; background: rgba(20, 20, 22, 0.92) !important; border-color: #3a3a40 !important; color: #e8e8ec; }
+.take-result .take-score { display: flex; align-items: baseline; gap: 12px; }
+.take-result .take-score strong { font-family: ui-monospace, Menlo, monospace; font-size: 40px; color: #fff; }
+.take-actions { gap: 8px; } .take-actions button { flex: 1; }
+
+/* Workspace tabs: done phases open for review; future ones are greyed. */
+.nle .nle-ws { background: transparent; border: 0; border-bottom: 2px solid transparent; border-radius: 0; box-shadow: none; min-height: 0; padding: 6px 10px; font-size: 14px; color: var(--nle-muted); }
+.nle button.nle-ws:hover { color: #fff; background: transparent; }
+.nle .nle-ws.on { color: #fff; border-bottom-color: #fff; }
+.nle .nle-ws.viewing { border-bottom-color: #f0c200; color: #f0d77a; }
+.nle .nle-ws.locked { color: #55555c; cursor: default; }
+.nle .review-bar { display: flex; align-items: center; gap: 10px; }
+.nle .review-note { color: #f0d77a; font-weight: 600; padding: 0 8px; white-space: nowrap; }
+/* Casting and the premiere keep their illustrated page inside the editor's frame. */
+.nle-body.page { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); grid-template-areas: "page"; }
+.nle-page { grid-area: page; overflow: auto; border-radius: 6px; margin: 0; padding: 18px; min-height: 0; color: var(--text); font-family: var(--body, 'Nunito', system-ui, sans-serif); font-size: 15px; }
+.nle-page > * { max-width: 1040px; margin-left: auto; margin-right: auto; }
+.nle .nle-page .action-bar { position: sticky; bottom: 0; }
+@media (max-width: 900px) { .nle-page { padding: 12px 10px 90px; } .nle .nle-page .action-bar { position: fixed; } }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { LOCKED_MSG, useReview } from '../review';
 import type { Film, Meter, PendingShoot, Profile, Scene } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { Face } from '../components/Face';
@@ -8,7 +9,6 @@ import { IsoSet, stageActorFor, type StageActor, type StageBubble } from '../com
 import { Bolt, Heart, Speech } from '../components/Icons';
 import { ActionBar, Sheet, Stat, useToast } from '../components/ui';
 import { Monitor, NleTimeline, Panel, timecode, type Track } from '../components/Nle';
-import { Details } from '../components/ui';
 import { Glyph, Medallion, type GlyphName } from '../components/GameIcons';
 import { SETS, setById } from '../../engine/data/sets';
 import { toneById } from '../../engine/data/tones';
@@ -16,7 +16,7 @@ import { actionById } from '../../engine/data/actions';
 import { describeBeat, money } from '../../engine/format';
 import { layout, participants } from '../../engine/script';
 import {
-  METERS, chooseVersion, chosenTake, crewWeekCost, doWeek, predictMeters, setFit, shootWeekCost, shootingBlockers,
+  METERS, chooseVersion, chosenTake, crewWeekCost, doWeek, setFit, shootWeekCost, shootingBlockers,
   tryAgain, weeksLeft, weeksUsed, wrapShooting, budgetLeftShooting, type ShootResult,
 } from '../../engine/shooting';
 
@@ -79,7 +79,9 @@ export function ShootingScreen() {
   const kept = film.scenes.filter((s) => s.chosenTakeId).length;
 
   const [result, setResult] = useState<WeekResult | null>(null);
+  const review = useReview();
   const apply = (r: ShootResult) => {
+    if (review.readOnly) return toast.show(LOCKED_MSG), false;
     if (!r.ok) return toast.show(r.reason), false;
     update(() => r.profile);
     const next = r.profile.activeFilm;
@@ -209,7 +211,7 @@ export function ShootingScreen() {
       )}
       {st.pending && (
         <Sheet wide title={`Scene ${film.scenes.findIndex((s) => s.id === st.pending!.sceneId) + 1}`} kicker="On set">
-          <ShootStage key={st.pending.versions[0].id} p={p} pending={st.pending} onPick={(id) => apply(chooseVersion(p, id))} onRetry={() => apply(tryAgain(p))} />
+          <ShootStage key={st.pending.versions[0].id} p={p} pending={st.pending} onPick={(id) => apply(chooseVersion(p, id))} onRetry={() => { const sid = st.pending!.sceneId; if (apply(tryAgain(p))) setFlow({ kind: 'shoot', sceneId: sid }); }} />
         </Sheet>
       )}
       {toast.node}
@@ -314,22 +316,40 @@ function ShootFlow({ initialScene, onApply, onClose }: { initialScene?: string; 
     );
   }
   const set = setById(setId ?? sortedSets[0].id);
-  const prediction = predictMeters(film, scene, set, focus, level);
+  void level;
+  const st = film.shooting!;
+  const ids = participants(scene);
+  const castHere = ids.map((id) => film.roles.find((r) => r.id === id)).filter(Boolean) as Film['roles'];
+  const fatigues = castHere.map((r) => st.fatigue[r.id] ?? 0);
+  const avgFat = fatigues.length ? Math.round(fatigues.reduce((a, b) => a + b, 0) / fatigues.length) : 0;
+  const maxFat = Math.max(0, ...fatigues);
+  const practice = st.practice[scene.id];
+  const pairs: { names: string; v?: number }[] = [];
+  for (let i = 0; i < castHere.length; i++)
+    for (let j = i + 1; j < castHere.length; j++) {
+      const a = castHere[i].actor!, b = castHere[j].actor!;
+      pairs.push({ names: `${a.name.split(' ')[0]} × ${b.name.split(' ')[0]}`, v: st.revealedPairs[[a.id, b.id].sort().join('|')] });
+    }
+  const fit = setFit(set, scene);
+  const num = (v: number, good: number, bad: number, invert = false) => (invert ? (v <= good ? 'good' : v >= bad ? 'bad' : '') : (v >= good ? 'good' : v <= bad ? 'bad' : ''));
+  const week = money(crewWeekCost(film));
   return (
     <Sheet
       wide
       title={`Scene ${film.scenes.indexOf(scene) + 1}`}
-      kicker="Step 2 of 2 · set & focus"
+      kicker={sceneName(film, scene)}
       onClose={initialScene ? onClose : () => setSceneId(undefined)}
       footer={<>
         <button onClick={initialScene ? onClose : () => setSceneId(undefined)}>Back</button>
+        <button title={`Rehearse this scene · 1 week · ${week}`} onClick={() => onApply(doWeek(p, { kind: 'practice', sceneId: scene.id })) && onClose()}>Rehearse</button>
+        <button title={`Rest the cast · 1 week · ${week}`} onClick={() => onApply(doWeek(p, { kind: 'relax' })) && onClose()}>Day off</button>
         <button className="record grow" onClick={() => onApply(doWeek(p, { kind: 'shoot', sceneId: scene.id, setId: set.id, focus })) && onClose()}>
           <span className="rec-dot" /> Record · {money(shootWeekCost(film, scene, set))}
         </button>
       </>}
     >
       <div className="studio-stage compact" style={{ backgroundImage: `url(${art('stage-bg')})` }}>
-        <IsoSet set={set} extras={Math.min(set.extrasCapacity, 10)} height={210} studio lights={false} actors={stageCast(film, scene)} />
+        <IsoSet set={set} extras={Math.min(set.extrasCapacity, 10)} height={190} studio lights={false} actors={stageCast(film, scene)} />
         <div className="stage-caption">{scene.beats.map((b) => {
           const name = (id?: string) => film.roles.find((r) => r.id === id)?.name ?? '';
           return describeBeat(name(b.roleId), b.actionId, b.targetId ? name(b.targetId) : undefined);
@@ -337,32 +357,54 @@ function ShootFlow({ initialScene, onApply, onClose }: { initialScene?: string; 
       </div>
       <div className="section-label">Set</div>
       <div className="set-picks scroll-x">
-        {sortedSets.map((s) => (
-          <button key={s.id} className={`set-pick ${s.id === set.id ? 'selected' : ''}`} onClick={() => setSetId(s.id)} aria-pressed={s.id === set.id}>
-            <IsoSet set={s} height={60} />
-            <strong className="small">{s.name}</strong>
-            <span className={`small ${setFit(s, scene) >= 70 ? 'good' : 'muted'}`}>fit {setFit(s, scene)}</span>
+        {sortedSets.map((x) => (
+          <button key={x.id} className={`set-pick ${x.id === set.id ? 'selected' : ''}`} onClick={() => setSetId(x.id)} aria-pressed={x.id === set.id}>
+            <IsoSet set={x} height={60} />
+            <strong className="small">{x.name}</strong>
+            <span className={`small ${setFit(x, scene) >= 70 ? 'good' : 'muted'}`}>fit {setFit(x, scene)}</span>
           </button>
         ))}
       </div>
-      <div className="section-label">Direct for · expected result</div>
-      <div className="focus-list">
-        {METERS.map((m) => (
-          <button key={m} className={`focus-row ${focus === m ? 'on' : ''}`} aria-pressed={focus === m} onClick={() => setFocus(m)}>
-            <span className={`m-icon m-${m}`}>{METER_ICON[m]}</span>
-            <span className="focus-label">{METER_LABEL[m]}</span>
-            <span className={`bar m-${m}`}><span style={{ width: `${prediction.meters[m]}%` }} /></span>
-            <span className="focus-value">{prediction.meters[m]}</span>
-          </button>
+      <div className="section-label">On set today</div>
+      <div className="cond-grid">
+        <span className="cond"><span className="cond-k">Set fit</span><strong className={num(fit, 75, 50)}>{fit}</strong></span>
+        <span className="cond"><span className="cond-k">Bond</span><strong className={num(st.bond, 50, 15)}>{st.bond}</strong></span>
+        <span className="cond"><span className="cond-k">Rehearsal</span><strong className={practice ? num(Math.max(practice.pace, practice.dialogue), 50, 15) : 'bad'}>{practice ? `${practice.pace} / ${practice.dialogue}` : '0'}</strong><span className="cond-sub">pace / lines</span></span>
+        <span className="cond"><span className="cond-k">Fatigue</span><strong className={num(avgFat, 25, 55, true)}>{avgFat}%</strong><span className="cond-sub">max {maxFat}%{st.fresh > 0 ? ' · rested' : ''}</span></span>
+        {pairs.map((x) => (
+          <span key={x.names} className="cond"><span className="cond-k">{x.names}</span><strong className={x.v === undefined ? 'muted' : num(x.v, 15, -10)}>{x.v === undefined ? '?' : `${x.v > 0 ? '+' : ''}${x.v}`}</strong><span className="cond-sub">chemistry</span></span>
         ))}
       </div>
-      <details className="fold">
-        <summary className="small">Why these numbers?</summary>
-        <Details label="Why">
-          <div className="row wrap factor-chips">{prediction.factors.map((f) => <span key={f.label} className="tag">{f.label} {f.value}</span>)}</div>
-        </Details>
-      </details>
+      <div className="section-label">Direct for</div>
+      <div className="seg">
+        {METERS.map((m) => <button key={m} className={focus === m ? 'on' : ''} aria-pressed={focus === m} onClick={() => setFocus(m)}>{METER_ICON[m]} {METER_LABEL[m]}</button>)}
+      </div>
+      {scene.takes.length > 0 && (
+        <>
+          <div className="section-label">Takes so far</div>
+          <TakeTable scene={scene} />
+        </>
+      )}
     </Sheet>
+  );
+}
+
+/** Earlier takes of a scene, as numbers. */
+export function TakeTable({ scene }: { scene: Scene }) {
+  return (
+    <table className="take-table">
+      <thead><tr><th>Take</th><th>Set</th><th>Pace</th><th>Chem.</th><th>Lines</th><th>Score</th></tr></thead>
+      <tbody>
+        {scene.takes.map((t, i) => (
+          <tr key={t.id} className={scene.chosenTakeId === t.id ? 'kept' : ''}>
+            <td>{i + 1}{scene.chosenTakeId === t.id ? ' ★' : ''}</td>
+            <td>{setById(t.setId).name}</td>
+            <td>{t.meters.pace}</td><td>{t.meters.chemistry}</td><td>{t.meters.dialogue}</td>
+            <td><strong>{t.score}</strong></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -434,13 +476,9 @@ function ShootStage({ p, pending, onPick, onRetry }: { p: Profile; pending: Pend
         {!done && <button className="ghost-dark" onClick={() => setTime(1)}>Skip ▶▶</button>}
       </div>
       <IsoSet set={set} extras={Math.min(set.extrasCapacity, 14)} height={300} studio lights={false} actors={cast} acting={acting} bubbles={live} />
-      <div className="live-meters">
+      <div className="live-numbers">
         {METERS.map((m) => (
-          <div key={m} className="weight live">
-            <span className={`m-icon m-${m}`}>{METER_ICON[m]}</span>
-            <span className={`bar m-${m}`}><span style={{ width: `${meters[m]}%` }} /></span>
-            <strong>{meters[m]}</strong>
-          </div>
+          <span key={m} className={`live-num m-${m}`}><span className={`m-icon m-${m}`}>{METER_ICON[m]}</span><strong>{done ? pending.versions[0].meters[m] : meters[m]}</strong><em>{METER_LABEL[m]}</em></span>
         ))}
       </div>
       {done && (
@@ -455,29 +493,19 @@ function ShootStage({ p, pending, onPick, onRetry }: { p: Profile; pending: Pend
               })}
             </p>
           )}
-          <div className="cards">
-            {pending.versions.map((v) => (
-              <div key={v.id} className={`card version v-${v.version}`}>
-                <div className="row between">
-                  <strong>{v.version === 'pace' ? 'Pace cut' : v.version === 'chemistry' ? 'Chemistry cut' : 'Rough cut'}</strong>
-                  <span className="big">{v.score}</span>
-                </div>
-                {METERS.map((m) => (
-                  <div key={m} className="weight">
-                    <span>{METER_LABEL[m]}</span>
-                    <span className={`bar m-${m}`}><span style={{ width: `${v.meters[m]}%` }} /></span>
-                    <span className="muted">{v.meters[m]}</span>
-                  </div>
-                ))}
+          {pending.versions.map((v) => {
+            const prev = chosenTake(scene);
+            return (
+              <div key={v.id} className="card take-result">
+                <div className="take-score"><span className="kicker">Take {scene.takes.length + 1}</span><strong>{v.score}</strong>{prev && <span className={`small ${v.score >= prev.score ? 'good' : 'bad'}`}>kept take {prev.score}</span>}</div>
                 <p className="small muted">“{v.feedback}”</p>
-                <button className="primary" onClick={() => onPick(v.id)}>Use this take</button>
+                <div className="row take-actions">
+                  <button className="primary" onClick={() => onPick(v.id)}>Keep take</button>
+                  <button onClick={onRetry}>Shoot again</button>
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="row">
-            <button onClick={onRetry}>Try again another week</button>
-            {chosenTake(scene) && <span className="small light-text">Current take for this scene: {chosenTake(scene)!.score}</span>}
-          </div>
+            );
+          })}
         </div>
       )}
     </div>

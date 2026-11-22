@@ -104,15 +104,16 @@ describe('what moves the bubbles', () => {
 });
 
 describe('shoots and versions', () => {
-  it('a shoot makes bubbles and 3 versions: pace, chemistry, rough', () => {
+  it('a shoot makes bubbles and one take: keep it or shoot again', () => {
     let p = shootingProfile();
     p = okP(doWeek(p, { kind: 'shoot', sceneId: sceneId(p, 0), setId: 'cityStreet', focus: 'pace' }));
     const pending = p.activeFilm!.shooting!.pending!;
-    expect(pending.versions.map((v) => v.version)).toEqual(['pace', 'chemistry', 'rough']);
-    const [pace, chem, rough] = pending.versions;
-    expect(pace.meters.pace).toBeGreaterThan(chem.meters.pace);
-    expect(chem.meters.chemistry).toBeGreaterThan(pace.meters.chemistry);
-    expect(rough.score).toBeLessThan(Math.min(pace.score, chem.score));
+    expect(pending.versions.map((v) => v.version)).toEqual(['take']);
+    const [chem] = pending.versions;
+    // Shooting again stores the take without keeping it; the next shoot gives a second take.
+    const again = okP(tryAgain(p));
+    expect(again.activeFilm!.scenes[0].takes).toHaveLength(1);
+    expect(again.activeFilm!.scenes[0].chosenTakeId).toBeUndefined();
     const total = pending.bubbles.filter((b) => b.meter === 'pace').reduce((a, b) => a + b.value, 0);
     expect(total).toBe(pending.meters.pace);
     expect(pending.revealed.length).toBeGreaterThan(0);
@@ -120,7 +121,7 @@ describe('shoots and versions', () => {
     p = okP(chooseVersion(p, chem.id));
     const s = p.activeFilm!.scenes[0];
     expect(s.chosenTakeId).toBe(chem.id);
-    expect(s.takes).toHaveLength(3);
+    expect(s.takes).toHaveLength(1);
     expect(s.setId).toBe('cityStreet');
   });
   it('noise: two identical shoots differ a little', () => {

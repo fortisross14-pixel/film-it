@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { genreName } from '../../engine/data/genres';
 import { useGame, useProfile } from '../store';
-import { Shell, type NavItem } from '../components/Shell';
-import { Clapper, Coins, Film, Home, Masks, People, Trophy } from '../components/Icons';
+import { Clapper, Coins, Film, Masks, People, Trophy } from '../components/Icons';
 import { Sheet } from '../components/ui';
 import { EditorFrame } from '../components/Nle';
+import { ReviewCtx } from '../review';
 import { ContractDetails } from '../components/ContractCard';
 import { money } from '../../engine/format';
 import { spent } from '../../engine/script';
-import { weeksUsed } from '../../engine/shooting';
 import { abandonFilm } from '../../engine/profile';
 import { parkCareer } from '../../engine/career';
 import type { FilmPhase } from '../../engine/types';
@@ -31,8 +30,8 @@ export function ProductionScreen() {
   const { update } = useGame();
   const film = p.activeFilm!;
   const [brief, setBrief] = useState(false);
+  const [view, setView] = useState<FilmPhase | undefined>();
   const phaseIdx = PHASES.findIndex((x) => x.id === film.phase);
-  const nav: NavItem[] = PHASES.map((ph, i) => ({ id: ph.id, label: ph.label, icon: ph.icon, done: i < phaseIdx }));
   const left = film.contract.budget - spent(film);
   const briefSheet = brief && (
     <Sheet title={film.title} kicker="The brief" onClose={() => setBrief(false)}
@@ -44,39 +43,42 @@ export function ProductionScreen() {
       <ContractDetails c={film.contract} />
     </Sheet>
   );
-  // The hands-on phases run in the editing-suite workspace.
-  if (film.phase === 'script' || film.phase === 'shooting' || film.phase === 'post') {
-    return (
+  // Every phase shares the editor's top menu. Earlier phases can be opened read-only.
+  const shown = view && PHASES.findIndex((x) => x.id === view) < phaseIdx ? view : film.phase;
+  const reviewing = shown !== film.phase;
+  const shownLabel = PHASES.find((x) => x.id === shown)?.label;
+  const back = () => setView(undefined);
+  const nleLayout = shown === 'post' ? 'with-bin' : shown === 'casting' || shown === 'premiere' ? 'page' : undefined;
+  const body = (
+    <>
+      {shown === 'script' && <ScriptEditor />}
+      {shown === 'shooting' && <ShootingScreen />}
+      {shown === 'post' && <PostScreen />}
+      {(shown === 'casting' || shown === 'premiere') && (
+        <main className="nle-page paper">
+          {shown === 'casting' ? <CastingScreen /> : <PremiereScreen />}
+        </main>
+      )}
+    </>
+  );
+  return (
+    <ReviewCtx.Provider value={{ readOnly: reviewing, phaseLabel: PHASES[phaseIdx]?.label, back }}>
       <EditorFrame
-        workspaces={PHASES.map((ph, i) => ({ id: ph.id, label: ph.label, done: i < phaseIdx }))}
-        active={film.phase}
-        layout={film.phase === 'post' ? 'with-bin' : undefined}
-        title={<>{film.title} <span className="dim">· {genreName(film.contract.genre)} for {film.contract.studio.name}</span></>}
+        workspaces={PHASES.map((ph, i) => ({
+          id: ph.id, label: ph.label, done: i < phaseIdx,
+          onOpen: i <= phaseIdx && !(film.results && i < phaseIdx && ph.id === 'premiere') ? () => setView(i === phaseIdx ? undefined : ph.id) : undefined,
+          viewing: reviewing && ph.id === shown,
+        }))}
+        active={shown}
+        layout={nleLayout}
+        title={<>{film.title} <span className="dim">· {genreName(film.contract.genre)} for {film.contract.studio.name}{reviewing ? ` · reviewing ${shownLabel}` : ''}</span></>}
         status={<span className={`hud-pill ${left < 0 ? 'bad' : ''}`} title="Budget left"><Coins size={16} /> {money(left)}</span>}
         actions={<button onClick={() => setBrief(true)}>Brief</button>}
         onHome={p.career && !film.results ? () => update(parkCareer) : undefined}
       >
-        {film.phase === 'script' && <ScriptEditor />}
-        {film.phase === 'shooting' && <ShootingScreen />}
-        {film.phase === 'post' && <PostScreen />}
+        {body}
         {briefSheet}
       </EditorFrame>
-    );
-  }
-  return (
-    <Shell
-      nav={nav} active={film.phase} progress
-      title={film.title}
-      sub={`${genreName(film.contract.genre)} for ${film.contract.studio.name} · ${PHASES[phaseIdx]?.label ?? ''} · week ${weeksUsed(film)}/${film.contract.deadlineWeeks}`}
-      pills={<span className={`hud-pill ${left < 0 ? 'bad' : ''}`} title="Budget left"><Coins size={18} /> {money(left)}</span>}
-      actions={<>
-        <button className="ghost-btn" onClick={() => setBrief(true)}>Brief</button>
-        {p.career && !film.results && <button className="icon ghost-btn" aria-label="Back home (the film waits)" title="Home" onClick={() => update(parkCareer)}><Home size={20} /></button>}
-      </>}
-    >
-      {film.phase === 'casting' && <CastingScreen />}
-      {film.phase === 'premiere' && <PremiereScreen />}
-      {briefSheet}
-    </Shell>
+    </ReviewCtx.Provider>
   );
 }

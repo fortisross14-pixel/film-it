@@ -310,6 +310,7 @@ export const TUNING = {
     bubbleSize: 5,
     /** Version shaping. */
     versionShape: {
+      take: { pace: 1, chemistry: 1, dialogue: 1 },
       pace: { pace: 1.15, chemistry: 0.88, dialogue: 0.95 },
       chemistry: { pace: 0.88, chemistry: 1.15, dialogue: 0.95 },
       rough: { pace: 0.7, chemistry: 0.72, dialogue: 0.7 },

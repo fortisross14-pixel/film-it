@@ -10,6 +10,10 @@ import { assignPortraits } from './portraits';
 import { TUNING } from './tuning';
 import { actionById } from './data/actions';
 import { SKILLS, generateFreshFaces, isHiddenGem } from './data/actors';
+import { gear } from './data/upgrades';
+
+/** Rarities that answer a casting call, by agency level (0 none, 1 Talent agency, 2 Star agency). */
+export const ALLOWED_RARITIES: Rarity[][] = [['common', 'uncommon'], ['common', 'uncommon', 'rare', 'epic'], ['common', 'uncommon', 'rare', 'epic', 'legendary']];
 import { directorById } from './data/directors';
 import { affinityBonus, specialtyScale } from './director';
 import { withRng } from './profile';
@@ -151,7 +155,9 @@ export function drawCards(p: Profile, roleId: string): CastResult {
   const gemBoost = 1 + (C().scoutGemWeight - 1) * Math.min(1, specialtyScale(director, 'casting', level));
   const { profile, value } = withRng(p, (rng) => {
     let pool = p.actorPool;
-    let available = pool.filter((a) => !blocked.has(a.id));
+    // Agencies decide who answers your calls: commons and uncommons first, then rare and epic, then everyone.
+    const allowed = ALLOWED_RARITIES[gear(p.unlocks.upgrades).agency];
+    let available = pool.filter((a) => !blocked.has(a.id) && (allowed.includes(a.rarity) || a.id === film.contract.sequelOf?.leadActorId));
     // Running low on talent: fresh faces join the pool.
     if (available.length < C().cardsPerDraw) {
       // Portraits are re-picked against the whole pool so newcomers get unused faces.

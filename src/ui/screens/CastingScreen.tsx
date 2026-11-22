@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LOCKED_MSG, useReview } from '../review';
 import { useGame, useProfile } from '../store';
 import { ActorCard } from '../components/ActorCard';
 import { Face } from '../components/Face';
@@ -25,7 +26,9 @@ export function CastingScreen() {
   const left = budgetLeft(film);
   const cast = film.roles.filter((r) => r.actor).length;
 
+  const review = useReview();
   const apply = (r: CastResult) => {
+    if (review.readOnly) return toast.show(LOCKED_MSG), false;
     if (!r.ok) return toast.show(r.reason), false;
     update(() => r.profile);
     return true;
@@ -121,7 +124,7 @@ function RoleSheet({ roleId, onApply, onClose, onNext }: {
                   budgetAfter={left - pay}
                   directorId={film.directorId}
                   onCast={() => {
-                    if (onApply(castActor(p, roleId, a.id))) onNext(film.roles.find((r) => !r.actor && r.id !== roleId)?.id ?? null);
+                    if (onApply(castActor(p, roleId, a.id))) onNext(null); // back to the cast overview: what is left, and the budget
                   }}
                 />
               );

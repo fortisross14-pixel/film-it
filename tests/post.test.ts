@@ -12,7 +12,10 @@ const film = (genre: 'thriller' | 'drama' | 'scifi' = 'thriller') => postProfile
 
 describe('take selection & cuts', () => {
   it('defaults to the take chosen on set and can switch', () => {
-    const f = film();
+    const base = film();
+    // A second take of scene 1 (as if shot again).
+    const t0 = base.scenes[0].takes[0];
+    const f = { ...base, scenes: base.scenes.map((x, i) => (i === 0 ? { ...x, takes: [...x.takes, { ...t0, id: 'again', score: t0.score - 7 }] } : x)) };
     const s = f.scenes[0];
     const before = sceneScores(f)[0].take;
     const other = s.takes.find((t) => t.id !== s.chosenTakeId)!;

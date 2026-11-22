@@ -40,3 +40,28 @@ describe('studio upgrades', () => {
     expect(setPolish({ ...f, upgrades: undefined }, s, 'vfx', 'premium').ok).toBe(true);
   });
 });
+
+describe('casting answers your agency level', () => {
+  it('without an agency only commons and uncommons turn up, even if you own better actors', async () => {
+    const { castProfile } = await import('./helpers');
+    const { drawCards } = await import('../src/engine/casting');
+    const { generateStar, FAMOUS } = await import('../src/engine/data/actors');
+    const { createRng } = await import('../src/engine/rng');
+    const base = castProfile('thriller', 10_000_000);
+    const rng = createRng(3);
+    const stars = FAMOUS.slice(0, 10).map((f) => generateStar(rng, f));
+    for (const [upgrades, ok] of [[[], ['common', 'uncommon']], [['agency1'], ['common', 'uncommon', 'rare', 'epic']]] as const) {
+      const seen = new Set<string>();
+      for (let seed = 1; seed <= 40; seed++) {
+        const p = {
+          ...base, seed, actorPool: [...base.actorPool, ...stars], unlocks: { ...base.unlocks, upgrades: [...upgrades] },
+          activeFilm: { ...base.activeFilm!, phase: 'casting' as const, casting: {}, rejected: [], roles: base.activeFilm!.roles.map((r) => ({ ...r, actor: undefined })) },
+        };
+        const r = drawCards(p, p.activeFilm.roles[0].id);
+        if (!r.ok) throw new Error(r.reason);
+        for (const a of r.profile.activeFilm!.casting[p.activeFilm.roles[0].id].offered) seen.add(a.rarity);
+      }
+      expect([...seen].every((x) => (ok as readonly string[]).includes(x))).toBe(true);
+    }
+  });
+});

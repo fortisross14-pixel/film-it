@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { LOCKED_MSG, useReview } from '../review';
 import type { Beat, Film, RoleType, Scene, Tone } from '../../engine/types';
 import { useGame, useProfile } from '../store';
 import { directorById } from '../../engine/data/directors';
@@ -44,7 +45,9 @@ export function ScriptEditor() {
   const [open, setOpen] = useState<string | null>(null);
   const toast = useToast();
 
+  const review = useReview();
   const apply: Apply = (r) => {
+    if (review.readOnly) return toast.show(LOCKED_MSG), false;
     if (!r.ok) return toast.show(r.reason), false;
     update((q) => ({ ...q, activeFilm: r.film }));
     if (r.removedBeats) toast.show(`${r.removedBeats} action(s) removed: their topic is gone.`);

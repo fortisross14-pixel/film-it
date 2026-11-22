@@ -450,3 +450,11 @@ should feel like an editing suite (Premiere Pro, DaVinci Resolve).
 
 UI polish, plus the open questions from the requirements: timeline snapping, shoot order, actor
 pool carry-over, pack unlock rules.
+
+## Phase review, one take per shoot, agency-gated casting
+- Every phase (script, casting, shooting, edit, premiere) shares the editor's top menu. Done phases can be opened read-only ("Locked · reviewing only"); edits are refused with a toast.
+- Casting calls only draw common/uncommon actors without an agency; Talent agency adds rare/epic, Star agency adds legendary (`ALLOWED_RARITIES` in `casting.ts`).
+- After casting a role you return to the cast overview (roles left, budget).
+- A shoot gives one take (version `take`): its pace/chemistry/dialogue as numbers, then Keep take or Shoot again. Takes are compared in Edit.
+- The shoot step shows no prediction: set fit, bond, rehearsal, fatigue, pair chemistry and earlier takes as numbers, with Rehearse / Day off / Record.
+- Not yet: going back from Edit to shoot more (the engine has no re-open of shooting).

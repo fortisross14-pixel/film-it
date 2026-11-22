@@ -18,7 +18,7 @@ export function timecode(minutes: number): string {
   return `${p(h)}:${p(m)}:${p(s)}:${p(f)}`;
 }
 
-export interface Workspace { id: string; label: string; done?: boolean }
+export interface Workspace { id: string; label: string; done?: boolean; onOpen?: () => void; viewing?: boolean }
 
 /** Top bar like an editor: home, workspace tabs (the film's phases), the project title, status. */
 export function EditorFrame({ workspaces, active, title, status, actions, onHome, layout, children }: {
@@ -32,7 +32,9 @@ export function EditorFrame({ workspaces, active, title, status, actions, onHome
           <img src={art('logo')} alt="Film it!" className="nle-logo" />
           <nav className="nle-workspaces" aria-label="Production phases">
             {workspaces.map((w) => (
-              <span key={w.id} className={`nle-ws ${w.id === active ? 'on' : ''} ${w.done ? 'done' : ''}`} aria-current={w.id === active ? 'step' : undefined}>{w.label}</span>
+              w.onOpen
+                ? <button key={w.id} className={`nle-ws ${w.id === active ? 'on' : ''} ${w.done ? 'done' : ''} ${w.viewing ? 'viewing' : ''}`} aria-current={w.id === active ? 'step' : undefined} onClick={w.onOpen}>{w.done && w.id !== active ? '✓ ' : ''}{w.label}</button>
+                : <span key={w.id} className={`nle-ws ${w.id === active ? 'on' : ''} locked`} title="Not yet">{w.label}</span>
             ))}
           </nav>
         </div>

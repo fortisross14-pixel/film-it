@@ -270,7 +270,8 @@ export type Meter = 'pace' | 'chemistry' | 'dialogue';
 export type MeterMap = Record<Meter, number>;
 
 /** Which cut of a shoot: favouring pace, favouring chemistry, or the rough one. */
-export type TakeVersion = 'pace' | 'chemistry' | 'rough';
+/** 'take' is the single take a shoot gives now; the others are from older saves (three versions per shoot). */
+export type TakeVersion = 'take' | 'pace' | 'chemistry' | 'rough';
 
 export interface Take {
   id: string;
