@@ -238,3 +238,46 @@
 .nle-lane .frame > .frame-num { position: absolute; right: 4px; top: 3px; }
 .nle-lane .frame .frame-tone { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
 @media (max-width: 900px) { .nle-tl-top .nle-tc { visibility: hidden; } .nle-lane .frame > .frame-num { font-size: 12px; } }
+
+/* ---------- Sheets opened inside the workspace: dialogs in the same editor style ---------- */
+.nle .sheet-backdrop { background: rgba(0, 0, 0, 0.6); }
+.nle .sheet { background: var(--nle-panel); color: var(--nle-text); border: 1px solid #000; border-radius: 8px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7); }
+.nle .sheet-head { background: #1c1c1e; border-bottom: 1px solid var(--nle-line); }
+.nle .sheet-head h2 { color: #f0f0f3; font-family: inherit; font-size: 15px; letter-spacing: 0; text-transform: none; }
+.nle .sheet-head .kicker { color: var(--nle-muted); }
+.nle .sheet-head .ghost-btn { background: transparent; border: 0; color: var(--nle-text); }
+.nle .sheet-body { background: var(--nle-panel); }
+.nle .sheet-foot { background: #1c1c1e; border-top-color: var(--nle-line); }
+.nle .sheet .card, .nle .sheet .scene-card { background: var(--nle-panel2); border-color: var(--nle-line); color: var(--nle-text); }
+.nle .sheet .tone-btn { background: var(--nle-panel3); border-color: #45454c; color: var(--nle-text); }
+.nle .sheet .tone-btn.on { background: var(--nle-blue); border-color: #1d6fc2; color: #fff; }
+.nle .sheet .seg { background: #151517; border-color: #45454c; }
+.nle .sheet .seg button.on { background: var(--nle-blue); color: #fff; }
+.nle .sheet .chip, .nle .sheet .tag { background: var(--nle-panel3); color: var(--nle-text); border-color: #45454c; }
+.nle .sheet .version, .nle .sheet .take-card { background: var(--nle-panel2); border-color: var(--nle-line); color: var(--nle-text); }
+.nle .sheet .version.best, .nle .sheet .version.on { border-color: var(--nle-blue); }
+.nle .sheet .stage, .nle .sheet .studio-stage { background: radial-gradient(ellipse at center, #26262b, #0d0d0f); border: 1px solid #000; }
+.nle .sheet .factor-chips .tag { background: #151517; }
+.nle .sheet .list-row { background: var(--nle-panel2); border-color: var(--nle-line); color: var(--nle-text); }
+.nle .sheet .list-row.pick.on { border-color: var(--nle-blue); }
+.nle .sheet .scene-num { background: var(--nle-blue); color: #fff; }
+.nle .sheet .reqs li, .nle .sheet p, .nle .sheet li { color: var(--nle-text); }
+.nle .sheet .muted, .nle .sheet .small.muted { color: var(--nle-muted); }
+.nle .sheet input, .nle .sheet select, .nle .sheet textarea { background: #151517; color: var(--nle-text); border-color: #45454c; }
+.nle .sheet .genre-badge { color: #fff; }
+.nle .sheet .brief-studio { color: #f0f0f3; font-family: inherit; }
+.nle .sheet .contract-hero .poster { box-shadow: 0 4px 14px rgba(0,0,0,0.6); }
+.nle .sheet .details-btn { color: var(--nle-blue2); }
+.nle .sheet .bar { background: #333338; }
+.nle .sheet .weight > span:first-child { color: var(--nle-muted); }
+.nle .sheet .danger { background: #5a1f1c; border-color: #8a2a24; color: #ffd6d1; }
+.nle .fact-chip { background: var(--nle-panel3); color: var(--nle-text); border: 1px solid #45454c; }
+.nle .fact-chip .icon, .nle .fact-chip svg { color: var(--nle-blue2); }
+.nle .focus-row { background: var(--nle-panel2); border: 1px solid var(--nle-line); color: var(--nle-text); }
+.nle .focus-row.on { background: #20303f; border: 2px solid var(--nle-blue); color: #fff; }
+.nle .focus-row .bar.m-pace > span { background: #e0662f; } .nle .focus-row .bar.m-chemistry > span { background: #e0567d; } .nle .focus-row .bar.m-dialogue > span { background: #5aa9ff; }
+.nle button.record { background: #c2271f; border-color: #8f1a14; color: #fff; font-family: inherit; letter-spacing: 0.06em; }
+.nle button.record:hover:not(:disabled) { background: #d8342b; }
+.nle .set-pick { background: var(--nle-panel2); border-color: var(--nle-line); color: var(--nle-text); }
+.nle .set-pick.selected { border-color: var(--nle-blue); box-shadow: 0 0 0 1px var(--nle-blue); }
+.nle details.fold > summary { color: var(--nle-blue2); }
