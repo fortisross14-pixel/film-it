@@ -9,3 +9,6 @@
 - Game-dev skills live in `.claude/skills/` (see `THIRD_PARTY.md`): `game-feel`, `game-ui-ux`,
   `card-game`, `save-systems`, `procedural-gen`. Use them when touching those areas; their code is
   engine-flavoured, translate it to React/DOM.
+- Saves and all persistent data go through `src/platform/storage.ts` (IndexedDB, localStorage only as fallback;
+  injected into the engine with `setSaveStore`). Never call localStorage directly: all the owner's games share the
+  fortisross14-pixel.github.io origin and its ~5 MB localStorage is usually full. This is the preferred solution for storage.

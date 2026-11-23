@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Profile } from '../engine/types';
 import { saveProfile } from '../engine/save';
+import { onStorageError } from '../platform/storage';
 
 interface GameStore {
   profile: Profile | null;
@@ -19,10 +20,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const [saveError, setSaveError] = useState<string | null>(null);
   // Autosave whenever the profile changes; surface failures instead of losing progress silently.
+  // IndexedDB writes finish after saveProfile returns: their failures arrive here.
+  useEffect(() => onStorageError(setSaveError), []);
   useEffect(() => {
     if (!profile) return;
+    setSaveError(null); // before saving: a storage error reported during the save must win
     const r = saveProfile(profile);
-    setSaveError(r.ok ? null : r.reason);
+    if (!r.ok) setSaveError(r.reason);
   }, [profile]);
 
   const open = useCallback((p: Profile) => setProfile(p), []);

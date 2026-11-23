@@ -1,5 +1,6 @@
-// One permanent save in localStorage: the studio is your whole progress. Storage is
-// injectable for tests. Saves from the old 3-slot builds are picked up once (the slot with
+// One permanent save: the studio is your whole progress. The engine never touches browser
+// storage itself: the app injects its store (IndexedDB-backed, src/platform/storage.ts) with
+// setSaveStore, and tests pass their own. Saves from the old 3-slot builds are picked up once (the slot with
 // the most films wins) and converted.
 //
 // Follows the save-systems skill: every save carries an integer version; loading
@@ -30,13 +31,12 @@ const BACKUP_KEY = `${SAVE_KEY}:bak`;
 const LEGACY_SLOTS = 3;
 const legacyKey = (slot: number) => `directors-cut:slot:${slot}`;
 
-function defaultStore(): KeyValueStore | undefined {
-  try {
-    return typeof localStorage !== 'undefined' ? localStorage : undefined;
-  } catch {
-    return undefined;
-  }
+let injected: KeyValueStore | undefined;
+/** The app sets its storage once at start-up; calls without a store argument use it. */
+export function setSaveStore(store: KeyValueStore | undefined): void {
+  injected = store;
 }
+const defaultStore = (): KeyValueStore | undefined => injected;
 
 /**
  * Migrations: MIGRATIONS[v] turns a version-v save into version v+1. Keep every one
@@ -201,6 +201,18 @@ export function saveProfile(p: Profile, store = defaultStore()): SaveResult {
     const full = e instanceof Error && /quota/i.test(e.name + e.message);
     return { ok: false, reason: full ? 'Browser storage is full: the game could not save.' : 'The game could not save.' };
   }
+}
+
+/** The save as a file's text, for Export. Undefined when there is nothing saved. */
+export function exportSave(store = defaultStore()): string | undefined {
+  return store?.getItem(SAVE_KEY) ?? undefined;
+}
+
+/** Read an exported save file (any supported version) and make it the save. */
+export function importSave(text: string, store = defaultStore()): LoadResult & { saved?: SaveResult } {
+  const r = parse(text);
+  if (r.status !== 'ok' || !r.profile) return r.status === 'empty' ? { status: 'corrupt', message: 'The file is empty.' } : r;
+  return { ...r, saved: saveProfile(r.profile, store) };
 }
 
 /** Erase all progress (the old slot saves too). */
